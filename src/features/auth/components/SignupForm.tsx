@@ -22,9 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { signup } from "../api";
-import { setAuthToken } from "@/services/auth-token";
-import { ApiError } from "@/services/api-client";
+import { useMockStore } from "@/mock-data/store";
 
 // Flow 1: visitor chooses account type on signup; a default (empty) Plan
 // Board is created for them server-side. Event Planners can both create
@@ -41,6 +39,7 @@ type SignupValues = z.infer<typeof signupSchema>;
 
 export function SignupForm() {
   const router = useRouter();
+  const { signup } = useMockStore();
   const [submitting, setSubmitting] = useState(false);
   const {
     register,
@@ -52,14 +51,14 @@ export function SignupForm() {
     defaultValues: { accountType: "Customer" },
   });
 
-  async function onSubmit(values: SignupValues) {
+  function onSubmit(values: SignupValues) {
     setSubmitting(true);
     try {
-      const { token } = await signup(values);
-      setAuthToken(token);
+      signup(values);
+      toast.success("Account created — your Plan Board is ready.");
       router.push("/plans");
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Signup failed");
+    } catch {
+      toast.error("Signup failed");
     } finally {
       setSubmitting(false);
     }

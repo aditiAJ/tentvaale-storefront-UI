@@ -14,10 +14,15 @@ export default function Home() {
         a quotation, and track delivery — all from one board.
       </p>
       <div className="flex gap-3">
-        <Button size="lg" render={<Link href="/catalog">Browse catalog</Link>} />
+        <Button
+          size="lg"
+          nativeButton={false}
+          render={<Link href="/catalog">Browse catalog</Link>}
+        />
         <Button
           size="lg"
           variant="outline"
+          nativeButton={false}
           render={<Link href="/signup">Start a plan</Link>}
         />
       </div>

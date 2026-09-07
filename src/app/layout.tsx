@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Playfair_Display, Manrope, Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { SiteHeader } from "@/layouts/site-header";
 import { SiteFooter } from "@/layouts/site-footer";
@@ -15,6 +15,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Tentvaale brand type system (src/styles/tentvaale-tokens.css) — Playfair Display
+// for headlines/money, Manrope for UI/labels/buttons, Inter for body copy.
+const playfairDisplay = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
+const manrope = Manrope({
+  variable: "--font-manrope",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const interBrand = Inter({
+  variable: "--font-inter-brand",
+  subsets: ["latin"],
+  weight: ["400", "500"],
+});
+
 export const metadata: Metadata = {
   title: "Tentvaale",
   description: "Plan, quote, and order event rentals.",
@@ -24,7 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${manrope.variable} ${interBrand.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <Providers>

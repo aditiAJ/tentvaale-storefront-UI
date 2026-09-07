@@ -1,5 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useMockStore } from "@/mock-data/store";
 
 const NAV_LINKS = [
   { href: "/catalog", label: "Catalog" },
@@ -7,10 +12,14 @@ const NAV_LINKS = [
 ];
 
 export function SiteHeader() {
+  const router = useRouter();
+  const { currentAccount, logout } = useMockStore();
+
   return (
     <header className="border-b">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="text-lg font-semibold tracking-tight">
+        <Link href="/" className="flex items-center gap-2 text-lg font-semibold tracking-tight">
+          <Image src="/brand/logo/tentvaale-logo-mark.png" alt="" width={28} height={28} />
           Tentvaale
         </Link>
 
@@ -27,8 +36,25 @@ export function SiteHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" render={<Link href="/login">Log in</Link>} />
-          <Button render={<Link href="/signup">Sign up</Link>} />
+          {currentAccount ? (
+            <>
+              <Button variant="ghost" nativeButton={false} render={<Link href="/account">{currentAccount.name}</Link>} />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  logout();
+                  router.push("/");
+                }}
+              >
+                Log out
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="ghost" nativeButton={false} render={<Link href="/login">Log in</Link>} />
+              <Button nativeButton={false} render={<Link href="/signup">Sign up</Link>} />
+            </>
+          )}
         </div>
       </div>
     </header>

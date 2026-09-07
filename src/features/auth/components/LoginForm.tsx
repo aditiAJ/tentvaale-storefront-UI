@@ -15,9 +15,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { login } from "../api";
-import { setAuthToken } from "@/services/auth-token";
-import { ApiError } from "@/services/api-client";
+import { useMockStore } from "@/mock-data/store";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -28,6 +26,7 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const router = useRouter();
+  const { login } = useMockStore();
   const [submitting, setSubmitting] = useState(false);
   const {
     register,
@@ -35,14 +34,13 @@ export function LoginForm() {
     formState: { errors },
   } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
 
-  async function onSubmit(values: LoginValues) {
+  function onSubmit(values: LoginValues) {
     setSubmitting(true);
     try {
-      const { token } = await login(values);
-      setAuthToken(token);
+      login(values.email);
       router.push("/plans");
-    } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Login failed");
+    } catch {
+      toast.error("Login failed");
     } finally {
       setSubmitting(false);
     }

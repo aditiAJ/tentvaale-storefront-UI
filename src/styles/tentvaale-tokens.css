@@ -1,0 +1,150 @@
+/*
+ * Tentvaale brand design system tokens.
+ * Source: "Handoff: Tentvaale Enquiry → Quote Flow" README + ds/tokens/* values quoted
+ * therein (the real token files weren't included, only their documented values —
+ * adopt verbatim as given; a few ramp steps the doc doesn't enumerate, marked
+ * DERIVED below, are computed and should be replaced once ds/tokens/colors.css
+ * itself is available).
+ *
+ * Two first-class themes, day (default) and night — scope with [data-theme].
+ * This is a separate token namespace from the shadcn tokens in globals.css
+ * (kept isolated so the rest of the scaffold is unaffected).
+ */
+
+:root {
+  /* Brand palette (verbatim) */
+  --graphite-black: #1B1B1D;
+  --warm-ivory: #F5F3EF;
+  --luxury-gold: #B49355;
+  --warm-beige: #C8A97E;
+  --pure-white: #FFFFFF;
+
+  /* Ramps (verbatim where given) */
+  --graphite-900: #0E0E10;
+  --graphite-800: #141416;
+  --graphite-700: #1B1B1D;
+  --graphite-600: #232326;
+  --graphite-500: #2E2E32;
+  --graphite-400: #3A3A3F;
+  --graphite-300: #55555C;
+
+  --ivory-050: #FFFFFF;
+  --ivory-100: #FBFAF8;
+  --ivory-200: #F5F3EF;
+  --ivory-300: #EBE7E0;
+  --ivory-400: #DCD6CB;
+  --ivory-500: #B8B1A4;
+  --ivory-600: #7C766B;
+
+  --gold-400: #C8A97E;
+  --gold-500: #B49355;
+  --gold-700: #8C6F3F; /* DERIVED: darker gold for text-on-light legibility, not given a literal hex */
+
+  /* Status (only --status-on-hold given a literal hex; available/out are "desaturated
+     green/red" by description only — DERIVED, muted to match the gold-forward palette) */
+  --status-available: #6E9174; /* DERIVED */
+  --status-on-hold: #C8A97E;
+  --status-out: #B0655A; /* DERIVED */
+  --status-danger: var(--status-out);
+
+  /* Elevation: day = soft warm shadows; night = gold hairline instead (set below) */
+  --shadow-day-1: 0 1px 3px rgba(27, 27, 29, 0.06);
+  --shadow-day-2: 0 4px 16px rgba(27, 27, 29, 0.08);
+  --shadow-day-3: 0 12px 32px rgba(27, 27, 29, 0.14);
+  --hairline-gold: rgba(180, 147, 85, 0.32);
+
+  /* Motion */
+  --dur-fast: 160ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  --dur-hero: 700ms;
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-control: background-color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-standard);
+  --hover-lift: -2px;
+  --press-offset: 1px;
+
+  /* Radius */
+  --radius-button: 8px;
+  --radius-card: 12px;
+  --radius-panel: 16px;
+  --radius-xs: 4px;
+  --radius-pill: 999px;
+
+  /* Spacing / misc */
+  --tap-min: 44px;
+  --tracking-label: 0.14em;
+  --tracking-nav: 0.02em;
+  --page-pad: 48px;
+
+  /* Type faces — populated from next/font variables in layout.tsx */
+  --font-display: var(--font-playfair), Georgia, serif;
+  --font-ui: var(--font-manrope), system-ui, sans-serif;
+  --font-body: var(--font-inter-brand), system-ui, sans-serif;
+
+  /* Day semantic aliases (default, per "day is the :root default") */
+  --surface-page: var(--warm-ivory);
+  --surface-card: var(--pure-white);
+  --surface-sunken: var(--ivory-300);
+  --text-primary: #1B1B1D;
+  --text-secondary: #5C5A55;
+  --text-muted: #8B877F;
+  --text-accent: var(--gold-700);
+  --border-subtle: #EBE7E0;
+  --border-strong: #DCD6CB;
+  --border-accent: var(--luxury-gold);
+  --card-border: 1px solid transparent;
+  --card-shadow: var(--shadow-day-2);
+  --icon-color: var(--graphite-black);
+
+  --accent: var(--luxury-gold);
+  --accent-hover: var(--gold-700);
+  --text-on-accent: var(--graphite-black);
+
+  --btn-primary-bg: var(--graphite-black);
+  --btn-primary-bg-hover: var(--luxury-gold);
+  --btn-primary-text: var(--warm-ivory);
+  --btn-primary-text-hover: var(--graphite-black);
+  --btn-secondary-text: var(--text-secondary);
+  --btn-secondary-border: var(--border-strong);
+}
+
+[data-theme="night"] {
+  --surface-page: #0E0E10;
+  --surface-card: #1B1B1D;
+  --surface-sunken: #141416;
+  --text-primary: #F3F1ED;
+  --text-secondary: #A9A5A0;
+  --text-muted: #7A767F;
+  --text-accent: var(--warm-beige);
+  --border-subtle: #2E2E32;
+  --border-strong: #3A3A3F;
+  --border-accent: rgba(180, 147, 85, 0.45);
+  --card-border: 1px solid var(--hairline-gold);
+  --card-shadow: none;
+  --icon-color: var(--luxury-gold);
+
+  --accent-hover: var(--warm-beige);
+
+  --btn-primary-bg: var(--luxury-gold);
+  --btn-primary-bg-hover: var(--warm-beige);
+  --btn-primary-text: var(--graphite-black);
+  --btn-primary-text-hover: var(--graphite-black);
+}
+
+/* Responsive: the prototype's two two-column layouts (enquiry basket, quote) don't
+   stack below ~840px — README flags this as the one thing to fix on implementation. */
+@media (max-width: 840px) {
+  .enquiry-grid,
+  .quote-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --page-pad: 16px;
+  }
+}
