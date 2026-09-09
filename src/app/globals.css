@@ -51,80 +51,82 @@
 }
 
 /*
- * shadcn's semantic tokens, remapped onto the Tentvaale brand palette
- * (src/styles/tentvaale-tokens.css) so every shadcn component inherits the
- * brand look automatically. Day values by default; .dark mirrors the brand's
- * night theme for when a real dark-mode toggle is wired up.
+ * shadcn's semantic tokens, remapped onto the Flowstep "dark luxury theme"
+ * (fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e — charcoal/ivory/antique-gold).
+ * This is the real site's design now — always-dark by design (colorTheme:
+ * "defaultDark" on every screen), not a light/dark pair, so :root and .dark
+ * carry the same values; nothing needs a theme toggle. Superseded the earlier
+ * graphite/luxury-gold remap this replaced.
  */
 :root {
-  --background: var(--surface-page);
-  --foreground: var(--text-primary);
-  --card: var(--surface-card);
-  --card-foreground: var(--text-primary);
-  --popover: var(--surface-card);
-  --popover-foreground: var(--text-primary);
-  --primary: var(--btn-primary-bg);
-  --primary-foreground: var(--btn-primary-text);
-  --secondary: var(--surface-sunken);
-  --secondary-foreground: var(--text-primary);
-  --muted: var(--surface-sunken);
-  --muted-foreground: var(--text-muted);
-  --accent: var(--luxury-gold);
-  --accent-foreground: var(--graphite-black);
-  --destructive: var(--status-danger);
-  --border: var(--border-subtle);
-  --input: var(--border-subtle);
-  --ring: var(--border-accent);
-  --chart-1: var(--luxury-gold);
-  --chart-2: var(--warm-beige);
-  --chart-3: var(--graphite-500);
-  --chart-4: var(--graphite-300);
-  --chart-5: var(--ivory-500);
-  --radius: 0.5rem;
-  --sidebar: var(--surface-card);
-  --sidebar-foreground: var(--text-primary);
-  --sidebar-primary: var(--btn-primary-bg);
-  --sidebar-primary-foreground: var(--btn-primary-text);
-  --sidebar-accent: var(--surface-sunken);
-  --sidebar-accent-foreground: var(--text-primary);
-  --sidebar-border: var(--border-subtle);
-  --sidebar-ring: var(--border-accent);
+  --background: #12100E;
+  --foreground: #F5EFE6;
+  --card: #161411;
+  --card-foreground: #F5EFE6;
+  --popover: #161411;
+  --popover-foreground: #F5EFE6;
+  --primary: #C9A15C;
+  --primary-foreground: #12100E;
+  --secondary: #1D1915;
+  --secondary-foreground: #F5EFE6;
+  --muted: #1D1915;
+  --muted-foreground: #B8AFA3;
+  --accent: #C9A15C;
+  --accent-foreground: #12100E;
+  --destructive: #B0655A;
+  --border: #24211D;
+  --input: #24211D;
+  --ring: rgba(201, 161, 92, 0.5);
+  --chart-1: #C9A15C;
+  --chart-2: #B8AFA3;
+  --chart-3: #8A6D3E;
+  --chart-4: #24211D;
+  --chart-5: #F5EFE6;
+  --radius: 0.75rem;
+  --sidebar: #161411;
+  --sidebar-foreground: #F5EFE6;
+  --sidebar-primary: #C9A15C;
+  --sidebar-primary-foreground: #12100E;
+  --sidebar-accent: #1D1915;
+  --sidebar-accent-foreground: #F5EFE6;
+  --sidebar-border: #24211D;
+  --sidebar-ring: rgba(201, 161, 92, 0.5);
   --font-sans: var(--font-manrope), system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
 }
 
 .dark {
-  --background: #0E0E10;
-  --foreground: #F3F1ED;
-  --card: #1B1B1D;
-  --card-foreground: #F3F1ED;
-  --popover: #1B1B1D;
-  --popover-foreground: #F3F1ED;
-  --primary: var(--luxury-gold);
-  --primary-foreground: var(--graphite-black);
-  --secondary: #141416;
-  --secondary-foreground: #F3F1ED;
-  --muted: #141416;
-  --muted-foreground: #7A767F;
-  --accent: var(--warm-beige);
-  --accent-foreground: var(--graphite-black);
-  --destructive: var(--status-danger);
-  --border: #2E2E32;
-  --input: #2E2E32;
-  --ring: rgba(180, 147, 85, 0.45);
-  --chart-1: var(--luxury-gold);
-  --chart-2: var(--warm-beige);
-  --chart-3: var(--graphite-300);
-  --chart-4: var(--graphite-400);
-  --chart-5: var(--ivory-500);
-  --sidebar: #1B1B1D;
-  --sidebar-foreground: #F3F1ED;
-  --sidebar-primary: var(--luxury-gold);
-  --sidebar-primary-foreground: var(--graphite-black);
-  --sidebar-accent: #141416;
-  --sidebar-accent-foreground: #F3F1ED;
-  --sidebar-border: #2E2E32;
-  --sidebar-ring: rgba(180, 147, 85, 0.45);
+  --background: #12100E;
+  --foreground: #F5EFE6;
+  --card: #161411;
+  --card-foreground: #F5EFE6;
+  --popover: #161411;
+  --popover-foreground: #F5EFE6;
+  --primary: #C9A15C;
+  --primary-foreground: #12100E;
+  --secondary: #1D1915;
+  --secondary-foreground: #F5EFE6;
+  --muted: #1D1915;
+  --muted-foreground: #B8AFA3;
+  --accent: #C9A15C;
+  --accent-foreground: #12100E;
+  --destructive: #B0655A;
+  --border: #24211D;
+  --input: #24211D;
+  --ring: rgba(201, 161, 92, 0.5);
+  --chart-1: #C9A15C;
+  --chart-2: #B8AFA3;
+  --chart-3: #8A6D3E;
+  --chart-4: #24211D;
+  --chart-5: #F5EFE6;
+  --sidebar: #161411;
+  --sidebar-foreground: #F5EFE6;
+  --sidebar-primary: #C9A15C;
+  --sidebar-primary-foreground: #12100E;
+  --sidebar-accent: #1D1915;
+  --sidebar-accent-foreground: #F5EFE6;
+  --sidebar-border: #24211D;
+  --sidebar-ring: rgba(201, 161, 92, 0.5);
 }
 
 @layer base {

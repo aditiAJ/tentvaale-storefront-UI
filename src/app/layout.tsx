@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display, Manrope, Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
-import { SiteHeader } from "@/layouts/site-header";
-import { SiteFooter } from "@/layouts/site-footer";
+import { SiteChrome } from "@/layouts/site-chrome";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,9 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Providers>
-          <SiteHeader />
-          <main className="flex flex-1 flex-col">{children}</main>
-          <SiteFooter />
+          <SiteChrome>{children}</SiteChrome>
         </Providers>
       </body>
     </html>

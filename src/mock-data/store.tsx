@@ -4,14 +4,16 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type {
   Account,
   AccountType,
+  Address,
   Order,
   Plan,
   PlanAuditAction,
   PlanCoOwnerRole,
   Quotation,
   QuotationLine,
+  QuotationLineStatus,
 } from "./types";
-import { PRODUCTS } from "./seed";
+import { BUNDLES, COLLECTIONS, PRODUCTS } from "./seed";
 
 const STORAGE_KEY = "tentvaale.mockstore.v1";
 
@@ -21,10 +23,12 @@ interface StoreState {
   plans: Plan[];
   quotations: Quotation[];
   orders: Order[];
+  wishlists: Record<string, string[]>; // accountId -> product ids
+  addressBook: Record<string, Address[]>; // accountId -> addresses
 }
 
 function emptyState(): StoreState {
-  return { accounts: [], currentAccountId: null, plans: [], quotations: [], orders: [] };
+  return { accounts: [], currentAccountId: null, plans: [], quotations: [], orders: [], wishlists: {}, addressBook: {} };
 }
 
 function loadState(): StoreState {
@@ -58,20 +62,31 @@ function pushAudit(plan: Plan, action: PlanAuditAction, detail: string, accountI
 interface StoreContextValue extends StoreState {
   currentAccount: Account | null;
   products: typeof PRODUCTS;
+  bundles: typeof BUNDLES;
+  collections: typeof COLLECTIONS;
 
   signup: (input: { name: string; email: string; phone: string; accountType: AccountType }) => Account;
   login: (email: string) => Account;
   logout: () => void;
+  upgradeToEventPlanner: () => void;
 
   createPlan: (name: string) => Plan;
   addSubEvent: (planId: string, name: string, eventDate: string) => void;
   removeSubEvent: (planId: string, subEventId: string) => void;
   addPlanItem: (
     planId: string,
-    item: { productId: string; quantity: number; subEventId: string | null; dimensions?: { length: number; width?: number } },
+    item: {
+      productId: string;
+      quantity: number;
+      subEventId: string | null;
+      dimensions?: { length: number; width?: number };
+      rentalStart?: string;
+      rentalEnd?: string;
+    },
   ) => void;
   removePlanItem: (planId: string, itemId: string) => void;
   adjustPlanItemQty: (planId: string, itemId: string, delta: number) => void;
+  addBundleToPlan: (planId: string, bundleId: string, rental?: { rentalStart?: string; rentalEnd?: string }) => void;
 
   addCoOwner: (planId: string, email: string, name: string, role: PlanCoOwnerRole) => void;
   removeCoOwner: (planId: string, accountId: string) => void;
@@ -80,14 +95,25 @@ interface StoreContextValue extends StoreState {
   acceptQuotationLines: (quotationId: string, planItemIds: string[]) => void;
   rejectQuotation: (quotationId: string, resolution: "Draft" | "Cancelled") => void;
   payForQuotation: (quotationId: string) => Order;
+  createDirectOrderQuotation: (planId: string) => Quotation;
 
-  previewCancellation: (orderId: string) => { cancellableLineIds: string[]; rentalChargeRefundable: false; depositRefundable: boolean };
+  previewCancellation: (orderId: string) => {
+    lines: { planItemId: string; productName: string; subEventLabel: string; amount: number; cancellable: boolean; reason?: string }[];
+    depositRefundable: boolean;
+  };
   cancelOrder: (orderId: string) => void;
 
   getPlan: (planId: string) => Plan | undefined;
   getQuotation: (quotationId: string) => Quotation | undefined;
   getOrder: (orderId: string) => Order | undefined;
   getQuotationsForPlan: (planId: string) => Quotation[];
+
+  wishlist: string[];
+  toggleWishlist: (productId: string) => void;
+
+  addresses: Address[];
+  addAddress: (label: string, detail: string) => void;
+  removeAddress: (addressId: string) => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
@@ -162,6 +188,15 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
 
   const logout = useCallback(() => setState((s) => ({ ...s, currentAccountId: null })), []);
 
+  // "For Professionals" application (screen 48) — no real verification queue exists,
+  // so approval is instant: the account flips to EventPlanner as soon as it's applied.
+  const upgradeToEventPlanner = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      accounts: s.accounts.map((a) => (a.id === s.currentAccountId ? { ...a, accountType: "EventPlanner" as const } : a)),
+    }));
+  }, []);
+
   const createPlan = useCallback(
     (name: string) => {
       if (!state.currentAccountId) throw new Error("Not signed in");
@@ -206,7 +241,14 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   const addPlanItem = useCallback(
     (
       planId: string,
-      item: { productId: string; quantity: number; subEventId: string | null; dimensions?: { length: number; width?: number } },
+      item: {
+        productId: string;
+        quantity: number;
+        subEventId: string | null;
+        dimensions?: { length: number; width?: number };
+        rentalStart?: string;
+        rentalEnd?: string;
+      },
     ) => {
       updatePlan(planId, (p, accountId) => {
         const product = PRODUCTS.find((pr) => pr.id === item.productId);
@@ -216,6 +258,22 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     },
     [],
   );
+
+  const addBundleToPlan = useCallback((planId: string, bundleId: string, rental?: { rentalStart?: string; rentalEnd?: string }) => {
+    const bundle = BUNDLES.find((b) => b.id === bundleId);
+    if (!bundle) return;
+    updatePlan(planId, (p, accountId) => {
+      const newItems = bundle.includedProductIds.map((productId) => ({
+        id: newId("item"),
+        productId,
+        quantity: 1,
+        subEventId: null,
+        rentalStart: rental?.rentalStart,
+        rentalEnd: rental?.rentalEnd,
+      }));
+      return pushAudit({ ...p, items: [...p.items, ...newItems] }, "ItemAdded", `${bundle.name} (bundle, ${newItems.length} items)`, accountId);
+    });
+  }, []);
 
   const removePlanItem = useCallback((planId: string, itemId: string) => {
     updatePlan(planId, (p, accountId) => {
@@ -266,21 +324,32 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
 
       function buildLines(itemIds: Set<string>): QuotationLine[] {
         const items = plan!.items.filter((it) => itemIds.has(it.id));
+        // Mock admin negotiation, so the partial-accept UI (Flow 5) has real
+        // variety to demonstrate: with 4+ lines, one comes back adjusted
+        // (partial stock) and one rejected (out of stock); with 2-3, just one
+        // adjusted; a single line always confirms as requested.
+        const adjustedIndex = items.length >= 2 ? (items.length >= 4 ? 1 : items.length - 1) : -1;
+        const rejectedIndex = items.length >= 4 ? 3 : -1;
         return items.map((it, i) => {
           const product = PRODUCTS.find((pr) => pr.id === it.productId)!;
-          // Mock admin negotiation: the last line of a multi-line quotation comes
-          // back stock-adjusted, so the partial-accept UI (Flow 5) has something
-          // real to demonstrate.
-          const adjusted = items.length > 1 && i === items.length - 1;
-          const confirmedQty = adjusted ? Math.max(1, Math.floor(it.quantity * 0.6)) : it.quantity;
+          const requestedQty = it.dimensions?.length ?? it.quantity;
+          const status: QuotationLineStatus = i === rejectedIndex ? "Rejected" : i === adjustedIndex ? "Adjusted" : "Confirmed";
+          const confirmedQty = status === "Rejected" ? 0 : status === "Adjusted" ? Math.max(1, Math.floor(requestedQty * 0.6)) : requestedQty;
+          const reason =
+            status === "Adjusted"
+              ? `Only ${confirmedQty} available — adjusted to ${confirmedQty}`
+              : status === "Rejected"
+                ? "Out of stock for these dates"
+                : undefined;
           return {
             planItemId: it.id,
             productId: it.productId,
             productName: product.name,
-            requestedQty: it.quantity,
+            requestedQty,
             confirmedQty,
             unitPrice: product.basePrice,
-            status: adjusted ? "Adjusted" : "Confirmed",
+            status,
+            reason,
             accepted: false,
           } satisfies QuotationLine;
         });
@@ -316,6 +385,55 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       }));
 
       return newQuotations;
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.plans, state.currentAccountId],
+  );
+
+  // Direct Order (Flow 4 branch): skips the negotiation loop entirely — every
+  // line is pre-confirmed and pre-accepted at list price, so the existing
+  // checkout/payment flow can be reused unchanged for "pay now" orders.
+  const createDirectOrderQuotation = useCallback(
+    (planId: string) => {
+      const plan = state.plans.find((p) => p.id === planId);
+      if (!plan) throw new Error("Plan not found");
+      requireOwner(plan);
+
+      const lines: QuotationLine[] = plan.items.map((it) => {
+        const product = PRODUCTS.find((pr) => pr.id === it.productId)!;
+        const qty = it.dimensions?.length ?? it.quantity;
+        return {
+          planItemId: it.id,
+          productId: it.productId,
+          productName: product.name,
+          requestedQty: qty,
+          confirmedQty: qty,
+          unitPrice: product.basePrice,
+          status: "Confirmed",
+          accepted: true,
+        };
+      });
+
+      const quotation: Quotation = {
+        id: newId("quo"),
+        planId,
+        subEventId: null,
+        round: 1,
+        lines,
+        validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        status: "Accepted",
+        isDirectOrder: true,
+      };
+
+      setState((s) => ({
+        ...s,
+        quotations: [...s.quotations, quotation],
+        plans: s.plans.map((p) =>
+          p.id === planId ? pushAudit({ ...p, status: "PartiallyAccepted" }, "PlanSubmitted", "DirectOrder", s.currentAccountId ?? "system") : p,
+        ),
+      }));
+
+      return quotation;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [state.plans, state.currentAccountId],
@@ -362,19 +480,37 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     setState((s) => {
       const quotation = s.quotations.find((q) => q.id === quotationId);
       if (!quotation) return s;
+      const plan = s.plans.find((p) => p.id === quotation.planId);
       const acceptedLines = quotation.lines.filter((l) => l.accepted);
       const paidAmount = acceptedLines.reduce((sum, l) => sum + l.unitPrice * l.confirmedQty, 0);
       const depositAmount = Math.round((paidAmount * 0.1) / 100) * 100;
+
+      // Seed plausible dispatch/delivery demo data: first sub-event already
+      // delivered, the rest pending — see the deviation note on Order.subEventDeliveryStatus.
+      const subEvents = plan?.subEvents ?? [];
+      const subEventDeliveryStatus: Record<string, "Delivered" | "Pending"> = {};
+      subEvents.forEach((se, i) => {
+        subEventDeliveryStatus[se.id] = i === 0 ? "Delivered" : "Pending";
+      });
+      const dispatchLog: Order["dispatchLog"] = [
+        { date: new Date(Date.now() - 4 * 86400000).toISOString().slice(0, 10), title: "Dispatched from warehouse", detail: "Vehicle assigned, crew notified" },
+        { date: new Date(Date.now() - 2 * 86400000).toISOString().slice(0, 10), title: "Delivered to venue", detail: "Received by venue staff" },
+        { date: new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10), title: "Return pickup (scheduled)" },
+      ];
+
       const order: Order = {
         id: newId("order"),
         quotationId,
         planId: quotation.planId,
-        deliveryStatus: "InProgress",
+        deliveryStatus: subEvents.length > 0 && subEvents.every((se) => subEventDeliveryStatus[se.id] === "Delivered") ? "FullyDelivered" : "InProgress",
         cancelled: false,
         depositStatus: "Held",
         paidAmount,
         depositAmount,
         createdAt: nowIso(),
+        venue: "The Grand Hyatt, Mumbai",
+        subEventDeliveryStatus,
+        dispatchLog,
       };
       created = order;
       return {
@@ -388,16 +524,34 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     return created as Order;
   }, []);
 
+  // A line is cancellable if its sub-event hasn't been marked Delivered yet
+  // (order-level items with no sub-event follow the order's overall status).
   const previewCancellation = useCallback(
     (orderId: string) => {
       const order = state.orders.find((o) => o.id === orderId);
-      return {
-        cancellableLineIds: order && !order.cancelled && order.deliveryStatus === "InProgress" ? [order.id] : [],
-        rentalChargeRefundable: false as const,
-        depositRefundable: !!order && !order.cancelled && order.deliveryStatus === "InProgress",
-      };
+      const quotation = order ? state.quotations.find((q) => q.id === order.quotationId) : undefined;
+      const plan = order ? state.plans.find((p) => p.id === order.planId) : undefined;
+      if (!order || !quotation || !plan) return { lines: [], depositRefundable: false };
+
+      const lines = quotation.lines
+        .filter((l) => l.accepted)
+        .map((l) => {
+          const item = plan.items.find((it) => it.id === l.planItemId);
+          const subEvent = item?.subEventId ? plan.subEvents.find((se) => se.id === item.subEventId) : undefined;
+          const delivered = subEvent ? order.subEventDeliveryStatus[subEvent.id] === "Delivered" : order.deliveryStatus === "FullyDelivered";
+          return {
+            planItemId: l.planItemId,
+            productName: l.productName,
+            subEventLabel: subEvent?.name ?? "General",
+            amount: l.unitPrice * l.confirmedQty,
+            cancellable: !order.cancelled && !delivered,
+            reason: delivered ? "already dispatched" : undefined,
+          };
+        });
+
+      return { lines, depositRefundable: !order.cancelled && order.deliveryStatus !== "FullyDelivered" };
     },
-    [state.orders],
+    [state.orders, state.quotations, state.plans],
   );
 
   const cancelOrder = useCallback((orderId: string) => {
@@ -419,24 +573,59 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   const getOrder = useCallback((orderId: string) => state.orders.find((o) => o.id === orderId), [state.orders]);
   const getQuotationsForPlan = useCallback((planId: string) => state.quotations.filter((q) => q.planId === planId), [state.quotations]);
 
+  const wishlist = (state.currentAccountId && state.wishlists[state.currentAccountId]) || [];
+
+  const toggleWishlist = useCallback((productId: string) => {
+    setState((s) => {
+      if (!s.currentAccountId) return s;
+      const current = s.wishlists[s.currentAccountId] || [];
+      const next = current.includes(productId) ? current.filter((id) => id !== productId) : [...current, productId];
+      return { ...s, wishlists: { ...s.wishlists, [s.currentAccountId]: next } };
+    });
+  }, []);
+
+  const addresses = (state.currentAccountId && state.addressBook[state.currentAccountId]) || [];
+
+  const addAddress = useCallback((label: string, detail: string) => {
+    setState((s) => {
+      if (!s.currentAccountId) return s;
+      const current = s.addressBook[s.currentAccountId] || [];
+      const next = [...current, { id: newId("addr"), label, detail }];
+      return { ...s, addressBook: { ...s.addressBook, [s.currentAccountId]: next } };
+    });
+  }, []);
+
+  const removeAddress = useCallback((addressId: string) => {
+    setState((s) => {
+      if (!s.currentAccountId) return s;
+      const current = s.addressBook[s.currentAccountId] || [];
+      return { ...s, addressBook: { ...s.addressBook, [s.currentAccountId]: current.filter((a) => a.id !== addressId) } };
+    });
+  }, []);
+
   return (
     <StoreContext.Provider
       value={{
         ...state,
         currentAccount,
         products: PRODUCTS,
+        bundles: BUNDLES,
+        collections: COLLECTIONS,
         signup,
         login,
         logout,
+        upgradeToEventPlanner,
         createPlan,
         addSubEvent,
         removeSubEvent,
         addPlanItem,
         removePlanItem,
         adjustPlanItemQty,
+        addBundleToPlan,
         addCoOwner,
         removeCoOwner,
         submitPlanForQuotation,
+        createDirectOrderQuotation,
         acceptQuotationLines,
         rejectQuotation,
         payForQuotation,
@@ -446,6 +635,11 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         getQuotation,
         getOrder,
         getQuotationsForPlan,
+        wishlist,
+        toggleWishlist,
+        addresses,
+        addAddress,
+        removeAddress,
       }}
     >
       {children}

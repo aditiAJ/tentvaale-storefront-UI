@@ -6,6 +6,12 @@
 
 export type AccountType = "Customer" | "EventPlanner";
 
+export interface Address {
+  id: string;
+  label: string;
+  detail: string;
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -26,6 +32,29 @@ export interface Product {
   imageUrl?: string;
 }
 
+// A Bundle isn't its own line item — "Add Full Bundle to Plan" expands it into
+// its included products as individual PlanItems, matching admin's real
+// bundle -> individual-item expansion rule (Contexts/Specs/08-Product-Bundles.md).
+// A Collection is a themed curation of ordinary catalog products ("Shop the
+// Look") — unlike a Bundle it doesn't expand into a single add-to-plan action,
+// each item is added individually.
+export interface Collection {
+  id: string;
+  name: string;
+  tagline: string;
+  heroImageUrl: string;
+  categories: string[];
+  productIds: string[];
+}
+
+export interface Bundle {
+  id: string;
+  name: string;
+  description: string;
+  imageUrl: string;
+  includedProductIds: string[];
+}
+
 export interface SubEvent {
   id: string;
   name: string;
@@ -38,6 +67,8 @@ export interface PlanItem {
   productId: string;
   quantity: number;
   dimensions?: { length: number; width?: number };
+  rentalStart?: string;
+  rentalEnd?: string;
 }
 
 export type PlanCoOwnerRole = "CoOwner" | "ViewOnlyPlanner";
@@ -94,6 +125,8 @@ export interface QuotationLine {
   confirmedQty: number;
   unitPrice: number;
   status: QuotationLineStatus;
+  /** Shown for Adjusted/Rejected lines, e.g. "Only 1 pair available — adjusted to 1". */
+  reason?: string;
   accepted: boolean;
 }
 
@@ -107,10 +140,18 @@ export interface Quotation {
   lines: QuotationLine[];
   validUntil: string;
   status: QuotationStatus;
+  /** True only for Direct Order (Flow 4 branch) — skips negotiation, all lines pre-accepted at list price. */
+  isDirectOrder?: boolean;
 }
 
 export type DeliveryStatus = "InProgress" | "FullyDelivered";
 export type DepositStatus = "Held" | "RefundPending" | "Refunded" | "Forfeited";
+
+export interface DispatchActivity {
+  date: string;
+  title: string;
+  detail?: string;
+}
 
 export interface Order {
   id: string;
@@ -122,4 +163,12 @@ export interface Order {
   paidAmount: number;
   depositAmount: number;
   createdAt: string;
+  venue?: string;
+  // NOTE: per-sub-event status/activity below is a deviation from the resolved
+  // Flow 7 decision in Contexts/Tentvaale_Storefront_UserFlows.md.txt ("order-level
+  // status only... don't ship a UI that implies precision the backend doesn't
+  // have") — the Flowstep design (screen 33) explicitly calls for it. Flagged,
+  // not silently overridden; worth revisiting once a real admin integration exists.
+  subEventDeliveryStatus: Record<string, "Delivered" | "Pending">;
+  dispatchLog: DispatchActivity[];
 }
