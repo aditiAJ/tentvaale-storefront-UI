@@ -43,6 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${manrope.variable} ${interBrand.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Search, Menu, Heart, User, X, FolderOpen } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { useMockStore } from "@/mock-data/store";
 
 // Flowstep screens 1 (desktop) / 2 (mobile). Desktop: full category rail +
@@ -43,6 +44,7 @@ function AuthActions() {
         <Link href="/account" className="flex size-9 items-center justify-center rounded-full transition-colors hover:bg-secondary" aria-label="Account">
           <User className="size-5 text-foreground" />
         </Link>
+        <ThemeToggle />
       </div>
     );
   }
@@ -54,6 +56,7 @@ function AuthActions() {
       <Link href="/signup" className="font-medium rounded-full bg-primary text-primary-foreground text-sm px-4 py-1.5 transition-colors hover:opacity-90">
         Sign Up
       </Link>
+      <ThemeToggle />
     </div>
   );
 }
@@ -108,6 +111,7 @@ export function SiteHeader() {
           <Link href="/account" className="text-foreground p-2" aria-label="Account">
             <User className="size-5" />
           </Link>
+          <ThemeToggle />
         </div>
       </div>
       {mobileMenuOpen && (

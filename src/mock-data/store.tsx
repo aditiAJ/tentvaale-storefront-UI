@@ -35,7 +35,11 @@ function loadState(): StoreState {
   if (typeof window === "undefined") return emptyState();
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as StoreState;
+    // Merge over emptyState() defaults rather than trusting the parsed blob
+    // outright — a stale localStorage entry from before a schema change
+    // (e.g. wishlists/addressBook being added) would otherwise come back
+    // missing those keys and crash every reader downstream.
+    if (raw) return { ...emptyState(), ...(JSON.parse(raw) as Partial<StoreState>) };
   } catch {
     // fall through
   }
