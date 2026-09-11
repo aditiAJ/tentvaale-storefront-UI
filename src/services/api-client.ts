@@ -1,4 +1,4 @@
-import { env } from "@/services/env";
+import { env, requireEnv } from "@/services/env";
 import { getAuthToken } from "@/services/auth-token";
 
 // Mirrors the admin backend's response envelope (Tentvaale_extracted ARCHITECTURE.md:
@@ -36,9 +36,10 @@ export async function apiFetch<T>(
   path: string,
   { method = "GET", body, signal }: RequestOptions = {},
 ): Promise<T> {
+  const apiBaseUrl = requireEnv("NEXT_PUBLIC_API_BASE_URL", env.apiBaseUrl);
   const token = getAuthToken();
 
-  const res = await fetch(`${env.apiBaseUrl}/${path.replace(/^\//, "")}`, {
+  const res = await fetch(`${apiBaseUrl}/${path.replace(/^\//, "")}`, {
     method,
     headers: {
       "Content-Type": "application/json",
