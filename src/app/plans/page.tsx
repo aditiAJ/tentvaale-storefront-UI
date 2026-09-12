@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
-import { COLLECTIONS } from "@/mock-data/seed";
+import { COLLECTIONS, formatEventDateRange } from "@/mock-data/seed";
 import type { Plan, PlanStatus } from "@/mock-data/types";
 
 // Flowstep screens 17 (desktop, populated) / 18 (mobile, empty state).
@@ -24,6 +24,15 @@ const STATUS_STYLE: Record<PlanStatus, string> = {
   Ordered: "bg-primary text-primary-foreground",
   Cancelled: "border border-destructive/60 bg-destructive/10 text-destructive",
 };
+
+// Shared by the card and the sort comparator so both read the same date.
+function planStartDate(plan: Plan) {
+  return plan.eventStartDate ?? plan.subEvents[0]?.eventDate;
+}
+
+function planDateLabel(plan: Plan) {
+  return formatEventDateRange(planStartDate(plan), plan.eventEndDate);
+}
 
 function initials(name: string) {
   return name
@@ -37,7 +46,9 @@ function initials(name: string) {
 function PlanCard({ plan }: { plan: Plan }) {
   const { accounts } = useMockStore();
   const cover = COLLECTIONS[plan.id.charCodeAt(plan.id.length - 1) % COLLECTIONS.length]?.heroImageUrl;
-  const eventDate = plan.subEvents[0]?.eventDate;
+  // Plans created from the New Plan form carry their own dates; ones created
+  // as a side effect of another flow fall back to the first sub-event's date.
+  const dateLabel = planDateLabel(plan);
   const owner = accounts.find((a) => a.id === plan.ownerAccountId);
   const collaborators = [owner, ...plan.coOwners.map((c) => accounts.find((a) => a.id === c.accountId))].filter(Boolean);
 
@@ -50,9 +61,15 @@ function PlanCard({ plan }: { plan: Plan }) {
             <h2 className="font-serif text-xl text-card-foreground">{plan.name}</h2>
             <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${STATUS_STYLE[plan.status]}`}>{plan.status}</span>
           </div>
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{eventDate ?? "No date set"}</span>
-            <span>{plan.items.length} items</span>
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+            <div className="flex items-center justify-between gap-2">
+              <span>{dateLabel}</span>
+              <span className="shrink-0">{plan.items.length} items</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate">{plan.venue || "Venue not set"}</span>
+              {plan.guestCount ? <span className="shrink-0">{plan.guestCount} guests</span> : null}
+            </div>
           </div>
           <div className="flex items-center">
             {collaborators.map((c, i) => (
@@ -73,8 +90,8 @@ function PlanCard({ plan }: { plan: Plan }) {
 export default function PlansPage() {
   const account = useRequireAccount();
   const { plans, wishlist, createPlan } = useMockStore();
-  const [name, setName] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState({ name: "", venue: "", eventStartDate: "", eventEndDate: "", guestCount: "" });
   const [statusFilter, setStatusFilter] = useState<"all" | PlanStatus>("all");
   const [sort, setSort] = useState<"event-date" | "name" | "status">("event-date");
 
@@ -85,16 +102,31 @@ export default function PlansPage() {
     const sorted = [...list];
     if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name));
     if (sort === "status") sorted.sort((a, b) => a.status.localeCompare(b.status));
-    if (sort === "event-date") sorted.sort((a, b) => (a.subEvents[0]?.eventDate ?? "9999").localeCompare(b.subEvents[0]?.eventDate ?? "9999"));
+    if (sort === "event-date") sorted.sort((a, b) => (planStartDate(a) ?? "9999").localeCompare(planStartDate(b) ?? "9999"));
     return sorted;
   }, [plans, account, statusFilter, sort]);
 
   if (!account) return null;
 
+  // Every field is required — a plan without a venue, dates and a head count
+  // can't be quoted, so the form blocks rather than creating a half-plan.
+  const formComplete =
+    form.name.trim() !== "" &&
+    form.venue.trim() !== "" &&
+    form.eventStartDate !== "" &&
+    form.eventEndDate !== "" &&
+    Number(form.guestCount) > 0;
+  const datesInvalid = form.eventStartDate !== "" && form.eventEndDate !== "" && form.eventEndDate < form.eventStartDate;
+
   function handleCreate() {
-    if (!name.trim()) return;
-    const plan = createPlan(name.trim());
-    setName("");
+    if (!formComplete || datesInvalid) return;
+    const plan = createPlan(form.name.trim(), {
+      venue: form.venue.trim(),
+      eventStartDate: form.eventStartDate,
+      eventEndDate: form.eventEndDate,
+      guestCount: Number(form.guestCount),
+    });
+    setForm({ name: "", venue: "", eventStartDate: "", eventEndDate: "", guestCount: "" });
     setDialogOpen(false);
     toast.success(`Created "${plan.name}"`);
   }
@@ -106,12 +138,35 @@ export default function PlansPage() {
         <DialogHeader>
           <DialogTitle>New plan</DialogTitle>
         </DialogHeader>
-        <div className="space-y-2">
-          <Label htmlFor="plan-name">Plan name</Label>
-          <Input id="plan-name" placeholder="Priya's Wedding" value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="plan-name">Event name *</Label>
+            <Input id="plan-name" placeholder="Priya's Wedding" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="plan-venue">Venue *</Label>
+            <Input id="plan-venue" placeholder="Taj Palace, Delhi" value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="plan-start">Start date *</Label>
+              <Input id="plan-start" type="date" value={form.eventStartDate} onChange={(e) => setForm({ ...form, eventStartDate: e.target.value })} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="plan-end">End date *</Label>
+              <Input id="plan-end" type="date" min={form.eventStartDate || undefined} value={form.eventEndDate} onChange={(e) => setForm({ ...form, eventEndDate: e.target.value })} />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="plan-guests">Guest count *</Label>
+            <Input id="plan-guests" type="number" min={1} placeholder="250" value={form.guestCount} onChange={(e) => setForm({ ...form, guestCount: e.target.value })} />
+          </div>
+          {datesInvalid && <p className="text-xs text-destructive">End date cannot be before the start date.</p>}
         </div>
         <DialogFooter>
-          <Button onClick={handleCreate}>Create</Button>
+          <Button onClick={handleCreate} disabled={!formComplete || datesInvalid}>
+            Create
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

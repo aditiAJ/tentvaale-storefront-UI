@@ -9,9 +9,12 @@ import type {
   Plan,
   PlanAuditAction,
   PlanCoOwnerRole,
+  PlanEventDetails,
   Quotation,
   QuotationLine,
   QuotationLineStatus,
+  SubEvent,
+  SubEventDetails,
 } from "./types";
 import { BUNDLES, COLLECTIONS, PRODUCTS } from "./seed";
 
@@ -74,8 +77,8 @@ interface StoreContextValue extends StoreState {
   logout: () => void;
   upgradeToEventPlanner: () => void;
 
-  createPlan: (name: string) => Plan;
-  addSubEvent: (planId: string, name: string, eventDate: string) => void;
+  createPlan: (name: string, details?: PlanEventDetails) => Plan;
+  addSubEvent: (planId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
   removeSubEvent: (planId: string, subEventId: string) => void;
   addPlanItem: (
     planId: string,
@@ -89,6 +92,7 @@ interface StoreContextValue extends StoreState {
     },
   ) => void;
   removePlanItem: (planId: string, itemId: string) => void;
+  movePlanItem: (planId: string, itemId: string, subEventId: string | null) => void;
   adjustPlanItemQty: (planId: string, itemId: string, delta: number) => void;
   addBundleToPlan: (planId: string, bundleId: string, rental?: { rentalStart?: string; rentalEnd?: string }) => void;
 
@@ -202,12 +206,13 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const createPlan = useCallback(
-    (name: string) => {
+    (name: string, details?: PlanEventDetails) => {
       if (!state.currentAccountId) throw new Error("Not signed in");
       const plan: Plan = {
         id: newId("plan"),
         ownerAccountId: state.currentAccountId,
         name,
+        ...details,
         status: "Draft",
         subEvents: [],
         items: [],
@@ -221,9 +226,9 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     [state.currentAccountId],
   );
 
-  const addSubEvent = useCallback((planId: string, name: string, eventDate: string) => {
+  const addSubEvent = useCallback((planId: string, name: string, eventDate: string, details?: SubEventDetails) => {
     updatePlan(planId, (p, accountId) => {
-      const subEvent = { id: newId("sub"), name, eventDate };
+      const subEvent: SubEvent = { id: newId("sub"), name, eventDate, ...details };
       return pushAudit({ ...p, subEvents: [...p.subEvents, subEvent] }, "SubEventAdded", name, accountId);
     });
   }, []);
@@ -285,6 +290,16 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       const product = PRODUCTS.find((pr) => pr.id === item?.productId);
       return pushAudit({ ...p, items: p.items.filter((it) => it.id !== itemId) }, "ItemRemoved", product?.name ?? itemId, accountId);
     });
+  }, []);
+
+  // Re-tag a line to another sub-event (or back to the general list). Flow 2
+  // treats sub-event tagging as a label on the item, so this is a field swap,
+  // not a remove-and-re-add.
+  const movePlanItem = useCallback((planId: string, itemId: string, subEventId: string | null) => {
+    updatePlan(planId, (p) => ({
+      ...p,
+      items: p.items.map((it) => (it.id === itemId ? { ...it, subEventId } : it)),
+    }));
   }, []);
 
   const adjustPlanItemQty = useCallback((planId: string, itemId: string, delta: number) => {
@@ -624,6 +639,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         removeSubEvent,
         addPlanItem,
         removePlanItem,
+        movePlanItem,
         adjustPlanItemQty,
         addBundleToPlan,
         addCoOwner,

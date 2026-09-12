@@ -55,7 +55,16 @@ export interface Bundle {
   includedProductIds: string[];
 }
 
-export interface SubEvent {
+// Only name + eventDate are asked for when a sub-event is created; the rest
+// are optional logistics the customer can fill in at creation or leave blank.
+export interface SubEventDetails {
+  venue?: string;
+  setupDate?: string;
+  teardownDate?: string;
+  guestCount?: number;
+}
+
+export interface SubEvent extends SubEventDetails {
   id: string;
   name: string;
   eventDate: string;
@@ -103,7 +112,18 @@ export interface PlanAuditEntry {
 
 export type PlanStatus = "Draft" | "Submitted" | "Quoted" | "PartiallyAccepted" | "Ordered" | "Cancelled";
 
-export interface Plan {
+// The New Plan form requires all four of these. They stay optional on the
+// type because plans created as a side effect of another flow (wishlist
+// "create plan and add", AI planner, check-availability) have no form to
+// collect them — those plans show "Not set" until the customer edits them.
+export interface PlanEventDetails {
+  venue?: string;
+  eventStartDate?: string;
+  eventEndDate?: string;
+  guestCount?: number;
+}
+
+export interface Plan extends PlanEventDetails {
   id: string;
   ownerAccountId: string;
   name: string;

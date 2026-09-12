@@ -11,10 +11,10 @@ import { useMockStore } from "@/mock-data/store";
 // inline search + auth in one row. Mobile: hamburger + wordmark + icons, with
 // a separate fixed bottom tab bar (site-mobile-nav.tsx) for primary nav.
 const NAV_LINKS = [
-  { href: "/catalog", label: "Product Catalog" },
-  { href: "/plans", label: "Plan Board" },
   { href: "/collections", label: "Featured Collections" },
   { href: "/bundles", label: "Bundles" },
+  { href: "/catalog", label: "Product Catalog" },
+  { href: "/plans", label: "Plan Board" },
   { href: "/about", label: "About" },
 ];
 

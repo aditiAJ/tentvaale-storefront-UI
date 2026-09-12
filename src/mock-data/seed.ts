@@ -150,12 +150,14 @@ export const BUNDLES: Bundle[] = [
 
 // Flow 2: "Starter suggestions surface for new plans (entry gate, passage,
 // seating, stage, photo booth) — customer can accept or dismiss each."
-export const STARTER_SUGGESTIONS: { key: string; label: string; productId: string }[] = [
-  { key: "entry-gate", label: "Entry Gate", productId: "p14" },
-  { key: "passage", label: "Passage", productId: "p8" },
-  { key: "seating", label: "Seating", productId: "p3" },
-  { key: "stage", label: "Stage", productId: "p14" },
-  { key: "photo-booth", label: "Photo Booth", productId: "p12" },
+// `categories` pre-filters the product picker the suggestion opens — a
+// suggestion is a prompt to choose something, not a single pre-picked SKU.
+export const STARTER_SUGGESTIONS: { key: string; label: string; categories: string[] }[] = [
+  { key: "entry-gate", label: "Entry Gate", categories: ["Installation Setup", "Styling Props", "Lighting"] },
+  { key: "passage", label: "Passage", categories: ["Carpets", "Lighting", "Planters"] },
+  { key: "seating", label: "Seating", categories: ["Furniture", "Lounge Packages"] },
+  { key: "stage", label: "Stage", categories: ["Installation Setup", "Styling Props"] },
+  { key: "photo-booth", label: "Photo Booth", categories: ["Styling Props", "Mirrors", "Lighting"] },
 ];
 
 // Flow: AI Planner results (screens 44-45) — a fixed curated set stands in for
@@ -179,4 +181,24 @@ export function formatRupees(n: number): string {
 
 export function rateTypeLabel(rateType: Product["rateType"]): string {
   return rateType === "Qty" ? "per unit" : rateType === "SqFt" ? "per sqft" : "per running ft";
+}
+
+// Dates are stored as ISO yyyy-mm-dd; the UI shows them as "9th Sep 2026".
+export function formatEventDate(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(`${iso}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  const day = d.getDate();
+  const suffix = day % 100 >= 11 && day % 100 <= 13 ? "th" : ["th", "st", "nd", "rd"][day % 10] ?? "th";
+  return `${day}${suffix} ${d.toLocaleString("en-GB", { month: "short" })} ${d.getFullYear()}`;
+}
+
+// "9th Sep — 12th Sep 2026" when the range shares a year, the full pair when
+// it doesn't, and a single date when start and end match.
+export function formatEventDateRange(start?: string, end?: string): string {
+  if (!start && !end) return "No date set";
+  if (!start) return formatEventDate(end);
+  if (!end || end === start) return formatEventDate(start);
+  const sameYear = start.slice(0, 4) === end.slice(0, 4);
+  return sameYear ? `${formatEventDate(start).replace(/ \d{4}$/, "")} — ${formatEventDate(end)}` : `${formatEventDate(start)} — ${formatEventDate(end)}`;
 }
