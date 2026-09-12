@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Search,
   Armchair,
@@ -13,16 +11,20 @@ import {
   Lightbulb,
   Wrench,
   Sofa,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ProductThumb } from "@/components/product-thumb";
+import { useMockStore } from "@/mock-data/store";
+import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
 
 // Flowstep screens 1 (desktop) / 2 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
-const OCCASIONS = ["Wedding", "Haldi", "Corporate", "Fashion Shoot", "Luxury Lounge", "More"];
+const OCCASIONS = ["Wedding", "Haldi", "Corporate", "Fashion Shoot", "Luxury Lounge"];
 
-const CATEGORY_ICONS = [
+// Labels match Product.category in src/mock-data/seed.ts exactly — the link
+// passes them straight to /catalog?category=, so a mismatch silently renders
+// an empty catalog.
+const CATEGORIES = [
   { icon: Armchair, label: "Furniture" },
   { icon: Sparkles, label: "Styling Props" },
   { icon: Frame, label: "Mirrors" },
@@ -31,20 +33,6 @@ const CATEGORY_ICONS = [
   { icon: Lightbulb, label: "Lighting" },
   { icon: Wrench, label: "Installation Setup" },
   { icon: Sofa, label: "Lounge Packages" },
-];
-
-const FEATURED_THEMES = [
-  { title: "Royal Heritage", img: "https://images.unsplash.com/photo-1772127822552-ce9ef537bdcf?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600" },
-  { title: "Monochrome Reception", img: "https://images.unsplash.com/photo-1716538878686-38567b89b5a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600" },
-  { title: "Amber Dunes", img: "https://images.unsplash.com/photo-1632296521966-b19f0d728635?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600" },
-  { title: "Garden Evening", img: "https://images.unsplash.com/photo-1651472652024-6ca9278d53a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=600" },
-];
-
-const TRENDING_COLLECTIONS = [
-  { title: "Furniture Edit", icon: Armchair },
-  { title: "Mirror Walls", icon: Frame },
-  { title: "Planter Styling", icon: Flower2 },
-  { title: "Ambient Lighting", icon: Lightbulb },
 ];
 
 const STATS = [
@@ -60,185 +48,184 @@ const PROJECTS = [
   { title: "Goa Beach Reception", img: "https://images.unsplash.com/photo-1651472652024-6ca9278d53a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
 ];
 
-const CITIES = ["Delhi", "Mumbai", "Goa", "Bengaluru"];
+// Every band below the hero shares this wrapper so gutters, max width and
+// vertical rhythm stay identical down the page.
+function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <section className={`mx-auto w-full max-w-7xl px-6 py-10 md:px-12 md:py-14 ${className}`}>{children}</section>;
+}
+
+function SectionHeading({ title, href, linkLabel = "View all" }: { title: string; href?: string; linkLabel?: string }) {
+  return (
+    <div className="mb-6 flex items-end justify-between gap-4">
+      <h2 className="font-serif text-2xl text-foreground md:text-3xl">{title}</h2>
+      {href && (
+        <Link href={href} className="flex shrink-0 items-center gap-1 text-sm text-primary transition-opacity hover:opacity-70">
+          {linkLabel}
+          <ArrowRight className="size-4" />
+        </Link>
+      )}
+    </div>
+  );
+}
 
 export default function Home() {
-  const router = useRouter();
-  const [availDate, setAvailDate] = useState("");
-  const [availCity, setAvailCity] = useState("");
-
-  function checkAvailability() {
-    const params = new URLSearchParams();
-    if (availDate) params.set("date", availDate);
-    params.set("city", availCity || "Mumbai");
-    router.push(`/check-availability?${params.toString()}`);
-  }
+  const { products, collections, bundles } = useMockStore();
+  const featuredProducts = products.slice(0, 8);
 
   return (
     <div className="w-full">
-      <section className="relative w-full h-[400px] md:h-[520px]">
+      <section className="relative h-110 w-full md:h-140">
         <img
           src="https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600"
           alt="Luxury event decor"
           className="size-full object-cover"
         />
-        <div className="bg-linear-to-t md:bg-linear-to-r from-background via-background/70 to-transparent absolute inset-0" />
-        <div className="flex absolute inset-0 px-6 md:px-12 flex-col justify-end md:justify-center gap-4 md:gap-6 pb-8 md:pb-0 max-w-2xl">
-          <h1 className="font-serif text-foreground text-3xl md:text-5xl leading-tight">
+        <div className="absolute inset-0 bg-linear-to-t from-background via-background/70 to-transparent md:bg-linear-to-r" />
+        <div className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-10 md:justify-center md:gap-6 md:px-12 md:pb-0">
+          <h1 className="max-w-2xl font-serif text-3xl leading-tight text-foreground md:text-5xl">
             Design Every Detail of Your Event
           </h1>
-          <p className="text-muted-foreground text-base md:text-lg max-w-lg">
-            Rent furniture, decor and full styled themes for weddings, corporate events and shoots
+          <p className="max-w-lg text-base text-muted-foreground md:text-lg">
+            Rent furniture, décor and fully styled collections for weddings, corporate events and shoots.
           </p>
-          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 md:gap-4">
-            <Button className="rounded-full" size="lg" nativeButton={false} render={<Link href="/catalog">Explore Collection</Link>} />
-            <Button variant="outline" className="rounded-full" size="lg" nativeButton={false} render={<Link href="/plans">Start Planning</Link>} />
+          <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
+            <Button className="rounded-full" size="lg" nativeButton={false} render={<Link href="/catalog">Browse Product Catalog</Link>} />
+            <Button variant="outline" className="rounded-full" size="lg" nativeButton={false} render={<Link href="/plans">Start a Plan Board</Link>} />
           </div>
         </div>
       </section>
 
-      <section className="flex pt-10 md:pt-12 px-6 md:px-12 pb-8 md:pb-12 flex-col items-center gap-6">
-        <h2 className="font-serif text-foreground text-2xl md:text-3xl text-center">What are you creating today?</h2>
+      <Section className="flex flex-col items-center gap-6">
+        <h2 className="text-center font-serif text-2xl text-foreground md:text-3xl">What are you creating today?</h2>
         <form action="/search" className="relative w-full max-w-2xl">
-          <Search className="-translate-y-1/2 text-muted-foreground absolute top-1/2 left-4 size-5" />
+          <Search className="absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             name="q"
-            placeholder="Search venues, décor, themes..."
-            className="rounded-full bg-muted text-foreground text-base border border-border py-3.5 md:py-4 pr-4 pl-12 w-full outline-none focus:border-primary"
+            placeholder="Search products, collections, bundles..."
+            className="w-full rounded-full border border-border bg-muted py-3.5 pr-4 pl-12 text-base text-foreground outline-none transition-colors focus:border-primary md:py-4"
           />
         </form>
-        <div className="flex flex-wrap justify-center items-center gap-3">
+        <div className="flex flex-wrap justify-center gap-3">
           {OCCASIONS.map((o) => (
             <Link
               key={o}
               href={`/search?occasion=${encodeURIComponent(o)}`}
-              className="transition-colors rounded-full text-sm border border-primary text-foreground px-5 py-2 hover:bg-primary hover:text-primary-foreground"
+              className="rounded-full border border-primary px-5 py-2 text-sm text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
             >
               {o}
             </Link>
           ))}
         </div>
-      </section>
 
-      <section className="flex px-6 md:px-12 pb-8 md:pb-8 gap-4 md:gap-0 md:justify-between overflow-x-auto">
-        {CATEGORY_ICONS.map(({ icon: Icon, label }) => (
-          <Link key={label} href={`/catalog?category=${encodeURIComponent(label)}`} className="flex flex-col items-center shrink-0 md:w-full gap-2 w-16">
-            <div className="rounded-full bg-secondary border border-primary/40 flex justify-center items-center size-16">
-              <Icon className="text-primary size-6" />
-            </div>
-            <span className="text-center text-foreground text-xs md:text-sm">{label}</span>
-          </Link>
-        ))}
-      </section>
-
-      <section className="flex pt-8 px-6 md:px-12 pb-8 flex-col gap-6">
-        <div className="flex justify-between items-center">
-          <h2 className="font-serif text-foreground text-xl md:text-3xl">Featured Themes</h2>
-          <Link href="/collections" className="transition-colors text-primary text-sm">
-            View all
-          </Link>
-        </div>
-        <div className="flex md:grid gap-6 grid-cols-4 overflow-x-auto pb-1">
-          {FEATURED_THEMES.map((t) => (
-            <Link key={t.title} href={`/collections/${encodeURIComponent(t.title.toLowerCase().replace(/\s+/g, "-"))}`} className="flex flex-col gap-2 shrink-0 w-[240px] md:w-auto">
-              <div className="rounded-2xl h-40 md:h-56 overflow-hidden">
-                <img src={t.img} alt={t.title} className="size-full object-cover" />
+        <div className="mt-4 grid w-full grid-cols-4 gap-x-4 gap-y-6 md:grid-cols-8">
+          {CATEGORIES.map(({ icon: Icon, label }) => (
+            <Link key={label} href={`/catalog?category=${encodeURIComponent(label)}`} className="group flex flex-col items-center gap-2">
+              <div className="flex size-14 items-center justify-center rounded-full border border-primary/40 bg-secondary transition-colors group-hover:border-primary group-hover:bg-primary/10 md:size-16">
+                <Icon className="size-6 text-primary" />
               </div>
-              <span className="text-foreground text-sm md:text-base">{t.title}</span>
+              <span className="text-center text-xs leading-tight text-foreground transition-colors group-hover:text-primary md:text-sm">
+                {label}
+              </span>
             </Link>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section className="flex pt-8 px-6 md:px-12 pb-8 flex-col gap-6">
-        <h2 className="font-serif text-foreground text-xl md:text-3xl">Trending Collections</h2>
-        <div className="flex md:grid gap-4 md:gap-6 grid-cols-4 overflow-x-auto pb-1">
-          {TRENDING_COLLECTIONS.map(({ icon: Icon, title }) => (
+      <Section>
+        <SectionHeading title="Product Catalog" href="/catalog" linkLabel="Browse all" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+          {featuredProducts.map((p) => (
             <Link
-              key={title}
-              href={`/catalog?collection=${encodeURIComponent(title)}`}
-              className="rounded-lg bg-card border border-border flex flex-col p-4 shrink-0 gap-2 w-40 md:w-auto md:h-40 md:justify-center"
+              key={p.id}
+              href={`/catalog/${p.id}`}
+              className="group flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary"
             >
-              <Icon className="text-primary size-5" />
-              <span className="text-foreground text-sm">{title}</span>
+              <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-36 w-full rounded-xl md:h-44" />
+              <div className="flex flex-col gap-1 px-1 pb-1">
+                <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary">{p.name}</span>
+                <span className="text-xs text-muted-foreground">From {formatRupees(p.basePrice)} / day</span>
+                <span className="w-fit rounded-full border border-primary/40 px-2 py-0.5 text-[10px] text-primary">
+                  {rateTypeLabel(p.rateType)}
+                </span>
+              </div>
             </Link>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section className="px-6 md:px-12 pb-8">
-        <Card className="rounded-2xl bg-secondary md:bg-secondary border-0 flex flex-col md:flex-row p-6 md:p-8 gap-4 justify-between items-start md:items-center w-full">
-          <div className="flex items-center gap-4 md:gap-6">
-            <div className="rounded-full bg-primary/15 flex justify-center items-center size-12 md:size-14 shrink-0">
-              <Sparkles className="text-primary size-6 md:size-7" />
-            </div>
-            <div className="flex flex-col gap-1">
-              <h3 className="font-serif text-foreground text-lg md:text-2xl">Let AI Plan Your Event</h3>
-              <p className="text-muted-foreground text-sm">Answer a few questions and get a tailored décor plan in minutes</p>
-            </div>
-          </div>
-          <Button className="rounded-full w-full md:w-auto" nativeButton={false} render={<Link href="/ai-planner">Try AI Planner</Link>} />
-        </Card>
-      </section>
+      <Section>
+        <SectionHeading title="Featured Collections" href="/collections" />
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {collections.map((c) => (
+            <Link key={c.id} href={`/collections/${c.id}`} className="group flex flex-col gap-3">
+              <div className="h-44 overflow-hidden rounded-2xl md:h-56">
+                <img
+                  src={c.heroImageUrl}
+                  alt={c.name}
+                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{c.name}</span>
+                <span className="line-clamp-2 text-xs text-muted-foreground md:text-sm">{c.tagline}</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Section>
 
-      <section className="px-6 md:px-12 pb-8">
-        <Card className="bg-card border-border p-6 md:p-8 gap-4 md:gap-6">
-          <CardHeader className="p-0 gap-2">
-            <h3 className="font-serif text-foreground text-xl md:text-2xl">Check Availability</h3>
-          </CardHeader>
-          <CardContent className="flex flex-col md:flex-row p-0 items-stretch md:items-end gap-4">
-            <div className="flex flex-col flex-1 gap-2">
-              <label className="text-muted-foreground text-sm">Date</label>
-              <Input type="date" className="rounded-lg bg-muted border-border w-full" value={availDate} onChange={(e) => setAvailDate(e.target.value)} />
-            </div>
-            <div className="flex flex-col flex-1 gap-2">
-              <label className="text-muted-foreground text-sm">City</label>
-              <Select value={availCity} onValueChange={(v) => v && setAvailCity(v)}>
-                <SelectTrigger className="bg-muted border-border w-full">
-                  <SelectValue placeholder="Select city" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CITIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button className="rounded-full" onClick={checkAvailability}>
-              Check Now
-            </Button>
-          </CardContent>
-        </Card>
-      </section>
+      <Section>
+        <SectionHeading title="Bundles" href="/bundles" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+          {bundles.map((b) => (
+            <Link
+              key={b.id}
+              href={`/bundles/${b.id}`}
+              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary"
+            >
+              <div className="h-44 overflow-hidden md:h-52">
+                <img
+                  src={b.imageUrl}
+                  alt={b.name}
+                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+              </div>
+              <div className="flex flex-1 flex-col gap-2 p-5">
+                <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{b.name}</span>
+                <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{b.description}</p>
+                <span className="text-xs text-muted-foreground">{b.includedProductIds.length} items included</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Section>
 
-      <section className="px-6 md:px-12 pb-8">
-        <h2 className="font-serif text-foreground text-xl md:text-3xl mb-6">Why Tentvaale</h2>
-        <div className="grid gap-4 md:gap-6 grid-cols-2 md:grid-cols-4">
+      <Section>
+        <SectionHeading title="Why Tentvaale" />
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
           {STATS.map((s) => (
-            <div key={s.label} className="rounded-lg bg-card border border-border flex flex-col p-4 md:p-0 md:border-0 md:bg-transparent gap-1">
-              <span className="font-serif text-primary text-2xl md:text-4xl">{s.value}</span>
-              <span className="text-muted-foreground md:text-foreground text-xs md:text-sm">{s.label}</span>
+            <div key={s.label} className="flex flex-col gap-1 rounded-2xl border border-border bg-card p-5">
+              <span className="font-serif text-2xl text-primary md:text-4xl">{s.value}</span>
+              <span className="text-xs text-muted-foreground md:text-sm">{s.label}</span>
             </div>
           ))}
         </div>
-      </section>
+      </Section>
 
-      <section className="flex pt-8 px-6 md:px-12 pb-8 flex-col gap-6">
-        <h2 className="font-serif text-foreground text-xl md:text-3xl">Featured Projects</h2>
-        <div className="flex md:grid gap-4 md:gap-6 grid-cols-3 overflow-x-auto pb-1">
+      <Section>
+        <SectionHeading title="Featured Projects" />
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {PROJECTS.map((p) => (
-            <div key={p.title} className="rounded-2xl border border-border relative shrink-0 w-[240px] md:w-auto h-44 md:h-64 overflow-hidden">
+            <div key={p.title} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
               <img src={p.img} alt={p.title} className="size-full object-cover" />
-              <div className="bg-linear-to-t from-background to-transparent absolute inset-x-0 bottom-0 p-4">
-                <span className="text-foreground text-sm">{p.title}</span>
+              <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background to-transparent p-4">
+                <span className="text-sm text-foreground">{p.title}</span>
               </div>
             </div>
           ))}
         </div>
-      </section>
+      </Section>
     </div>
   );
 }
