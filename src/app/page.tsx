@@ -80,12 +80,13 @@ export default function Home() {
           alt="Luxury event decor"
           className="size-full object-cover"
         />
-        <div className="absolute inset-0 bg-linear-to-t from-background via-background/70 to-transparent md:bg-linear-to-r" />
-        <div className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-10 md:justify-center md:gap-6 md:px-12 md:pb-0">
-          <h1 className="max-w-2xl font-serif text-3xl leading-tight text-foreground md:text-5xl">
+        {/* Fade confined to the bottom band only — the rest of the photo stays fully visible, undimmed. */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/85 via-black/40 to-transparent" />
+        <div className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-8 md:gap-6 md:px-12 md:pb-12">
+          <h1 className="max-w-2xl font-serif text-3xl leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)] md:text-5xl">
             Design Every Detail of Your Event
           </h1>
-          <p className="max-w-lg text-base text-muted-foreground md:text-lg">
+          <p className="max-w-lg text-base text-white/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)] md:text-lg">
             Rent furniture, décor and fully styled collections for weddings, corporate events and shoots.
           </p>
           <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">

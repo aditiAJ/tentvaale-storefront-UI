@@ -13,7 +13,7 @@ export default function CollectionsPage() {
       <header className="flex flex-col gap-2">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">Featured Collections</h1>
         <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
-          Fully styled looks — every piece already chosen to work together. Open one to shop the pieces or add the whole look to a plan.
+          Fully styled looks — every piece already chosen to work together. Open one to shop the pieces and add each to a plan.
         </p>
       </header>
 

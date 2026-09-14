@@ -62,6 +62,9 @@ export interface SubEventDetails {
   setupDate?: string;
   teardownDate?: string;
   guestCount?: number;
+  /** HH:mm, 24h. Time-of-day for the Timeline view — date alone doesn't show overlap within a day. */
+  startTime?: string;
+  endTime?: string;
 }
 
 export interface SubEvent extends SubEventDetails {
@@ -93,7 +96,9 @@ export type PlanAuditAction =
   | "ItemAdded"
   | "ItemRemoved"
   | "SubEventAdded"
+  | "SubEventEdited"
   | "SubEventRemoved"
+  | "ItemSharingChanged"
   | "CoOwnerAdded"
   | "CoOwnerRemoved"
   | "PlanSubmitted"
@@ -123,6 +128,8 @@ export interface PlanEventDetails {
   guestCount?: number;
 }
 
+export type ItemSharingDecision = "Shared" | "Dedicated";
+
 export interface Plan extends PlanEventDetails {
   id: string;
   ownerAccountId: string;
@@ -133,6 +140,13 @@ export interface Plan extends PlanEventDetails {
   coOwners: PlanCoOwner[];
   auditLog: PlanAuditEntry[];
   createdAt: string;
+  // Manual customer declaration, never system-inferred (Plan Board redesign,
+  // 2026-09-14): for a product used across 2+ sub-events, "Shared" means the
+  // same physical units are reused between them (required qty = the largest
+  // single sub-event's need); "Dedicated" means separate stock per sub-event
+  // (required qty = sum). A product with no entry here is undecided — that's
+  // what drives the Plan Health nudges, not a default of either state.
+  itemSharing?: Record<string, ItemSharingDecision>; // productId -> decision
 }
 
 export type QuotationLineStatus = "Confirmed" | "Adjusted" | "Rejected";

@@ -175,6 +175,10 @@ export const AI_PLAN_SUGGESTIONS: { kind: "product" | "bundle"; id: string }[] =
 
 export const AI_PLANNER_EVENT_TYPES = ["Wedding", "Haldi", "Corporate", "Fashion Shoot", "Luxury Lounge", "Other"];
 
+// Plan Board sub-event ("function") name presets — "Custom" falls through to
+// a free-text name in the Add/Edit Sub-Event form instead of one of these.
+export const FUNCTION_PRESETS = ["Haldi", "Mehendi", "Sangeet", "Wedding", "Reception"] as const;
+
 export function formatRupees(n: number): string {
   return "₹" + Math.round(n).toLocaleString("en-IN");
 }

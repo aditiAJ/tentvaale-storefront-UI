@@ -5,6 +5,7 @@ import type {
   Account,
   AccountType,
   Address,
+  ItemSharingDecision,
   Order,
   Plan,
   PlanAuditAction,
@@ -79,7 +80,10 @@ interface StoreContextValue extends StoreState {
 
   createPlan: (name: string, details?: PlanEventDetails) => Plan;
   addSubEvent: (planId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
+  updateSubEvent: (planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
   removeSubEvent: (planId: string, subEventId: string) => void;
+  setItemSharing: (planId: string, productId: string, decision: ItemSharingDecision) => void;
+  clearItemSharing: (planId: string, productId: string) => void;
   addPlanItem: (
     planId: string,
     item: {
@@ -230,6 +234,39 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     updatePlan(planId, (p, accountId) => {
       const subEvent: SubEvent = { id: newId("sub"), name, eventDate, ...details };
       return pushAudit({ ...p, subEvents: [...p.subEvents, subEvent] }, "SubEventAdded", name, accountId);
+    });
+  }, []);
+
+  const updateSubEvent = useCallback((planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => {
+    updatePlan(planId, (p, accountId) =>
+      pushAudit(
+        {
+          ...p,
+          subEvents: p.subEvents.map((se) => (se.id === subEventId ? { ...se, name, eventDate, ...details } : se)),
+        },
+        "SubEventEdited",
+        name,
+        accountId,
+      ),
+    );
+  }, []);
+
+  // Manual only — never inferred from overlap/timing. A product with no entry
+  // is undecided, distinct from "Dedicated"; clearItemSharing puts it back
+  // there rather than defaulting to a choice the customer didn't make.
+  const setItemSharing = useCallback((planId: string, productId: string, decision: ItemSharingDecision) => {
+    updatePlan(planId, (p, accountId) => {
+      const product = PRODUCTS.find((pr) => pr.id === productId);
+      return pushAudit({ ...p, itemSharing: { ...p.itemSharing, [productId]: decision } }, "ItemSharingChanged", `${product?.name ?? productId}: ${decision}`, accountId);
+    });
+  }, []);
+
+  const clearItemSharing = useCallback((planId: string, productId: string) => {
+    updatePlan(planId, (p) => {
+      if (!p.itemSharing || !(productId in p.itemSharing)) return p;
+      const next = { ...p.itemSharing };
+      delete next[productId];
+      return { ...p, itemSharing: next };
     });
   }, []);
 
@@ -636,7 +673,10 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         upgradeToEventPlanner,
         createPlan,
         addSubEvent,
+        updateSubEvent,
         removeSubEvent,
+        setItemSharing,
+        clearItemSharing,
         addPlanItem,
         removePlanItem,
         movePlanItem,

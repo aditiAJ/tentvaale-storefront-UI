@@ -3,7 +3,23 @@
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CalendarRange, Clock, LayoutList, MoveRight, Pencil, Plus, Search, Share2, Sparkles, Trash2, X } from "lucide-react";
+import {
+  Boxes,
+  CalendarRange,
+  Clock,
+  GanttChartSquare,
+  Info,
+  LayoutList,
+  ListChecks,
+  MoveRight,
+  Pencil,
+  Plus,
+  Search,
+  Share2,
+  Sparkles,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,7 +30,8 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
-import { STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import { getProductUsage, needsSharingDecision, requiredQuantity } from "@/mock-data/inventory-sharing";
+import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
 import type { PlanItem, PlanStatus, Product, SubEvent } from "@/mock-data/types";
 
 // Flowstep screens 19 (desktop) / 20 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
@@ -27,7 +44,7 @@ const STATUS_STYLE: Record<PlanStatus, string> = {
   Cancelled: "border border-destructive/60 bg-destructive/10 text-destructive",
 };
 
-const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", setupDate: "", teardownDate: "", guestCount: "" };
+const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
 
 // One row of the event-details strip; renders a dash rather than collapsing so
 // the strip keeps the same shape whether or not a field was filled in.
@@ -53,7 +70,7 @@ function initials(name: string) {
 export default function PlanDetailPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const account = useRequireAccount();
-  const { getPlan, products, accounts, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, addSubEvent } = useMockStore();
+  const { getPlan, products, accounts, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing } = useMockStore();
   const plan = getPlan(planId);
 
   const [activeTab, setActiveTab] = useState<string | null>(null); // null = General/Untagged
@@ -62,8 +79,11 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, string[]>>({});
   const [subEventDialogOpen, setSubEventDialogOpen] = useState(false);
   const [subEventForm, setSubEventForm] = useState(EMPTY_SUB_EVENT);
+  const [customFunctionName, setCustomFunctionName] = useState(false);
+  // null = the dialog is adding a new sub-event; an id = editing that one.
+  const [editingSubEventId, setEditingSubEventId] = useState<string | null>(null);
   const [auditLogOpen, setAuditLogOpen] = useState(false);
-  const [view, setView] = useState<"sub-events" | "dates">("sub-events");
+  const [view, setView] = useState<"sub-events" | "dates" | "timeline" | "inventory">("sub-events");
   const [activeDate, setActiveDate] = useState<string | null>(null);
   // Which starter suggestion opened the product picker — null = picker closed.
   const [pickerFor, setPickerFor] = useState<(typeof STARTER_SUGGESTIONS)[number] | null>(null);
@@ -82,6 +102,25 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const activeItems = plan.items.filter((it) => it.subEventId === activeTab);
   const activeSubEvent = activeTab ? plan.subEvents.find((se) => se.id === activeTab) : undefined;
   const activeLabel = activeSubEvent?.name ?? "General / Untagged";
+
+  // Drives the "Shared with X" tag on line items and the Inventory view.
+  const productUsage = getProductUsage(plan, products);
+
+  // Gentle planning nudges, never framed as a shortage or a warning — just
+  // things the customer hasn't gotten to yet.
+  const healthPrompts: string[] = [
+    ...productUsage
+      .filter((u) => needsSharingDecision(u) && !plan!.itemSharing?.[u.productId])
+      .map((u) => `You haven't confirmed whether ${u.product.name} is shared between ${[...new Set(u.subEventOccurrences.map((o) => o.subEventName))].join(" and ")}.`),
+    ...plan.subEvents.filter((se) => !plan!.items.some((it) => it.subEventId === se.id)).map((se) => `${se.name} has no inventory added yet.`),
+  ];
+  function sharedWithLabel(item: PlanItem): string | null {
+    if (plan!.itemSharing?.[item.productId] !== "Shared") return null;
+    const usage = productUsage.find((u) => u.productId === item.productId);
+    const others = usage?.subEventOccurrences.filter((o) => o.itemId !== item.id) ?? [];
+    if (others.length === 0) return null;
+    return `Shared with ${[...new Set(others.map((o) => o.subEventName))].join(", ")}`;
+  }
 
   function lineQty(item: PlanItem) {
     return item.dimensions?.length ?? item.quantity;
@@ -295,6 +334,217 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     );
   }
 
+  // Timeline: a horizontal band per sub-event that has a start time, laid out
+  // against a single continuous time axis (earliest start -> latest end
+  // across the plan). This is a planning aid, not a scheduler — it only ever
+  // shows where things sit relative to each other; nothing here blocks
+  // anything or calls it a "conflict".
+  function renderTimelineView() {
+    const scheduled = plan!.subEvents
+      .filter((se) => se.eventDate && se.startTime)
+      .map((se) => {
+        const start = new Date(`${se.eventDate}T${se.startTime}`);
+        const end = se.endTime ? new Date(`${se.eventDate}T${se.endTime}`) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+        return { se, start, end: end > start ? end : new Date(start.getTime() + 30 * 60 * 1000) };
+      })
+      .sort((a, b) => a.start.getTime() - b.start.getTime());
+    const unscheduled = plan!.subEvents.filter((se) => !se.eventDate || !se.startTime);
+
+    if (scheduled.length === 0) {
+      return (
+        <p className="mt-6 rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          Give a sub-event a date and start time to see it here, laid out against the others.
+        </p>
+      );
+    }
+
+    const axisMin = Math.min(...scheduled.map((s) => s.start.getTime()));
+    const axisMax = Math.max(...scheduled.map((s) => s.end.getTime()));
+    const span = Math.max(axisMax - axisMin, 60 * 60 * 1000);
+    const pct = (t: number) => ((t - axisMin) / span) * 100;
+
+    const dayTicks: { key: string; label: string; pct: number }[] = [];
+    const seenDays = new Set<string>();
+    for (const { se } of scheduled) {
+      if (seenDays.has(se.eventDate)) continue;
+      seenDays.add(se.eventDate);
+      dayTicks.push({ key: se.eventDate, label: formatEventDate(se.eventDate), pct: Math.max(0, Math.min(100, pct(new Date(`${se.eventDate}T00:00`).getTime()))) });
+    }
+    dayTicks.sort((a, b) => a.pct - b.pct);
+
+    // Merge every stretch where 2+ sub-events are concurrently running into
+    // highlight bands — a sweep over start/end edges, not a conflict check.
+    const edges = scheduled.flatMap(({ start, end }) => [
+      { t: start.getTime(), delta: 1 },
+      { t: end.getTime(), delta: -1 },
+    ]);
+    edges.sort((a, b) => a.t - b.t);
+    const overlapRanges: { start: number; end: number }[] = [];
+    let concurrent = 0;
+    let rangeStart: number | null = null;
+    for (const e of edges) {
+      const was = concurrent >= 2;
+      concurrent += e.delta;
+      const is = concurrent >= 2;
+      if (!was && is) rangeStart = e.t;
+      if (was && !is && rangeStart !== null) {
+        overlapRanges.push({ start: rangeStart, end: e.t });
+        rangeStart = null;
+      }
+    }
+
+    return (
+      <div className="mt-6 flex flex-col gap-4">
+        <div className="overflow-x-auto rounded-xl border border-border bg-card p-5">
+          <div className="min-w-[640px]">
+            <div className="relative mb-5 h-5 border-b border-border">
+              {dayTicks.map((t) => (
+                <span key={t.key} className="absolute top-0 -translate-x-1/2 text-[11px] whitespace-nowrap text-muted-foreground" style={{ left: `${t.pct}%` }}>
+                  {t.label}
+                </span>
+              ))}
+            </div>
+            <div className="relative flex flex-col gap-3">
+              {overlapRanges.map((r, i) => (
+                <div
+                  key={i}
+                  className="absolute top-0 bottom-0 rounded-lg bg-primary/10"
+                  style={{ left: `${pct(r.start)}%`, width: `${Math.max(pct(r.end) - pct(r.start), 0.5)}%` }}
+                />
+              ))}
+              {scheduled.map(({ se, start, end }) => {
+                const left = pct(start.getTime());
+                const width = Math.max(pct(end.getTime()) - left, 4);
+                return (
+                  <div key={se.id} className="relative h-12">
+                    <button
+                      onClick={() => {
+                        setActiveTab(se.id);
+                        setView("sub-events");
+                      }}
+                      className="absolute flex h-10 items-center gap-2 overflow-hidden rounded-lg border border-primary/50 bg-primary/15 px-3 text-left transition-colors hover:bg-primary/25"
+                      style={{ left: `${left}%`, width: `${width}%` }}
+                    >
+                      <span className="truncate text-sm font-medium text-foreground">{se.name}</span>
+                      <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                        {se.startTime}
+                        {se.endTime ? `–${se.endTime}` : ""}
+                      </span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {overlapRanges.length > 0 && (
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span className="inline-block size-3 shrink-0 rounded-sm bg-primary/10" /> Highlighted bands mark sub-events that share the same time window — worth a look in the Inventory view for anything they could reuse.
+          </p>
+        )}
+
+        {unscheduled.length > 0 && (
+          <div className="rounded-xl border border-dashed border-border bg-card p-4 text-sm text-muted-foreground">
+            Not on the timeline yet (no start time set): {unscheduled.map((se) => se.name).join(", ")}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Inventory: every product used anywhere in the plan, grouped across
+  // sub-events. Where a product appears in 2+ sub-events, this is the manual
+  // Shared/Dedicated prompt — the customer's own call, never inferred from
+  // the Timeline's overlap bands.
+  function renderInventoryView() {
+    const usage = productUsage;
+    const decisions = plan!.itemSharing ?? {};
+
+    if (usage.length === 0) {
+      return (
+        <p className="mt-6 rounded-xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          Add items to a sub-event to see them here, grouped by product across the whole plan.
+        </p>
+      );
+    }
+
+    return (
+      <div className="mt-6 flex flex-col gap-4">
+        {usage.map((u) => {
+          const decision = decisions[u.productId];
+          const decisionNeeded = needsSharingDecision(u);
+          const qty = requiredQuantity(u, decision);
+          return (
+            <section key={u.productId} className="overflow-hidden rounded-xl border border-border bg-card">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
+                <div className="flex items-center gap-3">
+                  <ProductThumb imageUrl={u.product.imageUrl} alt={u.product.name} className="size-10 shrink-0" />
+                  <div>
+                    <h3 className="font-serif text-lg text-foreground">{u.product.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      Used by {u.occurrences.length} {u.occurrences.length === 1 ? "line" : "lines"}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs tracking-wider text-muted-foreground uppercase">Required Quantity</span>
+                  <p className="font-serif text-2xl text-primary">{qty}</p>
+                </div>
+              </div>
+
+              <div className="flex flex-col divide-y divide-border">
+                {u.occurrences.map((o) => (
+                  <div key={o.itemId} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm">
+                    <span className="text-foreground">{o.subEventName}</span>
+                    <span className="text-muted-foreground">{o.timeWindow ?? "No date set"}</span>
+                    <span className="text-primary">Qty {o.quantity}</span>
+                  </div>
+                ))}
+              </div>
+
+              {decisionNeeded && (
+                <div className="flex flex-col gap-3 border-t border-border bg-background/40 px-5 py-4">
+                  <p className="text-sm text-foreground">
+                    Same {u.product.name.toLowerCase()} used by {[...new Set(u.subEventOccurrences.map((o) => o.subEventName))].join(" and ")}?
+                  </p>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      className={cn(
+                        "rounded-lg border px-4 py-2 text-sm transition-colors",
+                        decision === "Shared" ? "border-primary bg-primary text-primary-foreground" : "border-primary text-primary hover:bg-primary/10",
+                      )}
+                      onClick={() => setItemSharing(planId, u.productId, "Shared")}
+                    >
+                      Yes, reuse these
+                    </button>
+                    <button
+                      className={cn(
+                        "rounded-lg border px-4 py-2 text-sm transition-colors",
+                        decision === "Dedicated" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/40",
+                      )}
+                      onClick={() => setItemSharing(planId, u.productId, "Dedicated")}
+                    >
+                      No, keep separate
+                    </button>
+                    {decision && (
+                      <button className="text-xs text-muted-foreground underline" onClick={() => clearItemSharing(planId, u.productId)}>
+                        Undo
+                      </button>
+                    )}
+                  </div>
+                  {decision === "Shared" && <p className="text-xs text-primary">You&apos;ve marked these as shared — combined requirement: {qty}.</p>}
+                  {decision === "Dedicated" && <p className="text-xs text-muted-foreground">Kept separate — quantities stack to {qty}.</p>}
+                  {!decision && <p className="text-xs text-muted-foreground">Not yet confirmed — quantities are stacked ({qty}) until you decide.</p>}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
+
   function addFromPicker(product: Product) {
     addPlanItem(planId, { productId: product.id, quantity: 1, subEventId: activeTab });
     dismissSuggestion(pickerFor!.key);
@@ -302,20 +552,53 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     toast.success(`Added ${product.name} to ${activeLabel}`);
   }
 
-  // Only name is required. Date, venue, setup/teardown and guest count are
-  // logistics the customer often doesn't know yet — they stay optional and can
-  // be left blank without blocking the sub-event.
-  function handleAddSubEvent() {
+  // Only name is required. Date, time, venue, setup/teardown and guest count
+  // are logistics the customer often doesn't know yet — they stay optional
+  // and can be left blank without blocking the sub-event.
+  function handleSaveSubEvent() {
     const f = subEventForm;
     if (!f.name.trim()) return;
-    addSubEvent(planId, f.name.trim(), f.eventDate, {
+    const details = {
       venue: f.venue.trim() || undefined,
       setupDate: f.setupDate || undefined,
       teardownDate: f.teardownDate || undefined,
       guestCount: Number(f.guestCount) > 0 ? Number(f.guestCount) : undefined,
-    });
+      startTime: f.startTime || undefined,
+      endTime: f.endTime || undefined,
+    };
+    if (editingSubEventId) updateSubEvent(planId, editingSubEventId, f.name.trim(), f.eventDate, details);
+    else addSubEvent(planId, f.name.trim(), f.eventDate, details);
+    closeSubEventDialog();
+  }
+
+  function closeSubEventDialog() {
     setSubEventForm(EMPTY_SUB_EVENT);
+    setCustomFunctionName(false);
+    setEditingSubEventId(null);
     setSubEventDialogOpen(false);
+  }
+
+  function openAddSubEvent() {
+    setSubEventForm(EMPTY_SUB_EVENT);
+    setCustomFunctionName(false);
+    setEditingSubEventId(null);
+    setSubEventDialogOpen(true);
+  }
+
+  function openEditSubEvent(se: SubEvent) {
+    setSubEventForm({
+      name: se.name,
+      eventDate: se.eventDate,
+      venue: se.venue ?? "",
+      setupDate: se.setupDate ?? "",
+      teardownDate: se.teardownDate ?? "",
+      guestCount: se.guestCount ? String(se.guestCount) : "",
+      startTime: se.startTime ?? "",
+      endTime: se.endTime ?? "",
+    });
+    setCustomFunctionName(!(FUNCTION_PRESETS as readonly string[]).includes(se.name));
+    setEditingSubEventId(se.id);
+    setSubEventDialogOpen(true);
   }
 
   return (
@@ -387,11 +670,27 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         </div>
       </section>
 
-      {/* View switch — per sub-event, or everything grouped by calendar date. */}
-      <div className="flex items-center gap-2 pt-4">
+      {/* Plan Health — planning gaps, not shortages. Same visual weight as a
+          checklist item, no red/warning styling. */}
+      {healthPrompts.length > 0 && (
+        <div className="mt-4 flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
+          {healthPrompts.map((prompt, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+              <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span>{prompt}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* View switch — per sub-event, everything grouped by calendar date, the
+          Timeline overview, or the cross-plan Inventory / sharing view. */}
+      <div className="flex flex-wrap items-center gap-2 pt-4">
         {([
           { key: "sub-events", label: "Sub-events", icon: LayoutList },
           { key: "dates", label: "Date view", icon: CalendarRange },
+          { key: "timeline", label: "Timeline", icon: GanttChartSquare },
+          { key: "inventory", label: "Inventory", icon: Boxes },
         ] as const).map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -408,6 +707,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
       {view === "dates" ? (
         renderDateView()
+      ) : view === "timeline" ? (
+        renderTimelineView()
+      ) : view === "inventory" ? (
+        renderInventoryView()
       ) : (
         <>
       {/* Sub-event tabs */}
@@ -427,27 +730,60 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             {se.name}
           </button>
         ))}
-        <Dialog open={subEventDialogOpen} onOpenChange={setSubEventDialogOpen}>
+        <Dialog open={subEventDialogOpen} onOpenChange={(open) => (open ? setSubEventDialogOpen(true) : closeSubEventDialog())}>
           <DialogTrigger
             render={
-              <button className="flex shrink-0 items-center gap-2 py-4 text-sm text-muted-foreground">
+              <button className="flex shrink-0 items-center gap-2 py-4 text-sm text-muted-foreground" onClick={openAddSubEvent}>
                 <Plus className="size-4" /> Add Sub-Event
               </button>
             }
           />
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add sub-event</DialogTitle>
+              <DialogTitle>{editingSubEventId ? "Edit sub-event" : "Add sub-event"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="se-name">Name *</Label>
-                <Input
-                  id="se-name"
-                  placeholder="Day 1 — Sangeet"
-                  value={subEventForm.name}
-                  onChange={(e) => setSubEventForm({ ...subEventForm, name: e.target.value })}
-                />
+                <Label>Function *</Label>
+                <div className="flex flex-wrap gap-2">
+                  {FUNCTION_PRESETS.map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => {
+                        setCustomFunctionName(false);
+                        setSubEventForm({ ...subEventForm, name: preset });
+                      }}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        !customFunctionName && subEventForm.name === preset ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40",
+                      )}
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCustomFunctionName(true);
+                      setSubEventForm({ ...subEventForm, name: "" });
+                    }}
+                    className={cn(
+                      "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                      customFunctionName ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40",
+                    )}
+                  >
+                    Custom
+                  </button>
+                </div>
+                {customFunctionName && (
+                  <Input
+                    id="se-name"
+                    placeholder="e.g. Cocktail Hour"
+                    value={subEventForm.name}
+                    onChange={(e) => setSubEventForm({ ...subEventForm, name: e.target.value })}
+                  />
+                )}
               </div>
               <p className="text-xs text-muted-foreground">Everything below is optional — fill in what you know now.</p>
               <div className="grid grid-cols-2 gap-3">
@@ -469,6 +805,27 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                     placeholder="150"
                     value={subEventForm.guestCount}
                     onChange={(e) => setSubEventForm({ ...subEventForm, guestCount: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="se-start-time">Start time</Label>
+                  <Input
+                    id="se-start-time"
+                    type="time"
+                    value={subEventForm.startTime}
+                    onChange={(e) => setSubEventForm({ ...subEventForm, startTime: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="se-end-time">End time</Label>
+                  <Input
+                    id="se-end-time"
+                    type="time"
+                    min={subEventForm.startTime || undefined}
+                    value={subEventForm.endTime}
+                    onChange={(e) => setSubEventForm({ ...subEventForm, endTime: e.target.value })}
                   />
                 </div>
               </div>
@@ -504,8 +861,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleAddSubEvent} disabled={!subEventForm.name.trim()}>
-                Add
+              <Button onClick={handleSaveSubEvent} disabled={!subEventForm.name.trim()}>
+                {editingSubEventId ? "Save" : "Add"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -514,22 +871,28 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
       {activeSubEvent && (
         <div className="flex flex-col gap-3 pt-4 md:flex-row md:items-end md:justify-between">
-          <div className="grid flex-1 grid-cols-2 gap-4 md:grid-cols-5">
+          <div className="grid flex-1 grid-cols-2 gap-4 md:grid-cols-6">
             <DetailCell label="Date" value={formatEventDate(activeSubEvent.eventDate)} />
+            <DetailCell label="Time" value={activeSubEvent.startTime ? `${activeSubEvent.startTime}${activeSubEvent.endTime ? `–${activeSubEvent.endTime}` : ""}` : undefined} />
             <DetailCell label="Venue" value={activeSubEvent.venue} />
             <DetailCell label="Setup" value={formatEventDate(activeSubEvent.setupDate)} />
             <DetailCell label="Tear-down" value={formatEventDate(activeSubEvent.teardownDate)} />
             <DetailCell label="Guests" value={activeSubEvent.guestCount} />
           </div>
-          <button
-            className="shrink-0 text-xs text-muted-foreground hover:text-destructive"
-            onClick={() => {
-              removeSubEvent(planId, activeSubEvent.id);
-              setActiveTab(null);
-            }}
-          >
-            Remove this sub-event
-          </button>
+          <div className="flex shrink-0 items-center gap-4 text-xs">
+            <button className="text-muted-foreground hover:text-primary" onClick={() => openEditSubEvent(activeSubEvent)}>
+              Edit details
+            </button>
+            <button
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => {
+                removeSubEvent(planId, activeSubEvent.id);
+                setActiveTab(null);
+              }}
+            >
+              Remove this sub-event
+            </button>
+          </div>
         </div>
       )}
 
@@ -570,11 +933,17 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             {activeItems.map((item) => {
               const product = productById.get(item.productId);
               if (!product) return null;
+              const sharedWith = sharedWithLabel(item);
               return (
                 <div key={item.id} className="border-b border-border p-4 last:border-b-0 md:grid md:grid-cols-[2fr_1.4fr_1.4fr_120px] md:items-center md:gap-4 md:px-5 md:py-4">
                   <span className="flex items-center gap-3">
                     <ProductThumb imageUrl={product.imageUrl} alt={product.name} className="size-10 shrink-0" />
-                    <span className="text-sm text-foreground">{product.name}</span>
+                    <span className="flex flex-col gap-1">
+                      <span className="text-sm text-foreground">{product.name}</span>
+                      {sharedWith && (
+                        <span className="w-fit rounded-full border border-primary/40 px-2 py-0.5 text-[10px] text-primary">{sharedWith}</span>
+                      )}
+                    </span>
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {item.dimensions ? `${item.dimensions.length} ${product.rateType === "SqFt" ? "sqft" : "ft"}` : `Qty ${item.quantity}`}
@@ -626,6 +995,16 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             <span className="text-base text-foreground">Total</span>
             <span className="font-serif text-2xl text-primary">{formatRupees(planTotal)}</span>
           </div>
+          <Button
+            variant="outline"
+            className="mt-6 w-full gap-2 rounded-lg border-primary text-primary"
+            nativeButton={false}
+            render={
+              <Link href={`/plans/${planId}/summary`}>
+                <ListChecks className="size-4" /> View Plan Summary
+              </Link>
+            }
+          />
         </aside>
       </div>
         </>
