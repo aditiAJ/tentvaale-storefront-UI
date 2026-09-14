@@ -1,18 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Search,
-  Armchair,
-  Sparkles,
-  Frame,
-  Grid2x2,
-  Flower2,
-  Lightbulb,
-  Wrench,
-  Sofa,
-  ArrowRight,
-} from "lucide-react";
+import { Search, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
@@ -23,16 +12,17 @@ const OCCASIONS = ["Wedding", "Haldi", "Corporate", "Fashion Shoot", "Luxury Lou
 
 // Labels match Product.category in src/mock-data/seed.ts exactly — the link
 // passes them straight to /catalog?category=, so a mismatch silently renders
-// an empty catalog.
+// an empty catalog. Photo circles (not line icons) per the reference the user
+// supplied — each a real Unsplash photo representative of the category.
 const CATEGORIES = [
-  { icon: Armchair, label: "Furniture" },
-  { icon: Sparkles, label: "Styling Props" },
-  { icon: Frame, label: "Mirrors" },
-  { icon: Grid2x2, label: "Carpets" },
-  { icon: Flower2, label: "Planters" },
-  { icon: Lightbulb, label: "Lighting" },
-  { icon: Wrench, label: "Installation Setup" },
-  { icon: Sofa, label: "Lounge Packages" },
+  { image: "https://images.unsplash.com/photo-1645108537414-b113b89c049d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Furniture" },
+  { image: "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Styling Props" },
+  { image: "https://images.unsplash.com/photo-1775135595214-f945982d9cc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Mirrors" },
+  { image: "https://images.unsplash.com/photo-1757618978085-850cad5b020a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Carpets" },
+  { image: "https://images.unsplash.com/photo-1692616513667-5230c36f3afe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Planters" },
+  { image: "https://images.unsplash.com/photo-1556494403-f90163a73c21?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Lighting" },
+  { image: "https://images.unsplash.com/photo-1750107309391-37c2ff4c2d4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Installation Setup" },
+  { image: "https://images.unsplash.com/photo-1757810358892-680d8b58d799?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Lounge Packages" },
 ];
 
 const STATS = [
@@ -120,10 +110,11 @@ export default function Home() {
         </div>
 
         <div className="mt-4 grid w-full grid-cols-4 gap-x-4 gap-y-6 md:grid-cols-8">
-          {CATEGORIES.map(({ icon: Icon, label }) => (
+          {CATEGORIES.map(({ image, label }) => (
             <Link key={label} href={`/catalog?category=${encodeURIComponent(label)}`} className="group flex flex-col items-center gap-2">
-              <div className="flex size-14 items-center justify-center rounded-full border border-primary/40 bg-secondary transition-colors group-hover:border-primary group-hover:bg-primary/10 md:size-16">
-                <Icon className="size-6 text-primary" />
+              <div className="size-16 overflow-hidden rounded-full border border-primary/40 transition-colors group-hover:border-primary md:size-20">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={image} alt={label} className="size-full object-cover transition-transform duration-300 group-hover:scale-110" />
               </div>
               <span className="text-center text-xs leading-tight text-foreground transition-colors group-hover:text-primary md:text-sm">
                 {label}
