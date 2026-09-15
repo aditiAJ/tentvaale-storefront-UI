@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useRequireAccount } from "@/features/auth";
-import { useMockStore } from "@/mock-data/store";
+import { planGroupLabel, useMockStore } from "@/mock-data/store";
 import { formatRupees } from "@/mock-data/seed";
 
 // Flowstep screen 29 (desktop) — mobile 30 not fetched; stacks naturally.
@@ -43,7 +43,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
     if (!plan) return [];
     const groups: { label: string; amount: number }[] = [
       ...plan.subEvents.map((se) => ({ label: se.name, amount: 0 })),
-      { label: "General", amount: 0 },
+      { label: planGroupLabel(plan), amount: 0 },
     ];
     for (const line of acceptedLines) {
       const item = plan.items.find((it) => it.id === line.planItemId);

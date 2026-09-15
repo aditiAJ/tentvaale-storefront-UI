@@ -37,7 +37,7 @@ export function getProductUsage(plan: Plan, products: Product[]): ProductUsage[]
     const occurrence: ProductOccurrence = {
       itemId: item.id,
       subEventId: item.subEventId,
-      subEventName: subEvent?.name ?? "General / Untagged",
+      subEventName: subEvent?.name ?? (plan.generalLabel?.trim() || "Your event"),
       timeWindow: subEvent ? subEventTimeWindow(subEvent.eventDate, subEvent.startTime, subEvent.endTime) : undefined,
       sortKey: subEvent?.eventDate ? `${subEvent.eventDate}T${subEvent.startTime ?? "00:00"}` : "~",
       quantity: item.dimensions?.length ?? item.quantity,

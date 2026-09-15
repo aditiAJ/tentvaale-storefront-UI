@@ -8,24 +8,11 @@ import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
 import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import { CATEGORIES } from "@/mock-data/taxonomy";
 
 // Flowstep screens 1 (desktop) / 2 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 const OCCASIONS = ["Wedding", "Haldi", "Corporate", "Fashion Shoot", "Luxury Lounge"];
 
-// Labels match Product.category in src/mock-data/seed.ts exactly — the link
-// passes them straight to /catalog?category=, so a mismatch silently renders
-// an empty catalog. Photo circles (not line icons) per the reference the user
-// supplied — each a real Unsplash photo representative of the category.
-const CATEGORIES = [
-  { image: "https://images.unsplash.com/photo-1645108537414-b113b89c049d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Furniture" },
-  { image: "https://images.unsplash.com/photo-1587271407850-8d438ca9fdf2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Styling Props" },
-  { image: "https://images.unsplash.com/photo-1775135595214-f945982d9cc4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Mirrors" },
-  { image: "https://images.unsplash.com/photo-1757618978085-850cad5b020a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Carpets" },
-  { image: "https://images.unsplash.com/photo-1692616513667-5230c36f3afe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Planters" },
-  { image: "https://images.unsplash.com/photo-1556494403-f90163a73c21?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Lighting" },
-  { image: "https://images.unsplash.com/photo-1750107309391-37c2ff4c2d4f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Installation Setup" },
-  { image: "https://images.unsplash.com/photo-1757810358892-680d8b58d799?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=200", label: "Lounge Packages" },
-];
 
 const STATS = [
   { value: "12,000+", label: "Inventory Items" },
@@ -176,13 +163,13 @@ export default function Home() {
         </div>
 
         <motion.div
-          className="mt-4 grid w-full grid-cols-4 gap-x-4 gap-y-6 md:grid-cols-8"
+          className="mt-4 grid w-full grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-9"
           variants={gridContainer}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.4 }}
         >
-          {CATEGORIES.map(({ image, label }) => (
+          {CATEGORIES.map(({ image, name: label }) => (
             <motion.div key={label} variants={gridItem}>
               <Link href={`/catalog?category=${encodeURIComponent(label)}`} className="group flex flex-col items-center gap-2">
                 <div className="size-16 overflow-hidden rounded-full border border-primary/40 transition-colors group-hover:border-primary md:size-20">

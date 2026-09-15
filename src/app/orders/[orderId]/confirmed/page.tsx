@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
-import { useMockStore } from "@/mock-data/store";
+import { planGroupLabel, useMockStore } from "@/mock-data/store";
 import { formatRupees } from "@/mock-data/seed";
 
 // Flowstep screen 31 (desktop) — mobile 32 not fetched; stacks naturally.
@@ -42,7 +42,7 @@ export default function OrderConfirmedPage({ params }: { params: Promise<{ order
         .reduce((sum, l) => sum + l.unitPrice * l.confirmedQty, 0),
     })),
     {
-      label: "General",
+      label: planGroupLabel(plan),
       amount: quotation.lines
         .filter((l) => l.accepted && plan.items.find((it) => it.id === l.planItemId)?.subEventId === null)
         .reduce((sum, l) => sum + l.unitPrice * l.confirmedQty, 0),

@@ -70,6 +70,16 @@ export function canSubmitPlan(plan: Plan, accountId: string | null | undefined):
   // return !!accountId && (plan.ownerAccountId === accountId || plan.coOwners.some((c) => c.accountId === accountId && c.role === "CoOwner"));
 }
 
+/** Label for a plan's items that aren't tied to a function. */
+export function planGroupLabel(plan: Pick<Plan, "generalLabel">): string {
+  return plan.generalLabel?.trim() || "Your event";
+}
+
+// "Velvet Lounge Sofa (Velvet)" on quotes, orders and invoices when a fabric was chosen.
+function lineName(productName: string, fabric?: string): string {
+  return fabric ? `${productName} (${fabric})` : productName;
+}
+
 function pushAudit(plan: Plan, action: PlanAuditAction, detail: string, accountId: string): Plan {
   return {
     ...plan,
@@ -92,6 +102,7 @@ interface StoreContextValue extends StoreState {
 
   createPlan: (name: string, details?: PlanEventDetails) => Plan;
   updatePlanDetails: (planId: string, name: string, details: PlanEventDetails) => void;
+  renamePlanGroup: (planId: string, label: string) => void;
   addSubEvent: (planId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
   updateSubEvent: (planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
   removeSubEvent: (planId: string, subEventId: string) => void;
@@ -106,6 +117,7 @@ interface StoreContextValue extends StoreState {
       dimensions?: { length: number; width?: number };
       rentalStart?: string;
       rentalEnd?: string;
+      fabric?: string;
     },
   ) => void;
   removePlanItem: (planId: string, itemId: string) => void;
@@ -257,6 +269,10 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     updatePlan(planId, (p, accountId) => pushAudit({ ...p, name, ...details }, "PlanEdited", name, accountId));
   }, []);
 
+  const renamePlanGroup = useCallback((planId: string, label: string) => {
+    updatePlan(planId, (p) => ({ ...p, generalLabel: label.trim() || undefined }));
+  }, []);
+
   const updateSubEvent = useCallback((planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => {
     updatePlan(planId, (p, accountId) =>
       pushAudit(
@@ -314,6 +330,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         dimensions?: { length: number; width?: number };
         rentalStart?: string;
         rentalEnd?: string;
+        fabric?: string;
       },
     ) => {
       updatePlan(planId, (p, accountId) => {
@@ -441,7 +458,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
           return {
             planItemId: it.id,
             productId: it.productId,
-            productName: product.name,
+            productName: lineName(product.name, it.fabric),
             requestedQty,
             confirmedQty,
             unitPrice: product.basePrice,
@@ -505,7 +522,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         return {
           planItemId: it.id,
           productId: it.productId,
-          productName: product.name,
+          productName: lineName(product.name, it.fabric),
           requestedQty: qty,
           confirmedQty: qty,
           unitPrice: product.basePrice,
@@ -642,7 +659,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
           return {
             planItemId: l.planItemId,
             productName: l.productName,
-            subEventLabel: subEvent?.name ?? "General",
+            subEventLabel: subEvent?.name ?? planGroupLabel(plan),
             amount: l.unitPrice * l.confirmedQty,
             cancellable: !order.cancelled && !delivered,
             reason: delivered ? "already dispatched" : undefined,
@@ -718,6 +735,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         upgradeToEventPlanner,
         createPlan,
         updatePlanDetails,
+        renamePlanGroup,
         addSubEvent,
         updateSubEvent,
         removeSubEvent,
