@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { Search, ArrowRight } from "lucide-react";
+import { Search, ArrowRight, LayoutGrid, FileText, CreditCard, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
@@ -32,6 +32,31 @@ const STATS = [
   { value: "3,500+", label: "Events Styled" },
   { value: "18", label: "Cities" },
   { value: "9", label: "Years" },
+];
+
+// Mirrors the real flow: browse -> Plan with sub-events -> Submit for
+// Quotation or Direct Order -> pay -> delivery status on the Order page.
+const HOW_IT_WORKS = [
+  {
+    icon: LayoutGrid,
+    title: "Browse & Build a Plan",
+    description: "Browse the catalog and add pieces to a Plan, sorted by function like Haldi or Sangeet.",
+  },
+  {
+    icon: FileText,
+    title: "Submit or Order Direct",
+    description: "Get a quotation, or skip ahead with Direct Order at listed prices.",
+  },
+  {
+    icon: CreditCard,
+    title: "Review & Pay",
+    description: "Pay securely online. The full amount is collected upfront, so there are no surprises.",
+  },
+  {
+    icon: Truck,
+    title: "Delivery & Setup",
+    description: "We deliver and set up everything in time for your event, or you can pick it up yourself if that works better for you.",
+  },
 ];
 
 const PROJECTS = [
@@ -168,6 +193,28 @@ export default function Home() {
                   {label}
                 </span>
               </Link>
+            </motion.div>
+          ))}
+        </motion.div>
+      </Section>
+
+      <Section className="bg-card/40">
+        <SectionHeading title="How It Works" />
+        <motion.div
+          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.3 }}
+        >
+          {HOW_IT_WORKS.map((step, i) => (
+            <motion.div key={step.title} variants={gridItem} className="relative flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
+              <span className="font-serif text-xl text-primary/30">{String(i + 1).padStart(2, "0")}</span>
+              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
+                <step.icon className="size-4 text-primary" />
+              </div>
+              <h3 className="font-serif text-base text-foreground">{step.title}</h3>
+              <p className="text-xs leading-5 text-muted-foreground">{step.description}</p>
             </motion.div>
           ))}
         </motion.div>
