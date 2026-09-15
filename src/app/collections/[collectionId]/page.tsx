@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useMemo } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
   return (
     <div className="w-full pb-8">
       <section className="relative h-[280px] w-full overflow-hidden md:h-[480px]">
-        <img src={collection.heroImageUrl} alt={collection.name} className="size-full object-cover" />
+        <Image src={collection.heroImageUrl} alt={collection.name} fill priority sizes="100vw" className="object-cover" />
         <div className="absolute inset-0 bg-linear-to-t from-background via-background/40 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-6 md:p-12">
           <h1 className="font-serif text-3xl text-primary md:text-6xl">{collection.name}</h1>
@@ -78,8 +79,8 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
         <div className="flex gap-4 overflow-x-auto pb-1 md:grid md:grid-cols-3">
           {related.map((c) => (
             <Link key={c.id} href={`/collections/${c.id}`} className="w-64 shrink-0 overflow-hidden rounded-xl bg-card md:w-auto">
-              <div className="h-36 md:h-52">
-                <img src={c.heroImageUrl} alt={c.name} className="size-full object-cover" />
+              <div className="relative h-36 md:h-52">
+                <Image src={c.heroImageUrl} alt={c.name} fill sizes="(min-width: 768px) 33vw, 256px" className="object-cover" />
               </div>
               <p className="p-4 text-lg font-medium text-foreground">{c.name}</p>
             </Link>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import { CalendarDays } from "lucide-react";
@@ -57,7 +58,11 @@ function PlanCard({ plan }: { plan: Plan }) {
   return (
     <Link href={`/plans/${plan.id}`}>
       <Card className="cursor-pointer gap-4 overflow-hidden border-border bg-card p-0 transition-colors hover:border-primary">
-        {cover && <img src={cover} alt="" className="h-48 w-full object-cover" />}
+        {cover && (
+          <div className="relative h-48 w-full">
+            <Image src={cover} alt="" fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />
+          </div>
+        )}
         <CardContent className="flex flex-col gap-4 p-5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="font-serif text-xl text-card-foreground">{plan.name}</h2>

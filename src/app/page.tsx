@@ -1,6 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
+import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { Search, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
@@ -62,28 +64,67 @@ export default function Home() {
   const { products, collections, bundles } = useMockStore();
   const featuredProducts = products.slice(0, 8);
 
+  // Animate skill golden rules kept even at higher drama: only transform/
+  // opacity animated (GPU-accelerated), ease-out on entrance, and always a
+  // near-instant fallback for prefers-reduced-motion instead of disabling
+  // the triggers outright.
+  const reduceMotion = useReducedMotion();
+  const easeOutQuint = [0.23, 1, 0.32, 1] as const;
+
+  const heroImage: Variants = {
+    hidden: { scale: reduceMotion ? 1 : 1.18 },
+    visible: { scale: 1, transition: { duration: reduceMotion ? 0.01 : 2.2, ease: easeOutQuint } },
+  };
+  const heroContainer: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.18, delayChildren: reduceMotion ? 0 : 0.35 } },
+  };
+  const heroItem: Variants = {
+    hidden: { opacity: 0, y: reduceMotion ? 0 : 40, scale: reduceMotion ? 1 : 0.96 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: reduceMotion ? 0.01 : 0.8, ease: easeOutQuint } },
+  };
+
+  const gridContainer: Variants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.09 } },
+  };
+  const gridItem: Variants = {
+    hidden: { opacity: 0, y: reduceMotion ? 0 : 36, scale: reduceMotion ? 1 : 0.92 },
+    visible: { opacity: 1, y: 0, scale: 1, transition: { duration: reduceMotion ? 0.01 : 0.65, ease: easeOutQuint } },
+  };
+
   return (
     <div className="w-full">
-      <section className="relative h-110 w-full md:h-140">
-        <img
-          src="https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600"
-          alt="Luxury event decor"
-          className="size-full object-cover"
-        />
+      <section className="relative h-110 w-full overflow-hidden md:h-140">
+        <motion.div className="absolute inset-0" variants={heroImage} initial="hidden" animate="visible">
+          <Image
+            src="https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600"
+            alt="Luxury event decor"
+            fill
+            priority
+            sizes="100vw"
+            className="object-cover"
+          />
+        </motion.div>
         {/* Fade confined to the bottom band only — the rest of the photo stays fully visible, undimmed. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/85 via-black/40 to-transparent" />
-        <div className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-8 md:gap-6 md:px-12 md:pb-12">
-          <h1 className="max-w-2xl font-serif text-3xl leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)] md:text-5xl">
+        <motion.div
+          className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-8 md:gap-6 md:px-12 md:pb-12"
+          variants={heroContainer}
+          initial="hidden"
+          animate="visible"
+        >
+          <motion.h1 variants={heroItem} className="max-w-2xl font-serif text-3xl leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)] md:text-5xl">
             Design Every Detail of Your Event
-          </h1>
-          <p className="max-w-lg text-base text-white/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)] md:text-lg">
+          </motion.h1>
+          <motion.p variants={heroItem} className="max-w-lg text-base text-white/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)] md:text-lg">
             Rent furniture, décor and fully styled collections for weddings, corporate events and shoots.
-          </p>
-          <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
+          </motion.p>
+          <motion.div variants={heroItem} className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
             <Button className="rounded-full" size="lg" nativeButton={false} render={<Link href="/catalog">Browse Product Catalog</Link>} />
             <Button variant="outline" className="rounded-full" size="lg" nativeButton={false} render={<Link href="/plans">Start a Plan Event</Link>} />
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       </section>
 
       <Section className="flex flex-col items-center gap-6">
@@ -109,114 +150,157 @@ export default function Home() {
           ))}
         </div>
 
-        <div className="mt-4 grid w-full grid-cols-4 gap-x-4 gap-y-6 md:grid-cols-8">
+        <motion.div
+          className="mt-4 grid w-full grid-cols-4 gap-x-4 gap-y-6 md:grid-cols-8"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.4 }}
+        >
           {CATEGORIES.map(({ image, label }) => (
-            <Link key={label} href={`/catalog?category=${encodeURIComponent(label)}`} className="group flex flex-col items-center gap-2">
-              <div className="size-16 overflow-hidden rounded-full border border-primary/40 transition-colors group-hover:border-primary md:size-20">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={image} alt={label} className="size-full object-cover transition-transform duration-300 group-hover:scale-110" />
-              </div>
-              <span className="text-center text-xs leading-tight text-foreground transition-colors group-hover:text-primary md:text-sm">
-                {label}
-              </span>
-            </Link>
+            <motion.div key={label} variants={gridItem}>
+              <Link href={`/catalog?category=${encodeURIComponent(label)}`} className="group flex flex-col items-center gap-2">
+                <div className="size-16 overflow-hidden rounded-full border border-primary/40 transition-colors group-hover:border-primary md:size-20">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={image} alt={label} className="size-full object-cover transition-transform duration-300 group-hover:scale-110" />
+                </div>
+                <span className="text-center text-xs leading-tight text-foreground transition-colors group-hover:text-primary md:text-sm">
+                  {label}
+                </span>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </Section>
 
       <Section>
         <SectionHeading title="Product Catalog" href="/catalog" linkLabel="Browse all" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+        <motion.div
+          className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
           {featuredProducts.map((p) => (
-            <Link
-              key={p.id}
-              href={`/catalog/${p.id}`}
-              className="group flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary"
-            >
-              <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-36 w-full rounded-xl md:h-44" />
-              <div className="flex flex-col gap-1 px-1 pb-1">
-                <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary">{p.name}</span>
-                <span className="text-xs text-muted-foreground">From {formatRupees(p.basePrice)} / day</span>
-                <span className="w-fit rounded-full border border-primary/40 px-2 py-0.5 text-[10px] text-primary">
-                  {rateTypeLabel(p.rateType)}
-                </span>
-              </div>
-            </Link>
+            <motion.div key={p.id} variants={gridItem}>
+              <Link href={`/catalog/${p.id}`} className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary">
+                <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-36 w-full rounded-xl md:h-44" />
+                <div className="flex flex-col gap-1 px-1 pb-1">
+                  <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary">{p.name}</span>
+                  <span className="text-xs text-muted-foreground">From {formatRupees(p.basePrice)} / day</span>
+                  <span className="w-fit rounded-full border border-primary/40 px-2 py-0.5 text-[10px] text-primary">
+                    {rateTypeLabel(p.rateType)}
+                  </span>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </Section>
 
       <Section>
         <SectionHeading title="Featured Collections" href="/collections" />
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <motion.div
+          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
           {collections.map((c) => (
-            <Link key={c.id} href={`/collections/${c.id}`} className="group flex flex-col gap-3">
-              <div className="h-44 overflow-hidden rounded-2xl md:h-56">
-                <img
-                  src={c.heroImageUrl}
-                  alt={c.name}
-                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{c.name}</span>
-                <span className="line-clamp-2 text-xs text-muted-foreground md:text-sm">{c.tagline}</span>
-              </div>
-            </Link>
+            <motion.div key={c.id} variants={gridItem}>
+              <Link href={`/collections/${c.id}`} className="group flex h-full flex-col gap-3">
+                <div className="relative h-44 overflow-hidden rounded-2xl md:h-56">
+                  <Image
+                    src={c.heroImageUrl}
+                    alt={c.name}
+                    fill
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{c.name}</span>
+                  <span className="line-clamp-2 text-xs text-muted-foreground md:text-sm">{c.tagline}</span>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </Section>
 
       <Section>
         <SectionHeading title="Bundles" href="/bundles" />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <motion.div
+          className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
           {bundles.map((b) => (
-            <Link
-              key={b.id}
-              href={`/bundles/${b.id}`}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary"
-            >
-              <div className="h-44 overflow-hidden md:h-52">
-                <img
-                  src={b.imageUrl}
-                  alt={b.name}
-                  className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              </div>
-              <div className="flex flex-1 flex-col gap-2 p-5">
-                <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{b.name}</span>
-                <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{b.description}</p>
-                <span className="text-xs text-muted-foreground">{b.includedProductIds.length} items included</span>
-              </div>
-            </Link>
+            <motion.div key={b.id} variants={gridItem}>
+              <Link
+                href={`/bundles/${b.id}`}
+                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary"
+              >
+                <div className="relative h-44 overflow-hidden md:h-52">
+                  <Image
+                    src={b.imageUrl}
+                    alt={b.name}
+                    fill
+                    sizes="(min-width: 768px) 33vw, 100vw"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                </div>
+                <div className="flex flex-1 flex-col gap-2 p-5">
+                  <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{b.name}</span>
+                  <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{b.description}</p>
+                  <span className="text-xs text-muted-foreground">{b.includedProductIds.length} items included</span>
+                </div>
+              </Link>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </Section>
 
       <Section>
         <SectionHeading title="Why Tentvaale" />
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
+        <motion.div
+          className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.4 }}
+        >
           {STATS.map((s) => (
-            <div key={s.label} className="flex flex-col gap-1 rounded-2xl border border-border bg-card p-5">
+            <motion.div key={s.label} variants={gridItem} className="flex flex-col gap-1 rounded-2xl border border-border bg-card p-5">
               <span className="font-serif text-2xl text-primary md:text-4xl">{s.value}</span>
               <span className="text-xs text-muted-foreground md:text-sm">{s.label}</span>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </Section>
 
       <Section>
         <SectionHeading title="Featured Projects" />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <motion.div
+          className="grid grid-cols-1 gap-6 md:grid-cols-3"
+          variants={gridContainer}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.2 }}
+        >
           {PROJECTS.map((p) => (
-            <div key={p.title} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
-              <img src={p.img} alt={p.title} className="size-full object-cover" />
+            <motion.div key={p.title} variants={gridItem} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
+              <Image src={p.img} alt={p.title} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
               <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background to-transparent p-4">
                 <span className="text-sm text-foreground">{p.title}</span>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </Section>
     </div>
   );
