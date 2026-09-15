@@ -22,14 +22,33 @@ export interface Account {
 
 export type RateType = "Qty" | "SqFt" | "RFt";
 
+export type IndoorOutdoor = "Indoor" | "Outdoor" | "Indoor & outdoor";
+
+// Catalog taxonomy lives in mock-data/taxonomy.ts: every product carries the
+// global facets (colour, material, mood, theme fit, indoor/outdoor; price band
+// is derived from basePrice) plus its category's own facets in `attributes`.
 export interface Product {
   id: string;
   name: string;
+  /** One of CATEGORIES[].name in taxonomy.ts. */
   category: string;
+  /** One of that category's subcategories. */
+  subcategory?: string;
   rateType: RateType;
   basePrice: number;
   /** Only set where a real product photo was supplied — see ProductThumb for the fallback. */
   imageUrl?: string;
+  /** Display size for cards, e.g. "200 × 90 × 85 cm". */
+  size?: string;
+  colours?: string[];
+  materials?: string[];
+  moods?: string[];
+  themes?: string[];
+  setting?: IndoorOutdoor;
+  /** From the shared fabric vocabulary: upholstery options (Furniture) or the fabric itself (Fabric). */
+  fabrics?: string[];
+  /** Category-only facets, keyed by the facet label in taxonomy.ts (e.g. "Seating capacity"). */
+  attributes?: Record<string, string>;
 }
 
 // A Bundle isn't its own line item — "Add Full Bundle to Plan" expands it into
@@ -81,6 +100,8 @@ export interface PlanItem {
   dimensions?: { length: number; width?: number };
   rentalStart?: string;
   rentalEnd?: string;
+  /** Chosen upholstery fabric (shared fabric vocabulary) for Furniture. */
+  fabric?: string;
 }
 
 export type PlanCoOwnerRole = "CoOwner" | "ViewOnlyPlanner";
@@ -151,6 +172,8 @@ export interface Plan extends PlanEventDetails {
   // "Complete your setup" areas (entry-gate, passage...) already filled, keyed
   // by sub-event id ("general" for the untagged list).
   setupAdded?: Record<string, string[]>;
+  /** Customer's name for items not tied to a function (subEventId null). Shown as "Your event" until renamed. */
+  generalLabel?: string;
 }
 
 export type QuotationLineStatus = "Confirmed" | "Adjusted" | "Rejected";

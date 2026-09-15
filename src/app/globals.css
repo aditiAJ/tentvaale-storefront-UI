@@ -130,6 +130,13 @@
   --sidebar-ring: rgba(201, 161, 92, 0.5);
 }
 
+/* Soft gold halo for the currently selected chip / tab / card. */
+@utility glow {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-primary) 75%, transparent),
+    0 0 22px -4px color-mix(in oklab, var(--color-primary) 70%, transparent);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
 import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import { CATEGORIES, GLOBAL_FACETS, facetValues, upholsteryOptions } from "@/mock-data/taxonomy";
+import { FabricPicker } from "@/components/fabric-picker";
 
 // Flowstep screens 9 (desktop) / 10 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 // The "Added to Plan" confirmation (screens 52/54) is a dialog here rather
@@ -34,6 +36,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
   const [length, setLength] = useState(10);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [fabric, setFabric] = useState<string | undefined>(undefined);
   const [addedTo, setAddedTo] = useState<{ planId: string; planName: string; quantity: number; startDate: string; endDate: string } | null>(null);
 
   if (!product) {
@@ -59,6 +62,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
       dimensions: needsDimensions ? { length } : undefined,
       rentalStart: startDate || undefined,
       rentalEnd: endDate || undefined,
+      fabric,
     });
     const plan = myPlans.find((p) => p.id === planId);
     setAddedTo({ planId, planName: plan?.name ?? "your plan", quantity, startDate, endDate });
@@ -81,7 +85,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
           <div className="flex flex-col gap-4">
             <h1 className="font-serif text-3xl text-foreground md:text-4xl">{product.name}</h1>
             <div className="flex flex-wrap gap-2">
-              {[product.category, "Standard"].map((tag) => (
+              {[product.category, product.subcategory ?? "Standard"].map((tag) => (
                 <span key={tag} className="rounded-full border border-primary px-3 py-1 text-xs text-primary">
                   {tag}
                 </span>
@@ -110,6 +114,28 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
               </div>
             </div>
           </div>
+
+          {(() => {
+            // Every facet this product has a value for: size, the category's own facets, then the global ones.
+            const facets = [...(CATEGORIES.find((c) => c.name === product.category)?.facets ?? []), ...GLOBAL_FACETS.filter((f) => f.key !== "price")];
+            const rows = [...(product.size ? [["Size", product.size]] : []), ...facets.map((f) => [f.label, facetValues(f, product).join(", ")]).filter(([, v]) => v && v !== "—")];
+            return rows.length > 0 ? (
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-border p-4 text-sm">
+                {rows.map(([label, value]) => (
+                  <div key={label} className="min-w-0">
+                    <dt className="text-xs text-muted-foreground">{label}</dt>
+                    <dd className="text-foreground">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null;
+          })()}
+
+          {upholsteryOptions(product).length > 0 && (
+            <div className="border-t border-border pt-4">
+              <FabricPicker options={upholsteryOptions(product)} value={fabric} onChange={setFabric} />
+            </div>
+          )}
 
           {needsDimensions ? (
             <div className="flex items-center justify-between border-t border-border pt-4">

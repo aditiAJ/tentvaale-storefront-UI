@@ -37,6 +37,7 @@ import {
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
 import { formatEventDate } from "@/mock-data/seed";
+import { CATEGORIES } from "@/mock-data/taxonomy";
 import type { Order, Plan, Product, Quotation } from "@/mock-data/types";
 
 // Printable A4 invoice for one order, laid out like the Tentvaale "Event
@@ -50,7 +51,7 @@ import type { Order, Plan, Product, Quotation } from "@/mock-data/types";
 const CONTACT = { phone: "87809 83664", email: "info@tentvaale.com", web: "www.tentvaale.com" };
 
 // Categories print in this order; anything else follows alphabetically.
-const CATEGORY_ORDER = ["Furniture", "Lounge Packages", "Styling Props", "Mirrors", "Carpets", "Lighting", "Planters", "Installation Setup"];
+const CATEGORY_ORDER = CATEGORIES.map((c) => c.name);
 
 function byCategoryOrder(a: string, b: string) {
   const rank = (c: string) => (CATEGORY_ORDER.includes(c) ? CATEGORY_ORDER.indexOf(c) : CATEGORY_ORDER.length);
@@ -59,13 +60,14 @@ function byCategoryOrder(a: string, b: string) {
 
 const CATEGORY_ICON: Record<string, LucideIcon> = {
   Furniture: Armchair,
-  "Lounge Packages": Sofa,
-  "Styling Props": Sparkles,
-  Mirrors: Diamond,
-  Carpets: Diamond,
+  "Brass elements": Gem,
+  "Flower props": Flower2,
+  "Carpets and rugs": Diamond,
+  "Small props": Sparkles,
+  "Floor styling": Package,
+  "Monumental installations": Tent,
   Lighting: Lamp,
-  Planters: Flower2,
-  "Installation Setup": Tent,
+  Fabric: Sofa,
 };
 
 function eventIcon(name: string): LucideIcon {
@@ -155,7 +157,7 @@ function buildEvents(order: Order, quotation: Quotation, plan: Plan, products: P
 
   return groups
     .map(({ key, se }) => {
-      const name = se?.name ?? (plan.subEvents.length ? "General" : plan.name);
+      const name = se?.name ?? (plan.generalLabel?.trim() || "Your event");
       const prefix = name.trim().charAt(0).toUpperCase() || "G";
       const lines: InvoiceLine[] = accepted
         .filter((l) => (plan.items.find((it) => it.id === l.planItemId)?.subEventId ?? quotation.subEventId ?? null) === key)

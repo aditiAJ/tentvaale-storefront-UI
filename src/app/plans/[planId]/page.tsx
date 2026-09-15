@@ -21,7 +21,9 @@ import {
   MapPin,
   MoreHorizontal,
   MoveRight,
+  Package,
   PackageOpen,
+  Split,
   Pencil,
   Plus,
   Repeat,
@@ -48,7 +50,7 @@ import { NumberStepper } from "@/components/number-stepper";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
-import { canSubmitPlan, useMockStore } from "@/mock-data/store";
+import { canSubmitPlan, planGroupLabel, useMockStore } from "@/mock-data/store";
 import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/mock-data/inventory-sharing";
 import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
 import type { PlanItem, PlanStatus, Product, SubEvent } from "@/mock-data/types";
@@ -81,11 +83,13 @@ function initials(name: string) {
 export default function PlanDetailPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const account = useRequireAccount();
-  const { getPlan, products, accounts, updatePlanDetails, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, setPlanItemQty, markSetupAdded, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing } = useMockStore();
+  const { getPlan, products, accounts, updatePlanDetails, renamePlanGroup, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, setPlanItemQty, markSetupAdded, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing } = useMockStore();
   const plan = getPlan(planId);
 
   // null = General, an id = that function, undefined = not chosen yet (auto-pick below).
   const [chosenTab, setActiveTab] = useState<string | null | undefined>(undefined);
+  // Inline rename of the "Your event" group — null when not editing.
+  const [baseNameDraft, setBaseNameDraft] = useState<string | null>(null);
   // Keyed by sub-event id ("general" for the untagged list) so each
   // sub-event gets its own set of starter suggestions to work through.
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, string[]>>({});
@@ -104,7 +108,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     eventStartDate: "",
     eventEndDate: "",
   });
-  const [view, setView] = useState<"sub-events" | "dates" | "timeline" | "inventory">("sub-events");
+  const [view, setView] = useState<"sub-events" | "dates" | "timeline" | "inventory" | "sharing">("sub-events");
   const [activeDate, setActiveDate] = useState<string | null>(null);
   // Which starter suggestion opened the product picker — null = picker closed.
   const [pickerFor, setPickerFor] = useState<(typeof STARTER_SUGGESTIONS)[number] | null>(null);
@@ -122,14 +126,15 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const owner = accounts.find((a) => a.id === plan.ownerAccountId);
   const collaborators = [owner, ...plan.coOwners.map((c) => accounts.find((a) => a.id === c.accountId))].filter(Boolean);
 
-  // Open on General only when it has items (or there are no functions);
-  // otherwise the first function. A removed function falls back the same way.
-  const chosenStillExists = chosenTab === null ? plan.items.some((it) => it.subEventId === null) || plan.subEvents.length === 0 : plan.subEvents.some((se) => se.id === chosenTab);
+  // Before anything is picked: open "Your event" if it has items (or there are
+  // no functions), otherwise the first function. A removed function falls back the same way.
+  const chosenStillExists = chosenTab === null || plan.subEvents.some((se) => se.id === chosenTab);
   const activeTab: string | null =
     chosenTab !== undefined && chosenStillExists ? chosenTab : plan.subEvents.length > 0 && !plan.items.some((it) => it.subEventId === null) ? plan.subEvents[0].id : null;
   const activeItems = plan.items.filter((it) => it.subEventId === activeTab);
   const activeSubEvent = activeTab ? plan.subEvents.find((se) => se.id === activeTab) : undefined;
-  const activeLabel = activeSubEvent?.name ?? "General / Untagged";
+  const baseName = planGroupLabel(plan);
+  const activeLabel = activeSubEvent?.name ?? baseName;
 
   // Drives the "Shared with X" tag on line items and the Inventory view.
   const productUsage = getProductUsage(plan, products);
@@ -190,7 +195,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // ⋯ on a line: move it to another function (so General items aren't
   // stranded) or remove it.
   function renderItemMenu(item: PlanItem) {
-    const targets = [...plan!.subEvents.map((se) => ({ id: se.id as string | null, name: se.name })), { id: null as string | null, name: "General" }].filter(
+    const targets = [...plan!.subEvents.map((se) => ({ id: se.id as string | null, name: se.name })), { id: null as string | null, name: baseName }].filter(
       (t) => t.id !== item.subEventId,
     );
     const name = productById.get(item.productId)?.name ?? "item";
@@ -261,9 +266,9 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
     const dayTotal = (key: string) =>
       key === "general" ? subEventTotal(null) : (byDate.get(key) ?? []).reduce((sum, se) => sum + subEventTotal(se.id), 0);
-    const dayLabel = (key: string) => (key === "general" ? "General" : key === "unscheduled" ? "Unscheduled" : formatEventDate(key));
+    const dayLabel = (key: string) => (key === "general" ? baseName : key === "unscheduled" ? "Unscheduled" : formatEventDate(key));
     const daySubLabel = (key: string) => {
-      if (key === "general") return "Untagged items";
+      if (key === "general") return "Not tied to a function";
       const count = (byDate.get(key) ?? []).length;
       return `${count} sub-event${count === 1 ? "" : "s"}`;
     };
@@ -282,7 +287,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 onClick={() => setActiveDate(key)}
                 className={cn(
                   "flex w-44 shrink-0 flex-col gap-1 rounded-xl border px-4 py-3 text-left transition-colors md:w-auto",
-                  active ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
+                  active ? "glow border-primary bg-primary/10" : "border-border bg-card hover:border-primary/40",
                 )}
               >
                 <span className={cn("font-serif text-base", active ? "text-primary" : "text-foreground")}>{dayLabel(key)}</span>
@@ -311,7 +316,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           </header>
 
           {selected === "general"
-            ? renderDayCard("General / Untagged", undefined, generalItems, subEventTotal(null))
+            ? renderDayCard(baseName, undefined, generalItems, subEventTotal(null))
             : selectedSubEvents.map((se) =>
                 renderDayCard(
                   se.name,
@@ -497,6 +502,141 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // sub-events. Where a product appears in 2+ sub-events, this is the manual
   // Shared/Dedicated prompt — the customer's own call, never inferred from
   // the Timeline's overlap bands.
+  // Shared / Dedicated: products used by one function only on the left,
+  // products used by 2+ functions (e.g. chairs at Haldi and Sangeet) on the
+  // right, with the Reuse / Keep separate call and the reuse breakdown.
+  function renderSharingView() {
+    const decisions = plan!.itemSharing ?? {};
+    const functionsOf = (u: (typeof productUsage)[number]) => [...new Set(u.occurrences.map((o) => o.subEventName))];
+    const shared = productUsage.filter((u) => functionsOf(u).length >= 2);
+    const dedicated = productUsage.filter((u) => functionsOf(u).length < 2);
+
+    if (productUsage.length === 0) {
+      return (
+        <p className="rounded-2xl border border-dashed border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          Add items to your functions to see which ones are dedicated to a single function and which are shared across several.
+        </p>
+      );
+    }
+
+    const column = (title: string, hint: string, icon: LucideIcon, count: number, body: React.ReactNode) => {
+      const Icon = icon;
+      return (
+        <section className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border bg-card">
+          <header className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Icon className="size-4" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+                <p className="text-[11px] text-muted-foreground">{hint}</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">{count}</span>
+          </header>
+          <ul className="flex flex-col divide-y divide-border">{body}</ul>
+        </section>
+      );
+    };
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        {column(
+          "Dedicated",
+          "Used in one function only",
+          Package,
+          dedicated.length,
+          dedicated.length === 0 ? (
+            <li className="p-6 text-center text-xs text-muted-foreground">Every product is used in more than one function.</li>
+          ) : (
+            dedicated.map((u) => {
+              const qty = u.occurrences.reduce((s, o) => s + o.quantity, 0);
+              return (
+                <li key={u.productId} className="flex items-center gap-3 px-4 py-3">
+                  <ProductThumb imageUrl={u.product.imageUrl} alt={u.product.name} className="size-10 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-foreground">{u.product.name}</p>
+                    <button
+                      className="mt-0.5 w-fit rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setView("sub-events");
+                        setActiveTab(u.occurrences[0].subEventId);
+                      }}
+                    >
+                      {u.occurrences[0].subEventName}
+                    </button>
+                  </div>
+                  <span className="shrink-0 text-sm tabular-nums">× {qty}</span>
+                </li>
+              );
+            })
+          ),
+        )}
+
+        {column(
+          "Shared",
+          "Used across two or more functions",
+          Repeat,
+          shared.length,
+          shared.length === 0 ? (
+            <li className="p-6 text-center text-xs text-muted-foreground">No product is used in more than one function yet — add the same item (e.g. chairs) to Haldi and Sangeet to share it.</li>
+          ) : (
+            shared.map((u) => {
+              const decision = decisions[u.productId];
+              const isReused = decision === "Shared";
+              const { steps, totalReused } = reuseBreakdown(u);
+              const byName = new Map(steps.map((s) => [s.occurrence.itemId, s]));
+              return (
+                <li key={u.productId} className="flex flex-col gap-2.5 px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <ProductThumb imageUrl={u.product.imageUrl} alt={u.product.name} className="size-10 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-foreground">{u.product.name}</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Need <span className="text-foreground">{requiredQuantity(u, decision)}</span> units
+                        {isReused && totalReused > 0 && <span className="text-primary"> · {totalReused} reused, saves {formatRupees(totalReused * u.product.basePrice)}</span>}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {u.occurrences.map((o) => {
+                      const step = byName.get(o.itemId);
+                      return (
+                        <span key={o.itemId} className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px]">
+                          <span className="text-foreground">{o.subEventName}</span>
+                          <span className="text-muted-foreground">× {o.quantity}</span>
+                          {isReused && step && step.reused > 0 && <span className="text-primary">({step.reused} reused)</span>}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {needsSharingDecision(u) && (
+                    <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 text-[11px]">
+                      {([
+                        ["Shared", "Reuse same units"],
+                        ["Dedicated", "Keep separate"],
+                      ] as const).map(([value, label]) => (
+                        <button
+                          key={value}
+                          onClick={() => setItemSharing(planId, u.productId, value)}
+                          className={cn("flex-1 rounded-full px-2 py-1 transition-all", decision === value ? "glow bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {!decision && needsSharingDecision(u) && <p className="text-[11px] text-muted-foreground">Not decided yet — quantities are added up until you choose.</p>}
+                </li>
+              );
+            })
+          ),
+        )}
+      </div>
+    );
+  }
+
   function renderInventoryView() {
     const usage = productUsage;
     const decisions = plan!.itemSharing ?? {};
@@ -786,7 +926,6 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const itemsCount = plan.items.length;
   const pendingSharing = productUsage.filter((u) => needsSharingDecision(u) && !plan!.itemSharing?.[u.productId]);
   const emptySubEvents = plan.subEvents.filter((se) => !plan!.items.some((it) => it.subEventId === se.id));
-  const generalCount = plan.items.filter((it) => it.subEventId === null).length;
   const steps = [
     { label: "Event details", hint: "Dates, venue & guests", done: Boolean(plan.venue && startDate && plan.guestCount), onClick: openEditPlan },
     { label: "Add functions", hint: "Haldi, Sangeet, Wedding…", done: functionsCount > 0, onClick: openAddSubEvent },
@@ -811,13 +950,19 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       onClick: () => setView("inventory"),
     })),
   ];
+  // "Your event" (renamable) always leads — it's where a newcomer starts adding.
   const functionCards = [
+    { id: null as string | null, name: baseName, sub: "Items for the whole event" },
     ...plan.subEvents.map((se) => ({ id: se.id as string | null, name: se.name, sub: se.eventDate ? formatEventDate(se.eventDate) : "No date yet" })),
-    ...(generalCount > 0 || functionsCount === 0 ? [{ id: null as string | null, name: "General", sub: "Not tied to a function" }] : []),
   ];
 
+  function saveBaseName() {
+    renamePlanGroup(planId, baseNameDraft ?? "");
+    setBaseNameDraft(null);
+  }
+
   function confirmRemoveSubEvent(se: SubEvent) {
-    if (!window.confirm(`Remove ${se.name}? Its items will move to General.`)) return;
+    if (!window.confirm(`Remove ${se.name}? Its items will move to ${baseName}.`)) return;
     removeSubEvent(planId, se.id);
     setActiveTab(null);
     toast.success(`${se.name} removed`);
@@ -896,35 +1041,26 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         </div>
 
         {/* Progress steps — tells a first-time planner what to do next */}
-        <ol className="grid grid-cols-2 gap-px border-t border-border bg-border md:grid-cols-4">
+        <ol className="flex items-start border-t border-border px-3 pt-4 pb-3 md:px-6">
           {steps.map((s, i) => {
             const isCurrent = i === currentStep;
-            const content = (
-              <>
-                <span
-                  className={cn(
-                    "flex size-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
-                    s.done ? "border-primary bg-primary text-primary-foreground" : isCurrent ? "border-primary text-primary" : "border-border text-muted-foreground",
-                  )}
-                >
-                  {s.done ? <Check className="size-3.5" /> : i + 1}
-                </span>
-                <span className="flex min-w-0 flex-col text-left">
-                  <span className={cn("text-sm", s.done || isCurrent ? "text-foreground" : "text-muted-foreground")}>{s.label}</span>
-                  <span className="truncate text-xs text-muted-foreground">{isCurrent ? "Next step · " : ""}{s.hint}</span>
-                </span>
-              </>
-            );
-            const cls = cn("flex items-center gap-3 bg-card px-4 py-3.5 transition-colors", isCurrent && "bg-primary/5", s.onClick && "hover:bg-primary/10");
+            const Tag = s.onClick ? "button" : "div";
             return (
-              <li key={s.label} className="flex">
-                {s.onClick ? (
-                  <button className={cn(cls, "w-full")} onClick={s.onClick}>
-                    {content}
-                  </button>
-                ) : (
-                  <div className={cn(cls, "w-full")}>{content}</div>
-                )}
+              <li key={s.label} className="relative flex flex-1 flex-col items-center">
+                {/* connector from the previous stage */}
+                {i > 0 && <span className={cn("absolute top-2.75 right-1/2 h-0.5 w-full", steps[i - 1].done ? "bg-primary" : "bg-border")} />}
+                <Tag {...(s.onClick ? { onClick: s.onClick, type: "button" as const } : {})} className={cn("group flex flex-col items-center gap-1.5 text-center", s.onClick && "cursor-pointer")}>
+                  <span
+                    className={cn(
+                      "relative z-10 flex size-6 items-center justify-center rounded-full text-[11px] font-semibold ring-4 ring-card transition-colors",
+                      s.done ? "bg-primary text-primary-foreground" : isCurrent ? "border-2 border-primary bg-card text-primary" : "border border-border bg-card text-muted-foreground",
+                    )}
+                  >
+                    {s.done ? <Check className="size-3" /> : i + 1}
+                  </span>
+                  <span className={cn("text-xs leading-tight", s.done || isCurrent ? "text-foreground" : "text-muted-foreground", s.onClick && "group-hover:text-primary")}>{s.label}</span>
+                  <span className={cn("hidden text-[11px] leading-tight md:block", isCurrent ? "text-primary" : "text-muted-foreground/70")}>{isCurrent ? "Up next" : s.done ? "Done" : s.hint}</span>
+                </Tag>
               </li>
             );
           })}
@@ -953,24 +1089,27 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       <div className="mt-6 grid items-start gap-6 lg:grid-cols-[1fr_340px]">
         <div className="flex min-w-0 flex-col gap-5">
           {/* ================= VIEW SWITCH ================= */}
-          <div className="flex gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1">
-            {([
-              { key: "sub-events", label: "Functions", icon: LayoutList },
-              { key: "dates", label: "By date", icon: CalendarRange },
-              { key: "timeline", label: "Timeline", icon: GanttChartSquare },
-              { key: "inventory", label: "Inventory", icon: Boxes },
-            ] as const).map(({ key, label, icon: Icon }) => (
-              <button
-                key={key}
-                onClick={() => setView(key)}
-                className={cn(
-                  "flex flex-1 shrink-0 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm whitespace-nowrap transition-colors",
-                  view === key ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="size-4" /> {label}
-              </button>
-            ))}
+          <div className="-mx-1 overflow-x-auto px-1 py-1">
+            <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1">
+              {([
+                { key: "sub-events", label: "Functions", icon: LayoutList },
+                { key: "dates", label: "By date", icon: CalendarRange },
+                { key: "timeline", label: "Timeline", icon: GanttChartSquare },
+                { key: "inventory", label: "Inventory", icon: Boxes },
+                { key: "sharing", label: "Shared / Dedicated", icon: Split },
+              ] as const).map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  onClick={() => setView(key)}
+                  className={cn(
+                    "flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap transition-all duration-200",
+                    view === key ? "glow bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-3.5" /> {label}
+                </button>
+              ))}
+            </div>
           </div>
 
           {view === "dates" ? (
@@ -979,10 +1118,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             renderTimelineView()
           ) : view === "inventory" ? (
             renderInventoryView()
+          ) : view === "sharing" ? (
+            renderSharingView()
           ) : (
             <>
               {/* ================= FUNCTION CARDS ================= */}
-              <div className="flex gap-3 overflow-x-auto pb-1">
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {functionCards.map((f) => {
                   const active = activeTab === f.id;
                   const count = plan.items.filter((it) => it.subEventId === f.id).length;
@@ -990,64 +1131,94 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                     <button
                       key={f.id ?? "general"}
                       onClick={() => setActiveTab(f.id)}
+                      title={f.sub}
                       className={cn(
-                        "flex w-44 shrink-0 flex-col gap-1 rounded-xl border p-3.5 text-left transition-all",
-                        active ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-card hover:border-primary/40",
+                        "flex h-9 shrink-0 items-center gap-2 rounded-full border pr-1.5 pl-3.5 text-sm whitespace-nowrap transition-colors",
+                        active ? "glow border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground/80 hover:border-primary/50 hover:text-foreground",
                       )}
                     >
-                      <span className={cn("truncate font-serif text-lg", active ? "text-primary" : "text-foreground")}>{f.name}</span>
-                      <span className="truncate text-xs text-muted-foreground">{f.sub}</span>
-                      <span className="mt-1 flex items-center justify-between text-xs">
-                        <span className={count === 0 ? "text-muted-foreground/70" : "text-muted-foreground"}>{count === 0 ? "No items" : `${count} item${count === 1 ? "" : "s"}`}</span>
-                        <span className="text-foreground">{formatRupees(subEventTotal(f.id))}</span>
-                      </span>
+                      {f.name}
+                      <span className={cn("min-w-6 rounded-full px-1.5 py-0.5 text-[11px] tabular-nums", active ? "bg-primary-foreground/20" : count ? "bg-muted text-foreground" : "bg-muted text-muted-foreground")}>{count}</span>
                     </button>
                   );
                 })}
                 <button
                   onClick={openAddSubEvent}
-                  className="flex w-44 shrink-0 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border p-3.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 >
-                  <Plus className="size-5" /> Add function
-                  <span className="text-xs">Haldi, Sangeet…</span>
+                  <Plus className="size-4" /> Add function
                 </button>
               </div>
 
               {/* ================= SELECTED FUNCTION ================= */}
               <section className="overflow-hidden rounded-2xl border border-border bg-card">
-                <header className="flex flex-col gap-3 border-b border-border p-5 md:flex-row md:items-start md:justify-between">
-                  <div className="flex min-w-0 flex-col gap-2">
-                    <h2 className="font-serif text-2xl text-foreground">{activeSubEvent ? activeSubEvent.name : "General items"}</h2>
+                <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
+                  <div className="flex min-w-0 flex-col gap-1">
                     {activeSubEvent ? (
-                      <div className="flex flex-wrap gap-2">
-                        <MetaChip icon={CalendarDays} value={activeSubEvent.eventDate ? formatEventDate(activeSubEvent.eventDate) : undefined} empty="Add date" onClick={() => openEditSubEvent(activeSubEvent)} />
-                        <MetaChip
-                          icon={Clock}
-                          value={activeSubEvent.startTime ? `${activeSubEvent.startTime}${activeSubEvent.endTime ? `–${activeSubEvent.endTime}` : ""}` : undefined}
-                          empty="Add time"
-                          onClick={() => openEditSubEvent(activeSubEvent)}
-                        />
-                        <MetaChip icon={MapPin} value={activeSubEvent.venue} empty="Add venue" onClick={() => openEditSubEvent(activeSubEvent)} />
-                        <MetaChip icon={Users} value={activeSubEvent.guestCount ? `${activeSubEvent.guestCount} guests` : undefined} empty="Add guests" onClick={() => openEditSubEvent(activeSubEvent)} />
-                        {(activeSubEvent.setupDate || activeSubEvent.teardownDate) && (
-                          <MetaChip
-                            icon={Truck}
-                            value={`Setup ${formatEventDate(activeSubEvent.setupDate) || "—"} · Tear-down ${formatEventDate(activeSubEvent.teardownDate) || "—"}`}
-                          />
-                        )}
-                      </div>
+                      <>
+                        <h2 className="truncate font-serif text-xl text-foreground">{activeSubEvent.name}</h2>
+                        {(() => {
+                          const se = activeSubEvent;
+                          const facts = [
+                            se.eventDate && { icon: CalendarDays, text: formatEventDate(se.eventDate) },
+                            se.startTime && { icon: Clock, text: `${se.startTime}${se.endTime ? `–${se.endTime}` : ""}` },
+                            se.venue && { icon: MapPin, text: se.venue },
+                            se.guestCount && { icon: Users, text: `${se.guestCount} guests` },
+                            (se.setupDate || se.teardownDate) && { icon: Truck, text: `Setup ${formatEventDate(se.setupDate) || "—"} → ${formatEventDate(se.teardownDate) || "—"}` },
+                          ].filter(Boolean) as { icon: LucideIcon; text: string }[];
+                          const missing = [!se.eventDate && "date", !se.startTime && "time", !se.venue && "venue", !se.guestCount && "guests"].filter(Boolean) as string[];
+                          return (
+                            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              {facts.map(({ icon: Icon, text }) => (
+                                <span key={text} className="flex items-center gap-1">
+                                  <Icon className="size-3.5 text-primary/80" /> {text}
+                                </span>
+                              ))}
+                              {missing.length > 0 && (
+                                <button className="flex items-center gap-1 text-primary hover:underline" onClick={() => openEditSubEvent(se)}>
+                                  <Plus className="size-3" /> Add {missing.join(", ")}
+                                </button>
+                              )}
+                            </p>
+                          );
+                        })()}
+                      </>
+                    ) : baseNameDraft !== null ? (
+                      <form
+                        className="flex items-center gap-2"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          saveBaseName();
+                        }}
+                      >
+                        <Input autoFocus value={baseNameDraft} onChange={(e) => setBaseNameDraft(e.target.value)} placeholder="e.g. Priya & Arjun's Wedding" className="h-9 max-w-xs font-serif text-lg" onKeyDown={(e) => e.key === "Escape" && setBaseNameDraft(null)} />
+                        <Button type="submit" size="sm" className="rounded-lg">
+                          Save
+                        </Button>
+                        <Button type="button" size="sm" variant="ghost" className="rounded-lg" onClick={() => setBaseNameDraft(null)}>
+                          Cancel
+                        </Button>
+                      </form>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Items not tied to a specific function. Use the ⋯ menu on an item to move it into one.</p>
+                      <>
+                        <button className="group flex w-fit items-center gap-2 text-left" onClick={() => setBaseNameDraft(plan.generalLabel ?? "")} title="Rename">
+                          <h2 className="truncate font-serif text-xl text-foreground">{baseName}</h2>
+                          <Pencil className="size-3.5 text-muted-foreground transition-colors group-hover:text-primary" />
+                        </button>
+                        <p className="text-xs text-muted-foreground">
+                          {plan.generalLabel ? "Items for the whole event." : "Click the name to rename it — then add items, or split them into functions like Haldi or Sangeet."}
+                        </p>
+                      </>
                     )}
                   </div>
                   {activeSubEvent && (
-                    <div className="flex shrink-0 items-center gap-2">
-                      <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={() => openEditSubEvent(activeSubEvent)}>
-                        <Pencil className="size-3.5" /> Edit
-                      </Button>
-                      <Button variant="ghost" size="sm" className="gap-1.5 rounded-lg text-muted-foreground hover:text-destructive" onClick={() => confirmRemoveSubEvent(activeSubEvent)}>
-                        <Trash2 className="size-3.5" /> Remove
-                      </Button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-primary" onClick={() => openEditSubEvent(activeSubEvent)} title="Edit details" aria-label="Edit details">
+                        <Pencil className="size-4" />
+                      </button>
+                      <button className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive" onClick={() => confirmRemoveSubEvent(activeSubEvent)} title="Remove function" aria-label="Remove function">
+                        <Trash2 className="size-4" />
+                      </button>
                     </div>
                   )}
                 </header>
@@ -1118,7 +1289,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                         <PackageOpen className="size-6" />
                       </span>
                       <div>
-                        <p className="font-serif text-lg text-foreground">No items in {activeSubEvent?.name ?? "General"} yet</p>
+                        <p className="font-serif text-lg text-foreground">No items in {activeLabel} yet</p>
                         <p className="mt-1 text-sm text-muted-foreground">Start with the setup suggestions above, or pick anything from the catalog.</p>
                       </div>
                       <div className="flex flex-wrap justify-center gap-2">
@@ -1148,7 +1319,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                                 <span className="flex min-w-0 flex-col gap-0.5">
                                   <span className="truncate text-sm font-medium text-foreground">{product.name}</span>
                                   <span className="truncate text-xs text-muted-foreground">
-                                    {product.category} · {unitRateLabel(product)}
+                                    {product.subcategory ?? product.category} · {unitRateLabel(product)}
+                                    {item.fabric && ` · ${item.fabric} upholstery`}
                                   </span>
                                   {sharedWith && (
                                     <span className="flex w-fit items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
@@ -1175,7 +1347,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                           <Button variant="ghost" size="sm" className="rounded-lg text-muted-foreground" nativeButton={false} render={<Link href="/catalog">Browse catalog</Link>} />
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {activeSubEvent?.name ?? "General"} subtotal <span className="ml-2 font-serif text-xl text-primary">{formatRupees(subEventTotal(activeTab))}</span>
+                          {activeLabel} subtotal <span className="ml-2 font-serif text-xl text-primary">{formatRupees(subEventTotal(activeTab))}</span>
                         </span>
                       </div>
                     </div>
@@ -1197,7 +1369,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
             {planTotal > 0 && (
               <ul className="mt-5 flex flex-col gap-3">
-                {[...plan.subEvents.map((se) => ({ id: se.id as string | null, name: se.name })), { id: null as string | null, name: "General" }]
+                {[...plan.subEvents.map((se) => ({ id: se.id as string | null, name: se.name })), { id: null as string | null, name: baseName }]
                   .map((f) => ({ ...f, total: subEventTotal(f.id) }))
                   .filter((f) => f.total > 0 || f.id !== null)
                   .map((f) => (
@@ -1428,7 +1600,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         <SheetContent side="right" className="flex w-full flex-col gap-0 sm:max-w-md">
           <SheetHeader className="gap-1">
             <SheetTitle>{pickerFor?.key === BROWSE_PICKER.key ? "Add items" : `Choose a ${pickerFor?.label}`}</SheetTitle>
-            <p className="text-sm text-muted-foreground">Adding to {activeSubEvent?.name ?? "General"} · tick items and set quantities</p>
+            <p className="text-sm text-muted-foreground">Adding to {activeLabel} · tick items and set quantities</p>
           </SheetHeader>
           <div className="flex flex-col gap-3 px-4 pb-3">
             <div className="relative">
