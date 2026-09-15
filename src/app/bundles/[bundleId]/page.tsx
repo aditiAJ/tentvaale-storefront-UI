@@ -8,7 +8,7 @@ import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
@@ -103,11 +103,11 @@ export default function BundlePage({ params }: { params: Promise<{ bundleId: str
               <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">Start date</Label>
-                  <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                  <DateWheelPicker value={startDate} onChange={setStartDate} />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label className="text-sm text-muted-foreground">End date</Label>
-                  <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                  <DateWheelPicker value={endDate} min={startDate || undefined} onChange={setEndDate} />
                 </div>
               </div>
             </div>

@@ -91,6 +91,7 @@ interface StoreContextValue extends StoreState {
   upgradeToEventPlanner: () => void;
 
   createPlan: (name: string, details?: PlanEventDetails) => Plan;
+  updatePlanDetails: (planId: string, name: string, details: PlanEventDetails) => void;
   addSubEvent: (planId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
   updateSubEvent: (planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
   removeSubEvent: (planId: string, subEventId: string) => void;
@@ -249,6 +250,11 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       const subEvent: SubEvent = { id: newId("sub"), name, eventDate, ...details };
       return pushAudit({ ...p, subEvents: [...p.subEvents, subEvent] }, "SubEventAdded", name, accountId);
     });
+  }, []);
+
+  // Header "edit" on the plan page: name + event details (venue, dates, guests).
+  const updatePlanDetails = useCallback((planId: string, name: string, details: PlanEventDetails) => {
+    updatePlan(planId, (p, accountId) => pushAudit({ ...p, name, ...details }, "PlanEdited", name, accountId));
   }, []);
 
   const updateSubEvent = useCallback((planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => {
@@ -711,6 +717,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         logout,
         upgradeToEventPlanner,
         createPlan,
+        updatePlanDetails,
         addSubEvent,
         updateSubEvent,
         removeSubEvent,

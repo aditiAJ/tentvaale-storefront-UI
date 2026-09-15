@@ -93,6 +93,7 @@ export interface PlanCoOwner {
 }
 
 export type PlanAuditAction =
+  | "PlanEdited"
   | "ItemAdded"
   | "ItemRemoved"
   | "SubEventAdded"

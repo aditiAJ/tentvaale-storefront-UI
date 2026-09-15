@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateWheelPicker } from "@/components/date-wheel-picker";
+import { NumberStepper } from "@/components/number-stepper";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
@@ -150,16 +152,22 @@ export default function PlansPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="plan-start">Start date *</Label>
-              <Input id="plan-start" type="date" value={form.eventStartDate} onChange={(e) => setForm({ ...form, eventStartDate: e.target.value })} />
+              <DateWheelPicker id="plan-start" value={form.eventStartDate} onChange={(v) => setForm({ ...form, eventStartDate: v })} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="plan-end">End date *</Label>
-              <Input id="plan-end" type="date" min={form.eventStartDate || undefined} value={form.eventEndDate} onChange={(e) => setForm({ ...form, eventEndDate: e.target.value })} />
+              <DateWheelPicker id="plan-end" min={form.eventStartDate || undefined} value={form.eventEndDate} onChange={(v) => setForm({ ...form, eventEndDate: v })} />
             </div>
           </div>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="plan-guests">Guest count *</Label>
-            <Input id="plan-guests" type="number" min={1} placeholder="250" value={form.guestCount} onChange={(e) => setForm({ ...form, guestCount: e.target.value })} />
+            <NumberStepper
+              id="plan-guests"
+              optional
+              placeholder="250"
+              value={form.guestCount === "" ? undefined : Number(form.guestCount)}
+              onChange={(v) => setForm({ ...form, guestCount: v === undefined ? "" : String(v) })}
+            />
           </div>
           {datesInvalid && <p className="text-xs text-destructive">End date cannot be before the start date.</p>}
         </div>

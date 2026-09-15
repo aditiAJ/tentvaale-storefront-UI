@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Sparkles, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { AI_PLANNER_EVENT_TYPES } from "@/mock-data/seed";
 
 // Flowstep screens 42 (desktop) / 43 (mobile) — a single responsive form, not
@@ -148,16 +149,7 @@ export default function AiPlannerPage() {
           <label htmlFor="event-date" className="text-sm font-medium text-foreground">
             Event Date
           </label>
-          <div className="relative">
-            <CalendarDays className="absolute top-1/2 left-4 size-4 -translate-y-1/2 text-primary" />
-            <input
-              id="event-date"
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              className="w-full rounded-lg border border-primary/40 bg-background py-3 pr-4 pl-11 text-sm text-foreground"
-            />
-          </div>
+          <DateWheelPicker id="event-date" value={eventDate} onChange={setEventDate} />
         </div>
       </div>
 

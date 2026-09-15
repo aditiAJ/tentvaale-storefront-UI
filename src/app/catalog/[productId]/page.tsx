@@ -4,11 +4,12 @@ import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Check, Minus, Plus } from "lucide-react";
+import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DateWheelPicker } from "@/components/date-wheel-picker";
+import { NumberStepper } from "@/components/number-stepper";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
@@ -101,11 +102,11 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label className="text-sm text-muted-foreground">Start date</Label>
-                <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <DateWheelPicker value={startDate} onChange={setStartDate} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label className="text-sm text-muted-foreground">End date</Label>
-                <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <DateWheelPicker value={endDate} min={startDate || undefined} onChange={setEndDate} />
               </div>
             </div>
           </div>
@@ -113,20 +114,12 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
           {needsDimensions ? (
             <div className="flex items-center justify-between border-t border-border pt-4">
               <span className="text-sm text-foreground">{product.rateType === "SqFt" ? "Area (sq ft)" : "Length (running ft)"}</span>
-              <Input type="number" min={1} value={length} onChange={(e) => setLength(Number(e.target.value))} className="w-28" />
+              <NumberStepper value={length} onChange={setLength} aria-label="Size" />
             </div>
           ) : (
             <div className="flex items-center justify-between border-t border-border pt-4">
               <span className="font-serif text-xl text-foreground">Quantity</span>
-              <div className="flex items-center gap-4">
-                <Button variant="outline" size="icon" className="rounded-full border-primary text-primary" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
-                  <Minus className="size-4" />
-                </Button>
-                <span className="w-5 text-center text-lg">{quantity}</span>
-                <Button variant="outline" size="icon" className="rounded-full border-primary text-primary" onClick={() => setQuantity((q) => q + 1)}>
-                  <Plus className="size-4" />
-                </Button>
-              </div>
+              <NumberStepper value={quantity} onChange={setQuantity} aria-label="Quantity" />
             </div>
           )}
 

@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ProductThumb } from "@/components/product-thumb";
+import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { useMockStore } from "@/mock-data/store";
 import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
 import type { Product } from "@/mock-data/types";
@@ -27,6 +28,7 @@ const COSMETIC_FILTERS: { title: string; options: string[] }[] = [
 ];
 
 function FilterSidebar({ rateFilter, setRateFilter }: { rateFilter: Set<string>; setRateFilter: (s: Set<string>) => void }) {
+  const [availabilityDate, setAvailabilityDate] = useState(""); // cosmetic, like the filters above
   function toggleRate(v: string) {
     const next = new Set(rateFilter);
     if (next.has(v)) next.delete(v);
@@ -67,7 +69,7 @@ function FilterSidebar({ rateFilter, setRateFilter }: { rateFilter: Set<string>;
           <h3 className="text-sm font-medium text-foreground">Availability Date</h3>
           <ChevronDown className="size-4 text-muted-foreground" />
         </div>
-        <input type="date" className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground" />
+        <DateWheelPicker value={availabilityDate} onChange={setAvailabilityDate} />
       </div>
       <div className="flex flex-col gap-3 border-t border-border pt-6">
         <Button className="w-full rounded-lg">Apply Filters</Button>
