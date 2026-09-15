@@ -9,11 +9,16 @@ import {
   Clock,
   GanttChartSquare,
   Info,
+  Check,
+  CheckCircle2,
+  ChevronDown,
   LayoutList,
   ListChecks,
+  Minus,
   MoveRight,
   Pencil,
   Plus,
+  Repeat,
   Search,
   Share2,
   Sparkles,
@@ -29,8 +34,8 @@ import { ProductThumb } from "@/components/product-thumb";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
-import { useMockStore } from "@/mock-data/store";
-import { getProductUsage, needsSharingDecision, requiredQuantity } from "@/mock-data/inventory-sharing";
+import { canSubmitPlan, useMockStore } from "@/mock-data/store";
+import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/mock-data/inventory-sharing";
 import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
 import type { PlanItem, PlanStatus, Product, SubEvent } from "@/mock-data/types";
 
@@ -70,13 +75,15 @@ function initials(name: string) {
 export default function PlanDetailPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const account = useRequireAccount();
-  const { getPlan, products, accounts, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing } = useMockStore();
+  const { getPlan, products, accounts, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, setPlanItemQty, markSetupAdded, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing } = useMockStore();
   const plan = getPlan(planId);
 
   const [activeTab, setActiveTab] = useState<string | null>(null); // null = General/Untagged
   // Keyed by sub-event id ("general" for the untagged list) so each
   // sub-event gets its own set of starter suggestions to work through.
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, string[]>>({});
+  // Manual expand/collapse of "Complete your setup", per sub-event; unset = auto.
+  const [setupOpen, setSetupOpen] = useState<Record<string, boolean>>({});
   const [subEventDialogOpen, setSubEventDialogOpen] = useState(false);
   const [subEventForm, setSubEventForm] = useState(EMPTY_SUB_EVENT);
   const [customFunctionName, setCustomFunctionName] = useState(false);
@@ -89,13 +96,15 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const [pickerFor, setPickerFor] = useState<(typeof STARTER_SUGGESTIONS)[number] | null>(null);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerShowAll, setPickerShowAll] = useState(false);
+  // productId -> quantity for everything ticked in the picker.
+  const [pickerSelection, setPickerSelection] = useState<Record<string, number>>({});
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   if (!account) return null;
   if (!plan) return <div className="mx-auto w-full max-w-5xl px-4 py-10">Plan not found.</div>;
 
-  const isOwner = plan.ownerAccountId === account.id;
+  const canSubmit = canSubmitPlan(plan, account.id);
   const owner = accounts.find((a) => a.id === plan.ownerAccountId);
   const collaborators = [owner, ...plan.coOwners.map((c) => accounts.find((a) => a.id === c.accountId))].filter(Boolean);
 
@@ -139,6 +148,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
   const suggestionScope = activeTab ?? "general";
   const availableSuggestions = STARTER_SUGGESTIONS.filter((s) => !(dismissedSuggestions[suggestionScope] ?? []).includes(s.key));
+  const setupAddedKeys = plan.setupAdded?.[suggestionScope] ?? [];
+  const setupAddedCount = availableSuggestions.filter((s) => setupAddedKeys.includes(s.key)).length;
+  const setupComplete = setupAddedCount === availableSuggestions.length;
+  // Open by default only while this sub-event is still empty; once anything is
+  // added it collapses, but the customer can still expand it.
+  const setupExpanded = setupOpen[suggestionScope] ?? (activeItems.length === 0 && !setupComplete);
 
   function dismissSuggestion(key: string) {
     setDismissedSuggestions((d) => ({ ...d, [suggestionScope]: [...(d[suggestionScope] ?? []), key] }));
@@ -158,6 +173,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     setPickerFor(suggestion);
     setPickerQuery("");
     setPickerShowAll(false);
+    setPickerSelection({});
   }
 
   // "+" on a line re-tags it to another sub-event, so an item parked in
@@ -545,11 +561,128 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     );
   }
 
-  function addFromPicker(product: Product) {
-    addPlanItem(planId, { productId: product.id, quantity: 1, subEventId: activeTab });
-    dismissSuggestion(pickerFor!.key);
+  const selectedIds = Object.keys(pickerSelection);
+  const allPickerSelected = pickerProducts.length > 0 && pickerProducts.every((p) => pickerSelection[p.id]);
+
+  function togglePickerProduct(productId: string) {
+    setPickerSelection((s) => {
+      const next = { ...s };
+      if (next[productId]) delete next[productId];
+      else next[productId] = 1;
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setPickerSelection((s) => {
+      const next = { ...s };
+      for (const p of pickerProducts) {
+        if (allPickerSelected) delete next[p.id];
+        else next[p.id] ??= 1;
+      }
+      return next;
+    });
+  }
+
+  function addSelectedFromPicker() {
+    for (const productId of selectedIds) {
+      addPlanItem(planId, { productId, quantity: pickerSelection[productId], subEventId: activeTab });
+    }
+    markSetupAdded(planId, suggestionScope, pickerFor!.key);
     setPickerFor(null);
-    toast.success(`Added ${product.name} to ${activeLabel}`);
+    toast.success(`Added ${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"} to ${activeLabel}`);
+  }
+
+  // Products used by 2+ sub-events. "Reuse" marks them Shared, so later
+  // sub-events carry over units from earlier ones (Haldi 40 chairs, Sangeet
+  // 100 -> 40 reused, 60 new); "Keep separate" stacks the quantities.
+  function renderSharedProducts() {
+    const shared = productUsage.filter(needsSharingDecision);
+    if (shared.length === 0) return null;
+    const decisions = plan!.itemSharing ?? {};
+    const totalSaving = shared.reduce(
+      (sum, u) => sum + (decisions[u.productId] === "Shared" ? reuseBreakdown(u).totalReused * u.product.basePrice : 0),
+      0,
+    );
+
+    return (
+      <aside className="h-fit rounded-xl bg-card p-6">
+        <div className="flex items-center gap-2">
+          <Repeat className="size-5 text-primary" />
+          <h2 className="font-serif text-2xl text-foreground">Shared Products</h2>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">Used in more than one sub-event. Reuse them to rent fewer units.</p>
+
+        <div className="mt-5 flex flex-col divide-y divide-border">
+          {shared.map((u) => {
+            const decision = decisions[u.productId];
+            const isShared = decision === "Shared";
+            const { steps, totalReused } = reuseBreakdown(u);
+            return (
+              <div key={u.productId} className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0">
+                <div className="flex items-center gap-3">
+                  <ProductThumb imageUrl={u.product.imageUrl} alt={u.product.name} className="size-9 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-foreground">{u.product.name}</p>
+                    <p className="text-xs text-muted-foreground">Need {requiredQuantity(u, decision)} units</p>
+                  </div>
+                </div>
+
+                <ul className="flex flex-col gap-1.5 text-xs">
+                  {steps.map(({ occurrence, reused, fresh }) => (
+                    <li key={occurrence.itemId} className="flex items-baseline justify-between gap-2">
+                      <span className="text-foreground">
+                        {occurrence.subEventName} <span className="text-muted-foreground">· {occurrence.quantity}</span>
+                      </span>
+                      <span className={cn("text-right", isShared && reused > 0 ? "text-primary" : "text-muted-foreground")}>
+                        {!isShared ? `${occurrence.quantity} new` : reused === 0 ? `${fresh} new` : fresh === 0 ? `${reused} reused` : `${reused} reused + ${fresh} new`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    className={cn(
+                      "flex-1 rounded-lg border px-2 py-1.5 text-xs transition-colors",
+                      isShared ? "border-primary bg-primary text-primary-foreground" : "border-primary text-primary hover:bg-primary/10",
+                    )}
+                    onClick={() => setItemSharing(planId, u.productId, "Shared")}
+                  >
+                    Reuse
+                  </button>
+                  <button
+                    className={cn(
+                      "flex-1 rounded-lg border px-2 py-1.5 text-xs transition-colors",
+                      decision === "Dedicated" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/40",
+                    )}
+                    onClick={() => setItemSharing(planId, u.productId, "Dedicated")}
+                  >
+                    Keep separate
+                  </button>
+                </div>
+                {isShared && totalReused > 0 && (
+                  <p className="text-xs text-primary">
+                    {totalReused} reused · saves {formatRupees(totalReused * u.product.basePrice)}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {totalSaving > 0 && (
+          <>
+            <div className="my-5 border-t border-border" />
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-foreground">Estimated reuse saving</span>
+              <span className="font-serif text-xl text-primary">−{formatRupees(totalSaving)}</span>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">Confirmed by our team in the quotation.</p>
+          </>
+        )}
+      </aside>
+    );
   }
 
   // Only name is required. Date, time, venue, setup/teardown and guest count
@@ -899,26 +1032,60 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       <div className="grid gap-8 pt-6 md:grid-cols-[1fr_280px]">
         <div className="flex flex-col gap-6">
           {/* Starter suggestions */}
-          {availableSuggestions.length > 0 && (
+          {availableSuggestions.length > 0 && setupComplete ? (
+            // Every setup area filled — swap the checklist for a next-step banner.
+            <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
+              <span className="flex items-center gap-2 text-sm text-foreground">
+                <CheckCircle2 className="size-5 text-primary" /> Setup complete for {activeLabel} — review quantities below, then get a quote.
+              </span>
+              <span className="flex items-center gap-2">
+                <Button variant="outline" size="sm" className="border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}/summary`}>View summary</Link>} />
+                <Button size="sm" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Submit for Quotation</Link>} />
+              </span>
+            </section>
+          ) : availableSuggestions.length > 0 && (
             <section className="rounded-xl border border-dashed border-primary bg-card p-5">
-              <div className="flex items-center justify-between">
+              <button
+                className="flex w-full items-center justify-between gap-3 text-left"
+                onClick={() => setSetupOpen((o) => ({ ...o, [suggestionScope]: !setupExpanded }))}
+                aria-expanded={setupExpanded}
+              >
                 <h2 className="font-serif text-xl text-foreground">Complete your setup</h2>
-                <span className="text-xs text-muted-foreground">Adding to {activeLabel}</span>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-                {availableSuggestions.map((s) => (
-                  <div key={s.key} className="relative flex flex-col gap-3 rounded-lg border border-border bg-background p-3">
-                    <button className="absolute top-2 right-2 text-muted-foreground" onClick={() => dismissSuggestion(s.key)}>
-                      <X className="size-3" />
-                    </button>
-                    <Sparkles className="size-4 text-primary" />
-                    <span className="pr-2 text-sm text-foreground">{s.label}</span>
-                    <button className="w-fit rounded-md border border-primary px-2 py-1 text-xs text-primary" onClick={() => openPicker(s)}>
-                      Add
-                    </button>
+                <span className="flex items-center gap-3 text-xs text-muted-foreground">
+                  {setupAddedCount} of {availableSuggestions.length} added
+                  <ChevronDown className={cn("size-4 transition-transform", setupExpanded && "rotate-180")} />
+                </span>
+              </button>
+              {setupExpanded && (
+                <>
+                  <p className="mt-1 text-xs text-muted-foreground">Adding to {activeLabel}</p>
+                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+                    {availableSuggestions.map((s) => {
+                      const added = setupAddedKeys.includes(s.key);
+                      return (
+                        <div
+                          key={s.key}
+                          className={cn("relative flex flex-col gap-3 rounded-lg border bg-background p-3", added ? "border-primary/60" : "border-border")}
+                        >
+                          {!added && (
+                            <button className="absolute top-2 right-2 text-muted-foreground" onClick={() => dismissSuggestion(s.key)} aria-label={`Skip ${s.label}`}>
+                              <X className="size-3" />
+                            </button>
+                          )}
+                          {added ? <CheckCircle2 className="size-4 text-primary" /> : <Sparkles className="size-4 text-primary" />}
+                          <span className="pr-2 text-sm text-foreground">{s.label}</span>
+                          <button
+                            className={cn("w-fit rounded-md px-2 py-1 text-xs", added ? "text-muted-foreground hover:text-primary" : "border border-primary text-primary")}
+                            onClick={() => openPicker(s)}
+                          >
+                            {added ? "Added · add more" : "Add"}
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+                </>
+              )}
             </section>
           )}
 
@@ -945,8 +1112,33 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       )}
                     </span>
                   </span>
-                  <span className="text-sm text-muted-foreground">
-                    {item.dimensions ? `${item.dimensions.length} ${product.rateType === "SqFt" ? "sqft" : "ft"}` : `Qty ${item.quantity}`}
+                  <span className="mt-2 flex items-center gap-2 text-sm text-muted-foreground md:mt-0">
+                    <span className="flex items-center rounded-lg border border-border">
+                      <button
+                        className="px-2 py-1 hover:text-primary disabled:opacity-40"
+                        aria-label="Decrease quantity"
+                        disabled={lineQty(item) <= 1}
+                        onClick={() => setPlanItemQty(planId, item.id, lineQty(item) - 1)}
+                      >
+                        <Minus className="size-3" />
+                      </button>
+                      <input
+                        id={`qty-${item.id}`}
+                        type="number"
+                        min={1}
+                        className="w-12 bg-transparent text-center text-foreground outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                        value={lineQty(item)}
+                        onChange={(e) => setPlanItemQty(planId, item.id, Number(e.target.value))}
+                      />
+                      <button
+                        className="px-2 py-1 hover:text-primary"
+                        aria-label="Increase quantity"
+                        onClick={() => setPlanItemQty(planId, item.id, lineQty(item) + 1)}
+                      >
+                        <Plus className="size-3" />
+                      </button>
+                    </span>
+                    {item.dimensions && (product.rateType === "SqFt" ? "sqft" : "ft")}
                   </span>
                   <span className="flex flex-col">
                     <span className="font-serif text-base text-primary">{formatRupees(linePrice(item))}</span>
@@ -954,7 +1146,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   </span>
                   <div className="mt-2 flex items-center justify-end gap-3 md:mt-0">
                     {renderMoveMenu(item)}
-                    <button className="text-muted-foreground" onClick={() => toast.info("Editing line items isn't wired up yet — remove and re-add instead.")}>
+                    {/* ponytail: quantity is edited inline, so edit just jumps to that field */}
+                    <button
+                      className="text-muted-foreground hover:text-primary"
+                      aria-label="Edit quantity"
+                      onClick={() => (document.getElementById(`qty-${item.id}`) as HTMLInputElement | null)?.select()}
+                    >
                       <Pencil className="size-4" />
                     </button>
                     <button className="text-muted-foreground hover:text-destructive" onClick={() => removePlanItem(planId, item.id)}>
@@ -975,7 +1172,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           <Button variant="outline" className="w-fit border-primary text-primary" nativeButton={false} render={<Link href="/catalog">Browse catalog to add items</Link>} />
         </div>
 
-        {/* Plan Total sidebar */}
+        {/* Plan Total sidebar, with Shared Products underneath */}
+        <div className="flex h-fit flex-col gap-6">
         <aside className="h-fit rounded-xl bg-card p-6">
           <h2 className="font-serif text-2xl text-foreground">Plan Total</h2>
           <div className="mt-6 flex flex-col gap-4 text-sm">
@@ -1006,6 +1204,9 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             }
           />
         </aside>
+
+          {renderSharedProducts()}
+        </div>
       </div>
         </>
       )}
@@ -1031,37 +1232,86 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               <span className="text-muted-foreground">
                 {pickerShowAll ? "All products" : pickerFor?.categories.join(" · ")}
               </span>
-              <button className="text-primary hover:underline" onClick={() => setPickerShowAll((v) => !v)}>
-                {pickerShowAll ? "Suggested only" : "Show all products"}
-              </button>
+              <span className="flex items-center gap-3">
+                {pickerProducts.length > 0 && (
+                  <button className="text-primary hover:underline" onClick={toggleSelectAll}>
+                    {allPickerSelected ? "Clear all" : "Select all"}
+                  </button>
+                )}
+                <button className="text-primary hover:underline" onClick={() => setPickerShowAll((v) => !v)}>
+                  {pickerShowAll ? "Suggested only" : "Show all products"}
+                </button>
+              </span>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto border-t border-border">
-            {pickerProducts.map((prod) => (
-              <button
-                key={prod.id}
-                className="flex w-full items-center gap-3 border-b border-border p-4 text-left transition-colors hover:bg-secondary"
-                onClick={() => addFromPicker(prod)}
-              >
-                <ProductThumb imageUrl={prod.imageUrl} alt={prod.name} className="size-14 shrink-0" />
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate text-sm text-foreground">{prod.name}</span>
-                  <span className="text-xs text-muted-foreground">{prod.category}</span>
-                  <span className="text-xs text-primary">{unitRateLabel(prod)}</span>
-                </span>
-                <Plus className="ml-auto size-4 shrink-0 text-primary" />
-              </button>
-            ))}
+            {pickerProducts.map((prod) => {
+              const qty = pickerSelection[prod.id];
+              return (
+                <div
+                  key={prod.id}
+                  className={cn("flex w-full items-center gap-3 border-b border-border p-4 transition-colors", qty ? "bg-primary/5" : "hover:bg-secondary")}
+                >
+                  <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => togglePickerProduct(prod.id)} aria-pressed={!!qty}>
+                    <span
+                      className={cn(
+                        "flex size-5 shrink-0 items-center justify-center rounded border",
+                        qty ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                      )}
+                    >
+                      {qty && <Check className="size-3" />}
+                    </span>
+                    <ProductThumb imageUrl={prod.imageUrl} alt={prod.name} className="size-14 shrink-0" />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="truncate text-sm text-foreground">{prod.name}</span>
+                      <span className="text-xs text-muted-foreground">{prod.category}</span>
+                      <span className="text-xs text-primary">{unitRateLabel(prod)}</span>
+                    </span>
+                  </button>
+                  {qty && (
+                    <span className="flex shrink-0 items-center rounded-lg border border-border text-sm">
+                      <button
+                        className="px-2 py-1 text-muted-foreground hover:text-primary disabled:opacity-40"
+                        aria-label="Decrease quantity"
+                        disabled={qty <= 1}
+                        onClick={() => setPickerSelection((s) => ({ ...s, [prod.id]: qty - 1 }))}
+                      >
+                        <Minus className="size-3" />
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        className="w-10 bg-transparent text-center outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                        value={qty}
+                        onChange={(e) => setPickerSelection((s) => ({ ...s, [prod.id]: Math.max(1, Math.floor(Number(e.target.value)) || 1) }))}
+                      />
+                      <button
+                        className="px-2 py-1 text-muted-foreground hover:text-primary"
+                        aria-label="Increase quantity"
+                        onClick={() => setPickerSelection((s) => ({ ...s, [prod.id]: qty + 1 }))}
+                      >
+                        <Plus className="size-3" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+              );
+            })}
             {pickerProducts.length === 0 && (
               <p className="p-6 text-center text-sm text-muted-foreground">No products match. Try &quot;Show all products&quot;.</p>
             )}
+          </div>
+          <div className="border-t border-border p-4">
+            <Button className="w-full" disabled={selectedIds.length === 0} onClick={addSelectedFromPicker}>
+              {selectedIds.length === 0 ? "Select products to add" : `Add ${selectedIds.length} selected`}
+            </Button>
           </div>
         </SheetContent>
       </Sheet>
 
       {/* Sticky footer actions */}
       <footer className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
-        {isOwner ? (
+        {canSubmit ? (
           plan.items.length === 0 ? (
             <>
               <Button variant="outline" className="rounded-lg border-primary text-primary" disabled>
@@ -1078,7 +1328,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             </>
           )
         ) : (
-          <span className="text-sm text-muted-foreground">Only the plan owner can submit or order.</span>
+          <span className="text-sm text-muted-foreground">View-only access — ask the plan owner to submit or order.</span>
         )}
       </footer>
     </div>

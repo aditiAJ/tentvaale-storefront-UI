@@ -29,7 +29,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
     try {
       if (tab === "signup") {
         signup({ name: emailOrPhone.split("@")[0] || emailOrPhone, email: emailOrPhone, phone: "", accountType });
-        toast.success("Account created — your Plan Board is ready.");
+        toast.success("Account created — your Plan Event is ready.");
       } else {
         login(emailOrPhone);
       }
@@ -54,7 +54,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
       <div className="flex w-full flex-col gap-2 text-center">
         <h1 className="font-serif text-3xl text-foreground">{tab === "signup" ? "Create your account" : "Welcome back"}</h1>
         <p className="text-sm text-muted-foreground">
-          {tab === "signup" ? "Save your favourites and start planning in minutes" : "Log in to pick up your Plan Board"}
+          {tab === "signup" ? "Save your favourites and start planning in minutes" : "Log in to pick up your Plan Event"}
         </p>
       </div>
 

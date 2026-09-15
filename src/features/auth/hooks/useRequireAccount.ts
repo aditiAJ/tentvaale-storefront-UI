@@ -8,11 +8,13 @@ import { useMockStore } from "@/mock-data/store";
 // quotations, checkout, orders). Redirects to /login if there's no session.
 export function useRequireAccount() {
   const router = useRouter();
-  const { currentAccount } = useMockStore();
+  const { currentAccount, hydrated } = useMockStore();
 
+  // Wait for the saved session to load — otherwise a fresh tab or reload
+  // sees "no account" for one render and bounces to /login.
   useEffect(() => {
-    if (!currentAccount) router.replace("/login");
-  }, [currentAccount, router]);
+    if (hydrated && !currentAccount) router.replace("/login");
+  }, [hydrated, currentAccount, router]);
 
   return currentAccount;
 }

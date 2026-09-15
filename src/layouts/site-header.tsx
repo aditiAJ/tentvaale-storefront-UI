@@ -14,7 +14,7 @@ const NAV_LINKS = [
   { href: "/collections", label: "Featured Collections" },
   { href: "/bundles", label: "Bundles" },
   { href: "/catalog", label: "Product Catalog" },
-  { href: "/plans", label: "Plan Board" },
+  { href: "/plans", label: "Plan Event" },
   { href: "/about", label: "About" },
 ];
 

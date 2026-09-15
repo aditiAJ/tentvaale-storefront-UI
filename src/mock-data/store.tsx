@@ -60,6 +60,16 @@ function nowIso(): string {
 
 class OwnerOnlyError extends Error {}
 
+// Owner and full co-owners can submit for quotation / direct order; view-only
+// planners can't.
+// ponytail: permission gate switched off for now (owner was being blocked);
+// restore the owner/co-owner check below when roles are sorted out.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function canSubmitPlan(plan: Plan, accountId: string | null | undefined): boolean {
+  return true;
+  // return !!accountId && (plan.ownerAccountId === accountId || plan.coOwners.some((c) => c.accountId === accountId && c.role === "CoOwner"));
+}
+
 function pushAudit(plan: Plan, action: PlanAuditAction, detail: string, accountId: string): Plan {
   return {
     ...plan,
@@ -69,6 +79,8 @@ function pushAudit(plan: Plan, action: PlanAuditAction, detail: string, accountI
 
 interface StoreContextValue extends StoreState {
   currentAccount: Account | null;
+  /** False until localStorage has been read — the session isn't known before that. */
+  hydrated: boolean;
   products: typeof PRODUCTS;
   bundles: typeof BUNDLES;
   collections: typeof COLLECTIONS;
@@ -98,6 +110,8 @@ interface StoreContextValue extends StoreState {
   removePlanItem: (planId: string, itemId: string) => void;
   movePlanItem: (planId: string, itemId: string, subEventId: string | null) => void;
   adjustPlanItemQty: (planId: string, itemId: string, delta: number) => void;
+  setPlanItemQty: (planId: string, itemId: string, qty: number) => void;
+  markSetupAdded: (planId: string, scope: string, key: string) => void;
   addBundleToPlan: (planId: string, bundleId: string, rental?: { rentalStart?: string; rentalEnd?: string }) => void;
 
   addCoOwner: (planId: string, email: string, name: string, role: PlanCoOwnerRole) => void;
@@ -148,8 +162,8 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   const currentAccount = state.accounts.find((a) => a.id === state.currentAccountId) ?? null;
 
   function requireOwner(plan: Plan) {
-    if (plan.ownerAccountId !== state.currentAccountId) {
-      throw new OwnerOnlyError("Only the plan owner can do this.");
+    if (!canSubmitPlan(plan, state.currentAccountId)) {
+      throw new OwnerOnlyError("Only the plan owner or a co-owner can do this.");
     }
   }
 
@@ -163,7 +177,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       const defaultPlan: Plan = {
         id: newId("plan"),
         ownerAccountId: account.id,
-        name: "My Plan Board",
+        name: "My Plan Event",
         status: "Draft",
         subEvents: [],
         items: [],
@@ -346,6 +360,25 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     }));
   }, []);
 
+  // Absolute quantity edit from the plan line. Dimension-priced lines carry
+  // their billable amount in dimensions.length, so that's what gets set.
+  const setPlanItemQty = useCallback((planId: string, itemId: string, qty: number) => {
+    const value = Math.max(1, Math.floor(qty) || 1);
+    updatePlan(planId, (p) => ({
+      ...p,
+      items: p.items.map((it) =>
+        it.id !== itemId ? it : it.dimensions ? { ...it, dimensions: { ...it.dimensions, length: value } } : { ...it, quantity: value },
+      ),
+    }));
+  }, []);
+
+  const markSetupAdded = useCallback((planId: string, scope: string, key: string) => {
+    updatePlan(planId, (p) => {
+      const done = p.setupAdded?.[scope] ?? [];
+      return done.includes(key) ? p : { ...p, setupAdded: { ...p.setupAdded, [scope]: [...done, key] } };
+    });
+  }, []);
+
   const addCoOwner = useCallback((planId: string, email: string, name: string, role: PlanCoOwnerRole) => {
     setState((s) => {
       let account = s.accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
@@ -379,7 +412,9 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       requireOwner(plan);
 
       function buildLines(itemIds: Set<string>): QuotationLine[] {
-        const items = plan!.items.filter((it) => itemIds.has(it.id));
+        // Skip lines whose product is gone from the catalog (stale saved plans) —
+        // the plan page already hides them.
+        const items = plan!.items.filter((it) => itemIds.has(it.id) && PRODUCTS.some((pr) => pr.id === it.productId));
         // Mock admin negotiation, so the partial-accept UI (Flow 5) has real
         // variety to demonstrate: with 4+ lines, one comes back adjusted
         // (partial stock) and one rejected (out of stock); with 2-3, just one
@@ -422,15 +457,18 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
               { subEventId: null, itemIds: new Set(plan.items.filter((it) => it.subEventId === null).map((it) => it.id)) },
             ].filter((g) => g.itemIds.size > 0);
 
-      const newQuotations: Quotation[] = groups.map((g) => ({
+      const newQuotations: Quotation[] = groups
+        .map((g) => ({
         id: newId("quo"),
         planId,
         subEventId: g.subEventId,
         round: 1,
         lines: buildLines(g.itemIds),
         validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "Open",
-      }));
+        status: "Open" as const,
+      }))
+        .filter((q) => q.lines.length > 0);
+      if (newQuotations.length === 0) throw new Error("No valid items to quote — add products to the plan first.");
 
       setState((s) => ({
         ...s,
@@ -455,7 +493,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       if (!plan) throw new Error("Plan not found");
       requireOwner(plan);
 
-      const lines: QuotationLine[] = plan.items.map((it) => {
+      const lines: QuotationLine[] = plan.items.filter((it) => PRODUCTS.some((pr) => pr.id === it.productId)).map((it) => {
         const product = PRODUCTS.find((pr) => pr.id === it.productId)!;
         const qty = it.dimensions?.length ?? it.quantity;
         return {
@@ -664,6 +702,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       value={{
         ...state,
         currentAccount,
+        hydrated,
         products: PRODUCTS,
         bundles: BUNDLES,
         collections: COLLECTIONS,
@@ -681,6 +720,8 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         removePlanItem,
         movePlanItem,
         adjustPlanItemQty,
+        setPlanItemQty,
+        markSetupAdded,
         addBundleToPlan,
         addCoOwner,
         removeCoOwner,

@@ -8,8 +8,9 @@ import { SiteMobileNav } from "./site-mobile-nav";
 // The Enquiry-to-Quote flow ((enquiry-flow) route group) renders its own
 // TopNav/footer chrome — skip the main site's here so routes under /enquiry
 // and /quote don't get it twice.
+// Printable invoices (/orders/[id]/invoice) are bare A4 sheets too.
 function hasOwnChrome(pathname: string) {
-  return pathname.startsWith("/enquiry") || pathname.startsWith("/quote");
+  return pathname.startsWith("/enquiry") || pathname.startsWith("/quote") || pathname.endsWith("/invoice");
 }
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {

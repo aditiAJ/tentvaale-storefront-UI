@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
 import { useRequireAccount } from "@/features/auth";
-import { useMockStore } from "@/mock-data/store";
+import { canSubmitPlan, useMockStore } from "@/mock-data/store";
 import { getProductUsage, needsSharingDecision, requiredQuantity } from "@/mock-data/inventory-sharing";
 import { formatEventDateRange } from "@/mock-data/seed";
 
@@ -32,7 +32,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
   if (!account) return null;
   if (!plan) return <div className="mx-auto w-full max-w-4xl px-4 py-10">Plan not found.</div>;
 
-  const isOwner = plan.ownerAccountId === account.id;
+  const canSubmit = canSubmitPlan(plan, account.id);
   const usage = getProductUsage(plan, products);
   const decisions = plan.itemSharing ?? {};
   const startDate = plan.eventStartDate ?? plan.subEvents[0]?.eventDate;
@@ -85,7 +85,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
       )}
 
       <div className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
-        {isOwner ? (
+        {canSubmit ? (
           <>
             <Button
               variant="outline"
@@ -102,7 +102,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
             />
           </>
         ) : (
-          <span className="text-sm text-muted-foreground">Only the plan owner can submit or order.</span>
+          <span className="text-sm text-muted-foreground">View-only access — ask the plan owner to submit or order.</span>
         )}
       </div>
     </div>

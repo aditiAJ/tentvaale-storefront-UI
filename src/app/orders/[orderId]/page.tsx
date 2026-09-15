@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { CircleCheck, Clock3 } from "lucide-react";
+import { CircleCheck, Clock3, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,16 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ orderI
             <p className="text-sm tracking-[0.18em] text-primary uppercase">Order</p>
             <h1 className="font-serif text-3xl text-foreground md:text-4xl">#{order.id}</h1>
             <p className="text-base text-foreground/75">Plan: {plan.name}</p>
+            <Button
+              variant="outline"
+              className="mt-2 w-fit gap-2 border-primary text-primary"
+              nativeButton={false}
+              render={
+                <Link href={`/orders/${orderId}/invoice?download=1`} target="_blank">
+                  <Download className="size-4" /> Download Invoice
+                </Link>
+              }
+            />
           </div>
           <div className="grid grid-cols-2 gap-8 text-right md:gap-12">
             <div className="flex flex-col gap-1">

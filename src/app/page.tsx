@@ -81,7 +81,7 @@ export default function Home() {
           </p>
           <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
             <Button className="rounded-full" size="lg" nativeButton={false} render={<Link href="/catalog">Browse Product Catalog</Link>} />
-            <Button variant="outline" className="rounded-full" size="lg" nativeButton={false} render={<Link href="/plans">Start a Plan Board</Link>} />
+            <Button variant="outline" className="rounded-full" size="lg" nativeButton={false} render={<Link href="/plans">Start a Plan Event</Link>} />
           </div>
         </div>
       </section>

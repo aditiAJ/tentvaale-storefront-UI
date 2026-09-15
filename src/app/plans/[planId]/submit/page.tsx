@@ -55,8 +55,9 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
       const quotations = submitPlanForQuotation(planId, granularity);
       toast.success(`Submitted — ${quotations.length} quotation${quotations.length === 1 ? "" : "s"} created`);
       router.push(`/quotations/${quotations[0].id}`);
-    } catch {
-      toast.error("Only the plan owner can submit for quotation.");
+    } catch (err) {
+      console.error(err);
+      toast.error(err instanceof Error ? err.message : "Couldn't submit for quotation.");
     }
   }
 

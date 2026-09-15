@@ -147,6 +147,9 @@ export interface Plan extends PlanEventDetails {
   // (required qty = sum). A product with no entry here is undecided — that's
   // what drives the Plan Health nudges, not a default of either state.
   itemSharing?: Record<string, ItemSharingDecision>; // productId -> decision
+  // "Complete your setup" areas (entry-gate, passage...) already filled, keyed
+  // by sub-event id ("general" for the untagged list).
+  setupAdded?: Record<string, string[]>;
 }
 
 export type QuotationLineStatus = "Confirmed" | "Adjusted" | "Rejected";

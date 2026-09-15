@@ -6,6 +6,7 @@ export interface ProductOccurrence {
   subEventId: string | null; // null = General / Untagged
   subEventName: string;
   timeWindow?: string; // "9th Dec 2026, 10:00–13:00" when date/time is known
+  sortKey: string; // "2026-12-09T10:00" — chronological order; undated sort last
   quantity: number; // dimensions?.length ?? quantity — same convention as line pricing
 }
 
@@ -38,6 +39,7 @@ export function getProductUsage(plan: Plan, products: Product[]): ProductUsage[]
       subEventId: item.subEventId,
       subEventName: subEvent?.name ?? "General / Untagged",
       timeWindow: subEvent ? subEventTimeWindow(subEvent.eventDate, subEvent.startTime, subEvent.endTime) : undefined,
+      sortKey: subEvent?.eventDate ? `${subEvent.eventDate}T${subEvent.startTime ?? "00:00"}` : "~",
       quantity: item.dimensions?.length ?? item.quantity,
     };
     byProduct.set(item.productId, [...(byProduct.get(item.productId) ?? []), occurrence]);
@@ -72,4 +74,27 @@ export function requiredQuantity(usage: ProductUsage, decision: ItemSharingDecis
   // Shared: the same physical units cover every linked sub-event, so only
   // the largest single requirement is needed — not the sum.
   return generalQty + Math.max(...usage.subEventOccurrences.map((o) => o.quantity));
+}
+
+export interface ReuseStep {
+  occurrence: ProductOccurrence;
+  reused: number; // units carried over from an earlier sub-event
+  fresh: number; // extra units this sub-event adds on top
+}
+
+// Shared products, walked in date order: each sub-event reuses whatever the
+// earlier ones already brought in and only adds the shortfall.
+// Haldi 40 then Sangeet 100 -> Haldi 40 new, Sangeet 40 reused + 60 new.
+export function reuseBreakdown(usage: ProductUsage): { steps: ReuseStep[]; totalReused: number } {
+  const ordered = [...usage.subEventOccurrences].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  let onHand = 0;
+  let totalReused = 0;
+  const steps = ordered.map((occurrence) => {
+    const reused = Math.min(onHand, occurrence.quantity);
+    const fresh = occurrence.quantity - reused;
+    onHand += fresh;
+    totalReused += reused;
+    return { occurrence, reused, fresh };
+  });
+  return { steps, totalReused };
 }
