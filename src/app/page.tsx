@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { Search, ArrowRight, LayoutGrid, FileText, CreditCard, Truck } from "lucide-react";
+import { useSkipEntrance } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
@@ -82,6 +83,8 @@ export default function Home() {
   // near-instant fallback for prefers-reduced-motion instead of disabling
   // the triggers outright.
   const reduceMotion = useReducedMotion();
+  // Back/forward navigation: render already-revealed instead of blank.
+  const skip = useSkipEntrance();
   const easeOutQuint = [0.23, 1, 0.32, 1] as const;
 
   const heroImage: Variants = {
@@ -111,7 +114,7 @@ export default function Home() {
     // app uses the tighter global --radius from globals.css.
     <div className="w-full [--radius:0.625rem]">
       <section className="relative h-110 w-full overflow-hidden md:h-140">
-        <motion.div className="absolute inset-0" variants={heroImage} initial="hidden" animate="visible">
+        <motion.div className="absolute inset-0" variants={heroImage} initial={skip ? "visible" : "hidden"} animate="visible">
           <Image
             src="https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600"
             alt="Luxury event decor"
@@ -126,7 +129,7 @@ export default function Home() {
         <motion.div
           className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-8 md:gap-6 md:px-12 md:pb-12"
           variants={heroContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           animate="visible"
         >
           <motion.h1 variants={heroItem} className="max-w-2xl font-serif text-3xl leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)] md:text-5xl">
@@ -168,7 +171,7 @@ export default function Home() {
         <motion.div
           className="mt-4 grid w-full grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-9"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.4 }}
         >
@@ -193,7 +196,7 @@ export default function Home() {
         <motion.div
           className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
         >
@@ -215,7 +218,7 @@ export default function Home() {
         <motion.div
           className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
@@ -241,7 +244,7 @@ export default function Home() {
         <motion.div
           className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
@@ -267,7 +270,7 @@ export default function Home() {
         <motion.div
           className="grid grid-cols-1 gap-6 md:grid-cols-3"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
@@ -294,7 +297,7 @@ export default function Home() {
         <motion.div
           className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.4 }}
         >
@@ -312,7 +315,7 @@ export default function Home() {
         <motion.div
           className="grid grid-cols-1 gap-6 md:grid-cols-3"
           variants={gridContainer}
-          initial="hidden"
+          initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >

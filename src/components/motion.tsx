@@ -45,6 +45,23 @@ export const SPRING = {
 /** Shared viewport config: reveal once, when a third of the block is on screen. */
 export const VIEWPORT = { once: true, amount: 0.2 } as const;
 
+// Back/forward navigation restores the old scroll position immediately, so
+// entrance animations would leave the restored viewport blank until each
+// reveal fires again. A popstate marks the next ~second of mounts as a
+// restore; components mounted in that window start in their final state.
+let restoringUntil = 0;
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    restoringUntil = Date.now() + 1000;
+  });
+}
+
+/** True when this component mounted as part of a back/forward navigation. */
+export function useSkipEntrance() {
+  const [skip] = React.useState(() => typeof window !== "undefined" && Date.now() < restoringUntil);
+  return skip;
+}
+
 type Dir = "up" | "down" | "left" | "right" | "none";
 
 function offset(direction: Dir, distance: number) {
@@ -112,12 +129,13 @@ export function Reveal({
   ...props
 }: RevealProps) {
   const reduce = useReducedMotion();
+  const skip = useSkipEntrance();
   const variants = useRevealVariants({ direction, distance, scale, duration });
 
   return (
     <motion.div
       variants={variants}
-      initial="hidden"
+      initial={skip ? "visible" : "hidden"}
       {...(immediate ? { animate: "visible" } : { whileInView: "visible", viewport: VIEWPORT })}
       transition={{ delay: reduce ? 0 : delay, ...transition }}
       {...props}
@@ -145,6 +163,7 @@ type StaggerProps = React.ComponentProps<typeof motion.div> & {
  */
 export function Stagger({ gap = 0.06, delay = 0, immediate = false, ...props }: StaggerProps) {
   const reduce = useReducedMotion();
+  const skip = useSkipEntrance();
   const variants: Variants = {
     hidden: {},
     visible: {
@@ -158,7 +177,7 @@ export function Stagger({ gap = 0.06, delay = 0, immediate = false, ...props }: 
   return (
     <motion.div
       variants={variants}
-      initial="hidden"
+      initial={skip ? "visible" : "hidden"}
       {...(immediate ? { animate: "visible" } : { whileInView: "visible", viewport: VIEWPORT })}
       {...props}
     />
@@ -185,11 +204,12 @@ export function StaggerItem({
  */
 export function PageTransition({ children }: { children: React.ReactNode }) {
   const reduce = useReducedMotion();
+  const skip = useSkipEntrance();
 
   return (
     <motion.div
       className="flex flex-1 flex-col"
-      initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+      initial={skip ? false : { opacity: 0, y: reduce ? 0 : 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: reduce ? 0.01 : DUR.base, ease: EASE.out }}
     >

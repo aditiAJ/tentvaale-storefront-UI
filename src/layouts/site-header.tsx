@@ -152,13 +152,10 @@ export function SiteHeader() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b transition-[background-color,border-color,box-shadow,backdrop-filter] duration-300 ease-out-quint",
-        // Flat against the page at rest; lifts onto a blurred, shadowed plane
-        // once content scrolls beneath it, so the header stays legible over
-        // photography without sitting on a hard bar the whole time.
-        scrolled
-          ? "border-border bg-background/85 shadow-e2 supports-backdrop-filter:bg-background/70 supports-backdrop-filter:backdrop-blur-xl"
-          : "border-transparent bg-background"
+        // Solid background at all times — no translucent/blurred layer. Once
+        // content scrolls beneath, only a hairline border separates it.
+        "sticky top-0 z-50 w-full border-b bg-background transition-[border-color] duration-300 ease-out-quint",
+        scrolled ? "border-border" : "border-transparent"
       )}
     >
       {/* Desktop */}

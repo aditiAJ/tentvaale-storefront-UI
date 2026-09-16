@@ -1,12 +1,12 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpDown, ChevronDown, ChevronRight, Heart, Plus, Search, SlidersHorizontal, X } from "lucide-react";
-import { DUR, EASE, Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { ArrowUpDown, ChevronDown, ChevronRight, Heart, Minus, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { DUR, EASE, Reveal } from "@/components/motion";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -372,72 +372,125 @@ function QuickAddDialog({ product, onClose }: { product: Product | null; onClose
 
 /* ---------------- Product card ---------------- */
 
+/** Where this product already sits in the shopper's draft plans (latest wins). */
+function usePlanLine(productId: string) {
+  const { currentAccount, plans } = useMockStore();
+  if (!currentAccount) return null;
+  for (let i = plans.length - 1; i >= 0; i--) {
+    const plan = plans[i];
+    if (plan.ownerAccountId !== currentAccount.id || plan.status !== "Draft") continue;
+    const item = [...plan.items].reverse().find((it) => it.productId === productId);
+    if (item) return { planId: plan.id, planName: plan.name, itemId: item.id, qty: item.dimensions?.length ?? item.quantity };
+  }
+  return null;
+}
+
+/**
+ * Compact − qty + control shown in place of Add once the product is in a
+ * plan. Plain buttons, not NumberStepper: that one captures the mouse wheel,
+ * which would hijack page scrolling while the cursor crosses a card.
+ */
+function CardQty({ product, line }: { product: Product; line: NonNullable<ReturnType<typeof usePlanLine>> }) {
+  const { setPlanItemQty, removePlanItem } = useMockStore();
+  const unit = product.rateType === "Qty" ? "" : ` ${unitShort(product.rateType)}`;
+
+  function dec() {
+    if (line.qty <= 1) {
+      removePlanItem(line.planId, line.itemId);
+      toast(`Removed ${product.name} from ${line.planName}`);
+    } else setPlanItemQty(line.planId, line.itemId, line.qty - 1);
+  }
+
+  return (
+    <div
+      className="flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-primary bg-primary/10 text-primary"
+      title={`In ${line.planName}`}
+    >
+      <button onClick={dec} className="flex h-full w-7 items-center justify-center transition-colors hover:bg-primary hover:text-primary-foreground" aria-label={line.qty <= 1 ? `Remove ${product.name} from plan` : `Decrease ${product.name}`}>
+        <Minus className="size-3.5" />
+      </button>
+      <span className="min-w-7 px-1 text-center text-xs font-semibold tabular-nums" aria-live="polite">
+        {line.qty}
+        {unit}
+      </span>
+      <button
+        onClick={() => setPlanItemQty(line.planId, line.itemId, line.qty + 1)}
+        className="flex h-full w-7 items-center justify-center transition-colors hover:bg-primary hover:text-primary-foreground"
+        aria-label={`Increase ${product.name}`}
+      >
+        <Plus className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function ProductCard({ product, onQuickAdd }: { product: Product; onQuickAdd: (p: Product) => void }) {
   const { currentAccount, wishlist, toggleWishlist } = useMockStore();
   const wishlisted = wishlist.includes(product.id);
+  const line = usePlanLine(product.id);
 
   return (
-    <article className="surface-interactive group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-e1 hover:border-primary/50">
+    // h-full keeps cards in a grid row the same height; the info block sits
+    // compactly under the image and any spare height falls below it.
+    <article className="surface-interactive group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-e1 hover:border-primary/50">
       <div className="relative overflow-hidden bg-muted/60">
         <Link href={`/catalog/${product.id}`} className="block">
-          {/* Slow, subtle zoom (1.06 over 600ms). Anything faster reads as a
-              glitch on a photo grid this dense. */}
+          {/* 4:3 keeps the photo to roughly 55–60% of the card height. */}
           <ProductThumb
             imageUrl={product.imageUrl}
             alt={product.name}
-            className="aspect-square w-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.06]"
+            className="aspect-[4/3] w-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.05]"
           />
         </Link>
-        {/* Gold wash on hover ties the card to the accent without tinting the photo at rest. */}
-        <span className="pointer-events-none absolute inset-0 bg-linear-to-t from-primary/12 to-transparent opacity-0 transition-opacity duration-300 ease-out-quint group-hover:opacity-100" />
-
         {currentAccount && (
           <button
-            className="press absolute top-2.5 left-2.5 flex size-9 items-center justify-center rounded-sm bg-background/85 shadow-e1 backdrop-blur transition-colors duration-200 ease-out-quint hover:bg-background"
+            className="press absolute top-2 right-2 flex size-8 items-center justify-center rounded-md bg-background/85 shadow-e1 backdrop-blur transition-colors duration-200 ease-out-quint hover:bg-background"
             onClick={() => toggleWishlist(product.id)}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={wishlisted}
           >
-            <Heart
-              className={cn(
-                "size-4 transition-[transform,color,fill] duration-300 ease-out-quint",
-                wishlisted ? "scale-110 fill-primary text-primary" : "text-foreground",
-              )}
-            />
+            <Heart className={cn("size-3.5 transition-[transform,color,fill] duration-300 ease-out-quint", wishlisted ? "scale-110 fill-primary text-primary" : "text-foreground")} />
           </button>
         )}
       </div>
 
-      <div className="flex flex-1 flex-col gap-1 p-4">
-        <Link
-          href={`/catalog/${product.id}`}
-          className="line-clamp-2 text-sm leading-snug font-medium text-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary"
-        >
-          {product.name}
-        </Link>
-        {product.size && <span className="truncate text-xs text-muted-foreground">{product.size}</span>}
-        {/* Add button sits in the details row, right of the price — kept out
-            of the image so the photo stays unobstructed. */}
-        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
-          <Link href={`/catalog/${product.id}`} className="min-w-0">
-            <span className="font-serif text-lg text-primary">{formatRupees(product.basePrice)}</span>
-            <span className="text-xs text-muted-foreground"> / {unitShort(product.rateType)}</span>
-          </Link>
-          {/* Labelled outline button: reads as an action at a glance and fills
-              gold on hover, instead of an unlabelled floating icon. */}
-          <button
-            onClick={() => onQuickAdd(product)}
-            className="press inline-flex h-8 shrink-0 items-center gap-1 rounded-sm border border-primary px-3 text-xs font-semibold tracking-wide text-primary uppercase transition-colors duration-200 ease-out-quint hover:bg-primary hover:text-primary-foreground focus-visible:bg-primary focus-visible:text-primary-foreground"
-            aria-label={`Add ${product.name} to plan`}
+      <div className="flex flex-col px-3 pt-2.5 pb-3">
+        {/* Name and size read as one block; price follows right under it
+            with a small gap rather than being pushed to the card's foot. */}
+        <div className="flex flex-col gap-0.5">
+          <Link
+            href={`/catalog/${product.id}`}
+            className="line-clamp-2 text-sm leading-5 font-medium text-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary"
+            title={product.name}
           >
-            <Plus className="size-3.5" strokeWidth={2.5} />
-            Add
-          </button>
+            {product.name}
+          </Link>
+          {product.size && <span className="truncate text-[11px] leading-4 text-muted-foreground">{product.size}</span>}
+        </div>
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <Link href={`/catalog/${product.id}`} className="min-w-0 truncate leading-none">
+            <span className="font-serif text-base text-primary">{formatRupees(product.basePrice)}</span>
+            <span className="text-[11px] text-muted-foreground"> /{unitShort(product.rateType)}</span>
+          </Link>
+          {line ? (
+            <CardQty product={product} line={line} />
+          ) : (
+            <button
+              onClick={() => onQuickAdd(product)}
+              className="press inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-primary px-2.5 text-[11px] font-semibold tracking-wide text-primary uppercase transition-colors duration-200 ease-out-quint hover:bg-primary hover:text-primary-foreground focus-visible:bg-primary focus-visible:text-primary-foreground"
+              aria-label={`Add ${product.name} to plan`}
+            >
+              <Plus className="size-3.5" strokeWidth={2.5} />
+              Add
+            </button>
+          )}
         </div>
       </div>
     </article>
   );
 }
+
 
 /* ---------------- Page ---------------- */
 
@@ -496,6 +549,20 @@ function CatalogContent() {
     ...allFacets.flatMap((f) => (selection[f.key] ?? []).map((v) => ({ key: `${f.key}-${v}`, label: `${f.label}: ${v}`, clear: () => toggle(f.key, v) }))),
   ];
 
+  // Filtering while scrolled deep into the grid shrinks the page under the
+  // viewport and leaves you staring at the footer. When the result set
+  // changes and the grid's top is above the fold, bring the results back
+  // into view. Only scrolls up, never down, so filtering at the top is still.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const resultKey = `${category?.name ?? ""}|${sort}|${pills.map((p) => p.key).join(",")}`;
+  const lastKey = useRef(resultKey);
+  useEffect(() => {
+    if (lastKey.current === resultKey) return;
+    lastKey.current = resultKey;
+    const el = gridRef.current;
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [resultKey]);
+
   const panel = (
     <FilterPanel
       products={products}
@@ -513,7 +580,7 @@ function CatalogContent() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-[110rem] px-4 py-6 md:px-8 md:py-8 2xl:px-12">
+    <div className="w-full px-4 py-6 md:px-6 md:py-8">
       <nav className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/" className="transition-colors hover:text-primary">
           Home
@@ -641,20 +708,18 @@ function CatalogContent() {
           </AnimatePresence>
 
           {filtered.length > 0 ? (
-            <Stagger
-              // Re-key on the filter signature so a new result set cascades in
-              // rather than silently swapping under the cursor.
-              key={`${category?.name ?? "all"}-${pills.length}-${sort}`}
-              immediate
-              gap={0.035}
-              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5"
-            >
-              {filtered.map((p) => (
-                <StaggerItem key={p.id} distance={14} scale={0.97} className="flex flex-col">
+            // No re-keying and no parent stagger: each card reveals once, when
+            // it scrolls into view, with a small per-column offset. A parent
+            // stagger delays card N by N × gap, so cards far down a long grid
+            // were still invisible after scrolling or filtering. Cards that
+            // survive a filter change keep their mounted, visible state.
+            <div ref={gridRef} className="grid scroll-mt-28 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
+              {filtered.map((p, i) => (
+                <Reveal key={p.id} distance={12} duration={DUR.base} delay={(i % 4) * 0.04} className="flex min-w-0 flex-col">
                   <ProductCard product={p} onQuickAdd={setQuickAdd} />
-                </StaggerItem>
+                </Reveal>
               ))}
-            </Stagger>
+            </div>
           ) : (
             <Reveal immediate className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-20 text-center">
               <span className="flex size-14 items-center justify-center rounded-sm bg-primary/10">
@@ -686,14 +751,14 @@ export default function CatalogPage() {
 /** Same grid geometry as the real page, so the swap to content doesn't reflow. */
 function CatalogSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-[110rem] px-4 py-6 md:px-8 md:py-8 2xl:px-12">
+    <div className="w-full px-4 py-6 md:px-6 md:py-8">
       <div className="mb-7 flex flex-col gap-2">
         <div className="shimmer h-9 w-64 rounded-lg bg-muted/70" />
         <div className="shimmer h-4 w-96 max-w-full rounded bg-muted/70" />
       </div>
       <div className="flex gap-8">
         <div className="shimmer hidden h-128 w-64 shrink-0 rounded-2xl bg-muted/70 md:block" />
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
           {Array.from({ length: 10 }, (_, i) => (
             <SkeletonCard key={i} />
           ))}

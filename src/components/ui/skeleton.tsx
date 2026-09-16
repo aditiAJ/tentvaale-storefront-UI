@@ -25,12 +25,12 @@ function SkeletonCard({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="skeleton-card"
       className={cn(
-        "flex flex-col gap-3 overflow-hidden rounded-2xl border border-border bg-card p-3",
+        "flex flex-col gap-2.5 overflow-hidden rounded-xl border border-border bg-card p-3",
         className
       )}
       {...props}
     >
-      <Skeleton className="aspect-square w-full rounded-xl" />
+      <Skeleton className="aspect-[4/3] w-full rounded-lg" />
       <Skeleton className="h-3 w-2/5" />
       <Skeleton className="h-3.5 w-4/5" />
       <Skeleton className="h-4 w-1/3" />
