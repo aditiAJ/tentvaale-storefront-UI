@@ -4,7 +4,10 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowUpDown, ChevronDown, ChevronRight, Heart, Plus, Scissors, Search, SlidersHorizontal, X } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpDown, ChevronDown, ChevronRight, Heart, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { DUR, EASE, Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -37,14 +40,21 @@ function matches(p: Product, facets: FacetDef[], selection: Selection) {
 /* ---------------- Filters ---------------- */
 
 function FacetGroup({ title, count, defaultOpen, children }: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode }) {
+  // <details> stays the mechanism (keyboard + no-JS behaviour for free);
+  // interpolate-size + the ::details-content rule below give it a real
+  // height transition instead of the browser's instant snap.
   return (
-    <details open={defaultOpen} className="group border-t border-border py-3 first:border-t-0 first:pt-0">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase select-none hover:text-foreground [&::-webkit-details-marker]:hidden">
+    <details open={defaultOpen} className="group border-t border-border py-3 first:border-t-0 first:pt-0 [interpolate-size:allow-keywords]">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-0.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase transition-colors duration-200 ease-out-quint select-none hover:text-foreground [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2">
           {title}
-          {!!count && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground normal-case">{count}</span>}
+          {!!count && (
+            <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground normal-case tabular-nums">
+              {count}
+            </span>
+          )}
         </span>
-        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+        <ChevronDown className="size-3.5 transition-transform duration-300 ease-out-quint group-open:rotate-180" />
       </summary>
       <div className="mt-2.5 flex flex-col gap-2">{children}</div>
     </details>
@@ -57,7 +67,7 @@ function CheckList({ options, selected, onToggle }: { options: { value: string; 
   return (
     <>
       {visible.map((o) => (
-        <label key={o.value} className="flex cursor-pointer items-center justify-between gap-2 text-sm text-foreground/80 hover:text-foreground">
+        <label key={o.value} className="-mx-1.5 flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1 text-sm text-foreground/80 transition-colors duration-200 ease-out-quint hover:bg-muted/60 hover:text-foreground">
           <span className="flex min-w-0 items-center gap-2">
             <Checkbox checked={selected.includes(o.value)} onCheckedChange={() => onToggle(o.value)} />
             <span className="truncate">{o.value}</span>
@@ -112,8 +122,8 @@ function FilterPanel({
                 key={o.value}
                 onClick={() => toggle(f.key, o.value)}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-xs transition-all",
-                  selection.price?.includes(o.value) ? "glow border-primary bg-primary/15 text-primary" : "border-border text-foreground/80 hover:border-primary/50",
+                  "press rounded-full border px-3 py-1.5 text-xs transition-all duration-200 ease-out-quint",
+                  selection.price?.includes(o.value) ? "glow border-primary bg-primary/15 text-primary" : "border-border text-foreground/80 hover:border-primary/50 hover:bg-primary/5",
                 )}
               >
                 {o.value}
@@ -135,7 +145,7 @@ function FilterPanel({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search in catalog"
-          className="h-9 w-full rounded-lg border border-border bg-background pr-3 pl-9 text-sm outline-none transition-colors focus:border-primary"
+          className="h-10 w-full rounded-lg border border-border bg-background pr-3 pl-9 text-sm outline-none transition-[border-color,box-shadow] duration-200 ease-out-quint hover:border-primary/40 focus:border-primary focus:shadow-[0_0_0_3px_var(--ring)]"
         />
       </div>
 
@@ -144,7 +154,7 @@ function FilterPanel({
         <button
           onClick={() => onCategory(null)}
           className={cn(
-            "-mx-1 flex items-center justify-between rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+            "-mx-1 flex items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors duration-200 ease-out-quint",
             !category ? "bg-primary/10 font-medium text-primary" : "text-foreground/80 hover:bg-muted hover:text-foreground",
           )}
         >
@@ -157,22 +167,33 @@ function FilterPanel({
             const open = active || expanded.includes(c.name);
             return (
               <li key={c.name}>
-                <div className={cn("flex items-center rounded-md transition-colors", active ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted hover:text-foreground")}>
+                <div className={cn("flex items-center rounded-md transition-colors duration-200 ease-out-quint", active ? "bg-primary/10 text-primary" : "text-foreground/80 hover:bg-muted hover:text-foreground")}>
                   <button
                     onClick={() => setExpanded(open && !active ? expanded.filter((n) => n !== c.name) : [...expanded, c.name])}
-                    className="flex size-7 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+                    className="flex size-8 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
                     aria-label={open ? `Collapse ${c.name}` : `Expand ${c.name}`}
                     aria-expanded={open}
                   >
-                    <ChevronRight className={cn("size-3.5 transition-transform", open && "rotate-90")} />
+                    <ChevronRight className={cn("size-3.5 transition-transform duration-300 ease-out-quint", open && "rotate-90")} />
                   </button>
-                  <button onClick={() => onCategory(c.name)} className={cn("flex flex-1 items-center justify-between py-1.5 pr-2 text-left text-sm", active && "font-medium")}>
+                  <button onClick={() => onCategory(c.name)} className={cn("flex flex-1 items-center justify-between py-2 pr-2 text-left text-sm", active && "font-medium")}>
                     {c.name}
                     <span className="text-[11px] text-muted-foreground tabular-nums">{totalCount(c.name)}</span>
                   </button>
                 </div>
-                {open && (
-                  <ul className="mt-0.5 mb-1 ml-3.5 flex flex-col border-l border-border pl-2">
+                <AnimatePresence initial={false}>
+                  {open && (
+                  <motion.ul
+                    key="subcats"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: DUR.base, ease: EASE.inOut },
+                      opacity: { duration: DUR.fast, ease: EASE.out },
+                    }}
+                    className="mt-0.5 mb-1 ml-3.5 flex flex-col overflow-hidden border-l border-border pl-2"
+                  >
                     {c.subcategories.map((sub) => {
                       const on = active && subcats.includes(sub);
                       const count = products.filter((p) => p.category === c.name && p.subcategory === sub).length;
@@ -187,12 +208,17 @@ function FilterPanel({
                             }}
                             disabled={count === 0}
                             className={cn(
-                              "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1 text-left text-[13px] transition-colors disabled:opacity-40",
-                              on ? "font-medium text-primary" : "text-muted-foreground hover:text-foreground",
+                              "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors duration-200 ease-out-quint disabled:opacity-40",
+                              on ? "font-medium text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                             )}
                           >
                             <span className="flex items-center gap-2">
-                              <span className={cn("size-1.5 rounded-full", on ? "bg-primary" : "bg-border")} />
+                              <span
+                                className={cn(
+                                  "size-1.5 rounded-full transition-[background-color,transform] duration-200 ease-out-quint",
+                                  on ? "scale-125 bg-primary" : "bg-border",
+                                )}
+                              />
                               {sub}
                             </span>
                             <span className="text-[11px] tabular-nums">{count}</span>
@@ -200,8 +226,9 @@ function FilterPanel({
                         </li>
                       );
                     })}
-                  </ul>
+                  </motion.ul>
                 )}
+                </AnimatePresence>
               </li>
             );
           })}
@@ -348,50 +375,64 @@ function QuickAddDialog({ product, onClose }: { product: Product | null; onClose
 function ProductCard({ product, onQuickAdd }: { product: Product; onQuickAdd: (p: Product) => void }) {
   const { currentAccount, wishlist, toggleWishlist } = useMockStore();
   const wishlisted = wishlist.includes(product.id);
-  const fabrics = product.fabrics ?? [];
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-xl">
-      <div className="relative overflow-hidden">
+    <article className="surface-interactive group flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-e1 hover:border-primary/50">
+      <div className="relative overflow-hidden bg-muted/60">
         <Link href={`/catalog/${product.id}`} className="block">
-          <ProductThumb imageUrl={product.imageUrl} alt={product.name} className="aspect-square w-full rounded-none bg-muted/60 transition-transform duration-500 " />
+          {/* Slow, subtle zoom (1.06 over 600ms). Anything faster reads as a
+              glitch on a photo grid this dense. */}
+          <ProductThumb
+            imageUrl={product.imageUrl}
+            alt={product.name}
+            className="aspect-square w-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.06]"
+          />
         </Link>
+        {/* Gold wash on hover ties the card to the accent without tinting the photo at rest. */}
+        <span className="pointer-events-none absolute inset-0 bg-linear-to-t from-primary/12 to-transparent opacity-0 transition-opacity duration-300 ease-out-quint group-hover:opacity-100" />
 
         {currentAccount && (
           <button
-            className="absolute top-2.5 left-2.5 flex size-8 items-center justify-center rounded-full bg-background/80 shadow-sm backdrop-blur transition-colors hover:bg-background"
+            className="press absolute top-2.5 left-2.5 flex size-9 items-center justify-center rounded-full bg-background/85 shadow-e1 backdrop-blur transition-colors duration-200 ease-out-quint hover:bg-background"
             onClick={() => toggleWishlist(product.id)}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+            aria-pressed={wishlisted}
           >
-            <Heart className={wishlisted ? "fill-primary text-primary" : "text-foreground"} size={15} />
+            <Heart
+              className={cn(
+                "size-4 transition-[transform,color,fill] duration-300 ease-out-quint",
+                wishlisted ? "scale-110 fill-primary text-primary" : "text-foreground",
+              )}
+            />
           </button>
         )}
-        <button
-          onClick={() => onQuickAdd(product)}
-          className="absolute top-2.5 right-2.5 flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-all hover:scale-110 hover:shadow-lg"
-          aria-label={`Add ${product.name} to plan`}
-          title="Add to plan"
-        >
-          <Plus className="size-4" />
-        </button>
       </div>
 
-      <Link href={`/catalog/${product.id}`} className="flex flex-1 flex-col gap-1 p-3.5">
-        <span className="truncate text-[10px] tracking-wider text-muted-foreground uppercase">{product.subcategory ?? product.category}</span>
-        <span className="line-clamp-2 text-sm font-medium text-foreground transition-colors group-hover:text-primary">{product.name}</span>
+      <div className="flex flex-1 flex-col gap-1 p-4">
+        <Link
+          href={`/catalog/${product.id}`}
+          className="line-clamp-2 text-sm leading-snug font-medium text-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary"
+        >
+          {product.name}
+        </Link>
         {product.size && <span className="truncate text-xs text-muted-foreground">{product.size}</span>}
-        <span className="mt-auto flex items-baseline justify-between gap-2 pt-2">
-          <span>
+        {/* Add button sits in the details row, right of the price — kept out
+            of the image so the photo stays unobstructed. */}
+        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+          <Link href={`/catalog/${product.id}`} className="min-w-0">
             <span className="font-serif text-lg text-primary">{formatRupees(product.basePrice)}</span>
             <span className="text-xs text-muted-foreground"> / {unitShort(product.rateType)}</span>
-          </span>
-          {product.category === "Furniture" && fabrics.length > 0 && (
-            <span className="flex items-center gap-1 text-[10px] text-muted-foreground" title="Upholstery fabric can be chosen">
-              <Scissors className="size-3" /> {fabrics.length}
-            </span>
-          )}
-        </span>
-      </Link>
+          </Link>
+          <button
+            onClick={() => onQuickAdd(product)}
+            className="press flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e2 transition-[box-shadow,transform] duration-200 ease-out-quint hover:scale-110 hover:shadow-e3"
+            aria-label={`Add ${product.name} to plan`}
+            title="Add to plan"
+          >
+            <Plus className="size-4" />
+          </button>
+        </div>
+      </div>
     </article>
   );
 }
@@ -470,31 +511,35 @@ function CatalogContent() {
   );
 
   return (
-    <div className="w-full px-4 py-6 md:px-8 2xl:px-12">
-      <nav className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Link href="/" className="hover:text-primary">
+    <div className="mx-auto w-full max-w-[110rem] px-4 py-6 md:px-8 md:py-8 2xl:px-12">
+      <nav className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
+        <Link href="/" className="transition-colors hover:text-primary">
           Home
         </Link>
-        <ChevronRight className="size-3" />
-        <Link href="/catalog" className={category ? "hover:text-primary" : "text-foreground"}>
+        <ChevronRight className="size-3 opacity-60" />
+        <Link href="/catalog" className={category ? "transition-colors hover:text-primary" : "text-foreground"}>
           Catalog
         </Link>
         {category && (
           <>
-            <ChevronRight className="size-3" />
+            <ChevronRight className="size-3 opacity-60" />
             <span className="text-foreground">{category.name}</span>
           </>
         )}
       </nav>
 
-      <header className="mb-5 flex flex-col gap-1">
+      {/* Heading re-keys on category so switching categories replays the
+          entrance — the page visibly answers the click. */}
+      <Reveal key={category?.name ?? "all"} immediate direction="up" distance={12} className="mb-7 flex flex-col gap-1.5">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">{category?.name ?? "Product Catalog"}</h1>
-        <p className="text-sm text-muted-foreground">{category?.blurb ?? "Furniture, décor, lighting and installations to rent for every occasion."}</p>
-      </header>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+          {category?.blurb ?? "Furniture, décor, lighting and installations to rent for every occasion."}
+        </p>
+      </Reveal>
 
       <div className="flex gap-8">
         <aside className="hidden w-64 shrink-0 md:block">
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto rounded-2xl border border-border bg-card p-4">
+          <div className="sticky top-24 max-h-[calc(100dvh-8rem)] overflow-y-auto rounded-2xl border border-border bg-card p-4 shadow-e1">
             <div className="mb-3 flex items-center justify-between">
               <span className="flex items-center gap-2 text-sm font-medium">
                 <SlidersHorizontal className="size-4 text-primary" /> Filters
@@ -514,22 +559,32 @@ function CatalogContent() {
             <Sheet>
               <SheetTrigger
                 render={
-                  <button className="flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-sm md:hidden">
+                  <button className="press flex h-10 items-center gap-2 rounded-lg border border-border px-3.5 text-sm transition-colors duration-200 ease-out-quint hover:border-primary/60 md:hidden">
                     <SlidersHorizontal className="size-4" /> Filters
-                    {pills.length > 0 && <span className="rounded-full bg-primary px-1.5 text-[10px] text-primary-foreground">{pills.length}</span>}
+                    {pills.length > 0 && (
+                      <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground tabular-nums">{pills.length}</span>
+                    )}
                   </button>
                 }
               />
-              <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+              <SheetContent side="bottom" className="max-h-[85dvh] overflow-y-auto">
                 <SheetHeader>
                   <SheetTitle>Filters</SheetTitle>
                 </SheetHeader>
-                <div className="px-4 pb-6">{panel}</div>
+                <div className="px-5 pb-8">{panel}</div>
               </SheetContent>
             </Sheet>
-            <span className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">{filtered.length}</span> product{filtered.length === 1 ? "" : "s"}
-            </span>
+            {/* Count animates on change so the result of a filter click is
+                visible even when it lands below the fold. */}
+            <motion.span
+              key={filtered.length}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: DUR.fast, ease: EASE.out }}
+              className="text-sm text-muted-foreground"
+            >
+              <span className="font-medium text-foreground tabular-nums">{filtered.length}</span> product{filtered.length === 1 ? "" : "s"}
+            </motion.span>
             <div className="ml-auto">
               <Select value={sort} onValueChange={(v) => v && setSort(v as SortKey)}>
                 <SelectTrigger className="h-9 w-auto gap-2 rounded-lg">
@@ -546,34 +601,69 @@ function CatalogContent() {
             </div>
           </div>
 
-          {pills.length > 0 && (
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              {pills.map((p) => (
-                <button key={p.key} onClick={p.clear} className="flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 py-1 pr-2 pl-3 text-xs text-primary hover:bg-primary/10">
-                  {p.label} <X className="size-3" />
-                </button>
-              ))}
-              <button className="text-xs text-muted-foreground hover:text-foreground" onClick={clearAll}>
-                Clear all
-              </button>
-            </div>
-          )}
+          {/* Pills pop in and collapse out individually — a filter you removed
+              should visibly leave, not vanish between frames. */}
+          <AnimatePresence initial={false}>
+            {pills.length > 0 && (
+              <motion.div
+                key="pills"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: DUR.base, ease: EASE.inOut }}
+                className="overflow-hidden"
+              >
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {pills.map((p) => (
+                      <motion.button
+                        key={p.key}
+                        layout
+                        initial={{ opacity: 0, scale: 0.85 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.85 }}
+                        transition={{ duration: DUR.fast, ease: EASE.out }}
+                        onClick={p.clear}
+                        className="press flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/8 py-1.5 pr-2.5 pl-3.5 text-xs text-primary transition-colors duration-200 ease-out-quint hover:bg-primary/15"
+                      >
+                        {p.label} <X className="size-3" />
+                      </motion.button>
+                    ))}
+                  </AnimatePresence>
+                  <button className="text-xs text-muted-foreground transition-colors hover:text-foreground" onClick={clearAll}>
+                    Clear all
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {filtered.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
+            <Stagger
+              // Re-key on the filter signature so a new result set cascades in
+              // rather than silently swapping under the cursor.
+              key={`${category?.name ?? "all"}-${pills.length}-${sort}`}
+              immediate
+              gap={0.035}
+              className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5"
+            >
               {filtered.map((p) => (
-                <ProductCard key={p.id} product={p} onQuickAdd={setQuickAdd} />
+                <StaggerItem key={p.id} distance={14} scale={0.97} className="flex flex-col">
+                  <ProductCard product={p} onQuickAdd={setQuickAdd} />
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           ) : (
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-6 py-16 text-center">
-              <Search className="size-8 text-muted-foreground" />
+            <Reveal immediate className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-20 text-center">
+              <span className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+                <Search className="size-6 text-primary" />
+              </span>
               <p className="font-serif text-xl">No products match</p>
-              <p className="text-sm text-muted-foreground">Try removing a filter or picking another category.</p>
-              <Button variant="outline" onClick={clearAll}>
+              <p className="max-w-sm text-sm leading-6 text-muted-foreground">Try removing a filter or picking another category.</p>
+              <Button variant="outline" className="mt-1" onClick={clearAll}>
                 Clear filters
               </Button>
-            </div>
+            </Reveal>
           )}
         </main>
       </div>
@@ -585,8 +675,28 @@ function CatalogContent() {
 
 export default function CatalogPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<CatalogSkeleton />}>
       <CatalogContent />
     </Suspense>
+  );
+}
+
+/** Same grid geometry as the real page, so the swap to content doesn't reflow. */
+function CatalogSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-[110rem] px-4 py-6 md:px-8 md:py-8 2xl:px-12">
+      <div className="mb-7 flex flex-col gap-2">
+        <div className="shimmer h-9 w-64 rounded-lg bg-muted/70" />
+        <div className="shimmer h-4 w-96 max-w-full rounded bg-muted/70" />
+      </div>
+      <div className="flex gap-8">
+        <div className="shimmer hidden h-128 w-64 shrink-0 rounded-2xl bg-muted/70 md:block" />
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
+          {Array.from({ length: 10 }, (_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

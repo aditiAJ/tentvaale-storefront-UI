@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Plus } from "lucide-react";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -19,13 +21,15 @@ import { COLLECTIONS, formatEventDateRange } from "@/mock-data/seed";
 import type { Plan, PlanStatus } from "@/mock-data/types";
 
 // Flowstep screens 17 (desktop, populated) / 18 (mobile, empty state).
-const STATUS_STYLE: Record<PlanStatus, string> = {
-  Draft: "border border-muted-foreground text-muted-foreground",
-  Submitted: "border border-primary text-primary",
-  Quoted: "border border-primary text-primary",
-  PartiallyAccepted: "border border-primary text-primary",
-  Ordered: "bg-primary text-primary-foreground",
-  Cancelled: "border border-destructive/60 bg-destructive/10 text-destructive",
+// Status colours come from the shared Badge variants rather than one-off
+// border/text classes, so a "Cancelled" plan looks like a cancelled anything.
+const STATUS_VARIANT: Record<PlanStatus, React.ComponentProps<typeof Badge>["variant"]> = {
+  Draft: "outline",
+  Submitted: "accent",
+  Quoted: "accent",
+  PartiallyAccepted: "warning",
+  Ordered: "default",
+  Cancelled: "destructive",
 };
 
 // Shared by the card and the sort comparator so both read the same date.
@@ -56,33 +60,49 @@ function PlanCard({ plan }: { plan: Plan }) {
   const collaborators = [owner, ...plan.coOwners.map((c) => accounts.find((a) => a.id === c.accountId))].filter(Boolean);
 
   return (
-    <Link href={`/plans/${plan.id}`}>
-      <Card className="cursor-pointer gap-4 overflow-hidden border-border bg-card p-0 transition-colors hover:border-primary">
+    <Link href={`/plans/${plan.id}`} className="group flex h-full">
+      <Card interactive className="w-full gap-4 overflow-hidden border-border bg-card p-0">
         {cover && (
-          <div className="relative h-48 w-full">
-            <Image src={cover} alt="" fill sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />
+          <div className="relative h-48 w-full overflow-hidden">
+            <Image
+              src={cover}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover transition-transform duration-600 ease-out-quint group-hover:scale-105"
+            />
+            {/* Scrim keeps the status chip legible on any cover photo. */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-b from-black/40 to-transparent" />
+            <Badge variant={STATUS_VARIANT[plan.status]} className="absolute top-3 right-3 backdrop-blur-sm">
+              {plan.status}
+            </Badge>
           </div>
         )}
         <CardContent className="flex flex-col gap-4 p-5">
           <div className="flex items-start justify-between gap-2">
-            <h2 className="font-serif text-xl text-card-foreground">{plan.name}</h2>
-            <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs ${STATUS_STYLE[plan.status]}`}>{plan.status}</span>
+            <h2 className="font-serif text-xl leading-snug text-card-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
+              {plan.name}
+            </h2>
+            {!cover && <Badge variant={STATUS_VARIANT[plan.status]}>{plan.status}</Badge>}
           </div>
-          <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+          <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
             <div className="flex items-center justify-between gap-2">
               <span>{dateLabel}</span>
-              <span className="shrink-0">{plan.items.length} items</span>
+              <span className="shrink-0 tabular-nums">{plan.items.length} items</span>
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="truncate">{plan.venue || "Venue not set"}</span>
-              {plan.guestCount ? <span className="shrink-0">{plan.guestCount} guests</span> : null}
+              {plan.guestCount ? <span className="shrink-0 tabular-nums">{plan.guestCount} guests</span> : null}
             </div>
           </div>
           <div className="flex items-center">
             {collaborators.map((c, i) => (
               <span
                 key={c!.id}
-                className={`flex size-8 items-center justify-center rounded-full border-2 border-card text-xs font-medium ${i === 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"} ${i > 0 ? "-ml-2" : ""}`}
+                title={c!.name}
+                // Stack fans apart slightly on hover so overlapping avatars can
+                // be told apart without a tooltip.
+                className={`flex size-8 items-center justify-center rounded-full border-2 border-card text-xs font-medium transition-transform duration-300 ease-out-quint ${i === 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"} ${i > 0 ? "-ml-2 group-hover:ml-0" : ""}`}
               >
                 {initials(c!.name)}
               </span>
@@ -140,7 +160,13 @@ export default function PlansPage() {
 
   const NewPlanDialog = (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger render={<Button className="rounded bg-primary text-primary-foreground">+ New Plan</Button>} />
+      <DialogTrigger
+        render={
+          <Button size="lg" className="gap-1.5">
+            <Plus className="size-4" /> New Plan
+          </Button>
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>New plan</DialogTitle>
@@ -187,36 +213,39 @@ export default function PlansPage() {
 
   if (myPlans.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
-        <div className="flex size-20 items-center justify-center rounded-2xl border border-primary bg-card text-primary">
-          <CalendarDays className="size-10" />
+      <Reveal immediate className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-20 text-center">
+        {/* Gold halo behind the glyph gives the empty state a focal point
+            instead of a lone outlined square. */}
+        <div className="relative flex size-20 items-center justify-center rounded-2xl bg-card text-primary shadow-e2 ring-1 ring-primary/40">
+          <span className="absolute inset-0 rounded-2xl bg-primary/10 blur-xl" aria-hidden />
+          <CalendarDays className="relative size-10" />
         </div>
         <h1 className="font-serif text-2xl text-foreground">Start your first Plan</h1>
-        <p className="max-w-[330px] text-sm leading-6 text-foreground/70">
+        <p className="max-w-[330px] text-sm leading-6 text-muted-foreground">
           {wishlist.length > 0
             ? `You have ${wishlist.length} item${wishlist.length === 1 ? "" : "s"} saved in your Wishlist. Turn them into a Plan with an event date and sub-events like Sangeet or Reception.`
             : "Browse the catalog and add pieces to a Plan with an event date and sub-events like Sangeet or Reception."}
         </p>
-        <div className="flex w-full flex-col gap-2 pt-2">
+        <div className="flex w-full flex-col gap-2.5 pt-2">
           {wishlist.length > 0 && (
-            <Button className="rounded-lg bg-primary text-primary-foreground" nativeButton={false} render={<Link href="/wishlist">Create Plan from Wishlist</Link>} />
+            <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/wishlist">Create Plan from Wishlist</Link>} />
           )}
           {NewPlanDialog}
         </div>
-      </div>
+      </Reveal>
     );
   }
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-12">
-      <div className="flex items-center justify-between">
+      <Reveal immediate className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">My Plans</h1>
         {NewPlanDialog}
-      </div>
+      </Reveal>
 
-      <div className="mt-8 flex items-center gap-4 border-b border-border pb-6">
+      <div className="mt-8 flex flex-wrap items-center gap-3 border-b border-border pb-6">
         <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v as "all" | PlanStatus)}>
-          <SelectTrigger className="w-44 rounded border-border bg-card">
+          <SelectTrigger className="w-44 border-border bg-card">
             <SelectValue placeholder="All Statuses" />
           </SelectTrigger>
           <SelectContent>
@@ -230,7 +259,7 @@ export default function PlansPage() {
           </SelectContent>
         </Select>
         <Select value={sort} onValueChange={(v) => v && setSort(v as "event-date" | "name" | "status")}>
-          <SelectTrigger className="w-48 rounded border-border bg-card">
+          <SelectTrigger className="w-48 border-border bg-card">
             <SelectValue placeholder="Sort: Event Date" />
           </SelectTrigger>
           <SelectContent>
@@ -241,11 +270,19 @@ export default function PlansPage() {
         </Select>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <Stagger
+        // Re-keys on the filter/sort so a new result set cascades in.
+        key={`${statusFilter}-${sort}`}
+        immediate
+        gap={0.05}
+        className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+      >
         {myPlans.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} />
+          <StaggerItem key={plan.id} className="flex flex-col">
+            <PlanCard plan={plan} />
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
     </div>
   );
 }

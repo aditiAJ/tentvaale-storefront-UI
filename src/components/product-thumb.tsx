@@ -10,7 +10,9 @@ export function ProductThumb({ imageUrl, alt, className }: { imageUrl?: string; 
     <div className={cn("relative flex items-center justify-center overflow-hidden rounded-md bg-muted", className)}>
       {imageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={imageUrl} alt={alt} className="size-full object-contain p-2" />
+        // Local /brand PNGs are transparent cut-outs and need breathing room;
+        // remote photos are full-bleed scenes and should fill the frame.
+        <img src={imageUrl} alt={alt} className={cn("size-full", imageUrl.startsWith("/") ? "object-contain p-2" : "object-cover")} />
       ) : (
         <Package className="h-1/3 w-1/3 text-muted-foreground" aria-hidden />
       )}

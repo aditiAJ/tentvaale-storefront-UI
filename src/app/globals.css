@@ -48,6 +48,46 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Elevation — warm-tinted rather than neutral black, so shadows read as
+     part of the ivory/charcoal palette instead of a grey wash on top of it. */
+  --shadow-e1: var(--elev-1);
+  --shadow-e2: var(--elev-2);
+  --shadow-e3: var(--elev-3);
+  --shadow-e4: var(--elev-4);
+
+}
+
+/* Motion vocabulary — one set of curves/durations the whole product animates
+   on, so CSS transitions and Framer Motion springs agree with each other.
+   Mirrored in TS at src/components/motion.tsx (EASE / DUR). */
+@theme {
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-in-cubic: cubic-bezier(0.32, 0, 0.67, 0);
+
+  --animate-shimmer: shimmer 1.6s linear infinite;
+  --animate-rise: rise 0.45s var(--ease-out-quint) both;
+
+  @keyframes shimmer {
+    from {
+      background-position: 200% 0;
+    }
+    to {
+      background-position: -200% 0;
+    }
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
 }
 
 /*
@@ -75,15 +115,27 @@
   --accent: #C9A15C;
   --accent-foreground: #221D17;
   --destructive: #A6453B;
+  --success: #4F7A57;
+  --warning: #A9762A;
   --border: #E6DAC4;
   --input: #E6DAC4;
   --ring: rgba(184, 134, 62, 0.4);
+
+  /* Warm-tinted elevation ramp (charcoal #221D17 at low alpha, never pure
+     black — pure black on ivory reads grey and kills the warmth). */
+  --elev-1: 0 1px 2px -1px rgba(34, 29, 23, 0.10), 0 1px 3px 0 rgba(34, 29, 23, 0.06);
+  --elev-2: 0 2px 4px -2px rgba(34, 29, 23, 0.10), 0 6px 16px -4px rgba(34, 29, 23, 0.10);
+  --elev-3: 0 4px 8px -4px rgba(34, 29, 23, 0.12), 0 16px 32px -8px rgba(34, 29, 23, 0.14);
+  --elev-4: 0 8px 16px -8px rgba(34, 29, 23, 0.14), 0 32px 64px -16px rgba(34, 29, 23, 0.20);
   --chart-1: #C9A15C;
   --chart-2: #6B5F4F;
   --chart-3: #8A6D3E;
   --chart-4: #E6DAC4;
   --chart-5: #221D17;
-  --radius: 0.25rem;
+  /* Was 0.25rem — every rounded-* utility derives from this, so corners across
+     the product were near-square. 0.625rem lands the derived ramp on the brand
+     spec in tentvaale-tokens.css (button 8px-ish, card 12px, panel 16px). */
+  --radius: 0.625rem;
   --sidebar: #FFFCF6;
   --sidebar-foreground: #221D17;
   --sidebar-primary: #C9A15C;
@@ -112,9 +164,18 @@
   --accent: #C9A15C;
   --accent-foreground: #12100E;
   --destructive: #B0655A;
+  --success: #6E9174;
+  --warning: #C8A97E;
   --border: #24211D;
   --input: #24211D;
   --ring: rgba(201, 161, 92, 0.5);
+
+  /* On near-black, a drop shadow is invisible — depth has to come from a lit
+     top edge plus a deeper cast, so dark surfaces still separate from the page. */
+  --elev-1: 0 1px 0 0 rgba(245, 239, 230, 0.04) inset, 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --elev-2: 0 1px 0 0 rgba(245, 239, 230, 0.05) inset, 0 4px 14px -4px rgba(0, 0, 0, 0.6);
+  --elev-3: 0 1px 0 0 rgba(245, 239, 230, 0.06) inset, 0 12px 28px -8px rgba(0, 0, 0, 0.7);
+  --elev-4: 0 1px 0 0 rgba(245, 239, 230, 0.07) inset, 0 24px 56px -16px rgba(0, 0, 0, 0.8);
   --chart-1: #C9A15C;
   --chart-2: #B8AFA3;
   --chart-3: #8A6D3E;
@@ -137,19 +198,132 @@
     0 0 22px -4px color-mix(in oklab, var(--color-primary) 70%, transparent);
 }
 
+/* Interactive surface: the standard lift-on-hover / settle-on-press feel used
+   by every clickable card and tile. Transform + box-shadow only (compositable). */
+@utility surface-interactive {
+  transition:
+    transform 260ms var(--ease-out-quint),
+    box-shadow 260ms var(--ease-out-quint),
+    border-color 200ms var(--ease-out-quint);
+  will-change: transform;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--elev-3);
+  }
+  &:active {
+    transform: translateY(-1px);
+    transition-duration: 90ms;
+  }
+}
+
+/* Press feedback for small controls that shouldn't lift, only compress. */
+@utility press {
+  transition: transform 140ms var(--ease-out-quint);
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+/* Sliding sheen used by skeletons and any "content is arriving" placeholder. */
+@utility shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in oklab, var(--color-foreground) 7%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Hairline top-lit edge — gives dark cards a physical edge without a border. */
+@utility edge-lit {
+  box-shadow: inset 0 1px 0 0 color-mix(in oklab, var(--color-foreground) 6%, transparent);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
+    /* Optical: the serif headings sit better over slightly tightened body copy. */
+    text-rendering: optimizeLegibility;
   }
   html {
     @apply font-sans;
+    /* Sticky header is 56–64px; anchor jumps must clear it. */
+    scroll-padding-top: 5rem;
+    scroll-behavior: smooth;
   }
   h1,
   h2,
   h3 {
     @apply font-serif;
+    text-wrap: balance;
+  }
+  h1 {
+    letter-spacing: -0.015em;
+  }
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  /* One consistent focus ring everywhere, including native controls that don't
+     route through the Button/Input components. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+  /* Images never blow out a grid cell on small screens. */
+  img,
+  video,
+  svg {
+    max-width: 100%;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-primary) 35%, transparent);
+  }
+  /* Native <details> expand/collapse, animated. Progressive enhancement: where
+     ::details-content / interpolate-size aren't supported the disclosure still
+     works, it just snaps — so no JS accordion is needed for filter panels. */
+  details::details-content {
+    block-size: 0;
+    overflow: clip;
+    opacity: 0;
+    transition:
+      content-visibility 300ms var(--ease-out-quint) allow-discrete,
+      block-size 300ms var(--ease-out-quint),
+      opacity 200ms var(--ease-out-quint);
+  }
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+  /* Scrollbars: match the surface instead of punching a grey channel through it. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--color-foreground) 20%, transparent) transparent;
+  }
+}
+
+/* Global escape hatch. Framer Motion honours this per-component via
+   useReducedMotion; this covers the CSS-only transitions and any library
+   animation that doesn't ask. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

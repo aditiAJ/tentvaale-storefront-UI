@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { MediaCard } from "@/components/media-card";
 import { useMockStore } from "@/mock-data/store";
 
 // Index for the "Featured Collections" nav entry — the [collectionId] detail
@@ -11,44 +11,29 @@ export default function CollectionsPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12 md:py-14">
-      <header className="flex flex-col gap-2">
+      <Reveal immediate className="flex flex-col gap-2">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">Featured Collections</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground md:text-base">
+        <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
           Fully styled looks — every piece already chosen to work together. Open one to shop the pieces and add each to a plan.
         </p>
-      </header>
+      </Reveal>
 
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {collections.map((c) => (
-          <Link
-            key={c.id}
-            href={`/collections/${c.id}`}
-            className="group flex flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary"
-          >
-            <div className="relative h-48 overflow-hidden md:h-56">
-              <Image
-                src={c.heroImageUrl}
-                alt={c.name}
-                fill
-                sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            </div>
-            <div className="flex flex-1 flex-col gap-3 p-5">
-              <h2 className="font-serif text-xl text-foreground">{c.name}</h2>
-              <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{c.tagline}</p>
-              <div className="flex flex-wrap gap-2">
-                {c.categories.map((cat) => (
-                  <span key={cat} className="rounded-full border border-primary/40 px-3 py-0.5 text-xs text-primary">
-                    {cat}
-                  </span>
-                ))}
-              </div>
-              <span className="text-xs text-muted-foreground">{c.productIds.length} pieces</span>
-            </div>
-          </Link>
+      <Stagger immediate gap={0.06} className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {collections.map((c, i) => (
+          <StaggerItem key={c.id} className="flex flex-col">
+            <MediaCard
+              href={`/collections/${c.id}`}
+              image={c.heroImageUrl}
+              eyebrow={c.palette}
+              title={c.name}
+              description={c.tagline}
+              tags={c.bestFor}
+              metaEnd={`${c.productIds.length} pieces`}
+              priority={i < 3}
+            />
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
     </div>
   );
 }

@@ -64,14 +64,26 @@ export interface Collection {
   heroImageUrl: string;
   categories: string[];
   productIds: string[];
+  /** Occasions this look suits, shown as chips on the card. */
+  bestFor: string[];
+  /** Short palette line, e.g. "Crimson · Antique gold · Ivory". */
+  palette: string;
 }
 
 export interface Bundle {
   id: string;
   name: string;
+  /** One-line hook shown under the name on cards. */
+  tagline: string;
   description: string;
   imageUrl: string;
   includedProductIds: string[];
+  occasion: string;
+  /** Guest range the set is sized for, e.g. "80–120". */
+  guests: string;
+  setupTime: string;
+  /** 3–4 selling points listed on the bundle page. */
+  highlights: string[];
 }
 
 // Only name + eventDate are asked for when a sub-event is created; the rest

@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { PageTransition } from "@/components/motion";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { SiteMobileNav } from "./site-mobile-nav";
@@ -20,7 +21,11 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SiteHeader />
-      <main className="flex flex-1 flex-col pb-16 md:pb-0">{children}</main>
+      <main className="flex flex-1 flex-col pb-16 md:pb-0">
+        {/* Keyed by pathname so every navigation mounts a fresh transition and
+            replays the entrance — a route change should feel like a change. */}
+        <PageTransition key={pathname}>{children}</PageTransition>
+      </main>
       <SiteFooter />
       <SiteMobileNav />
     </>

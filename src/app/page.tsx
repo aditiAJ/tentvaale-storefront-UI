@@ -5,13 +5,14 @@ import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 import { Search, ArrowRight, LayoutGrid, FileText, CreditCard, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
 import { useMockStore } from "@/mock-data/store";
 import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
 import { CATEGORIES } from "@/mock-data/taxonomy";
 
 // Flowstep screens 1 (desktop) / 2 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
-const OCCASIONS = ["Wedding", "Haldi", "Corporate", "Fashion Shoot", "Luxury Lounge"];
+const OCCASIONS = ["Wedding", "Haldi", "Mehendi", "Sufi Night", "Ganpati", "Diwali", "Corporate"];
 
 
 const STATS = [
@@ -242,23 +243,18 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
-          {collections.map((c) => (
-            <motion.div key={c.id} variants={gridItem}>
-              <Link href={`/collections/${c.id}`} className="group flex h-full flex-col gap-3">
-                <div className="relative h-44 overflow-hidden rounded-2xl md:h-56">
-                  <Image
-                    src={c.heroImageUrl}
-                    alt={c.name}
-                    fill
-                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{c.name}</span>
-                  <span className="line-clamp-2 text-xs text-muted-foreground md:text-sm">{c.tagline}</span>
-                </div>
-              </Link>
+          {collections.slice(0, 4).map((c) => (
+            <motion.div key={c.id} variants={gridItem} className="flex flex-col">
+              <MediaCard
+                href={`/collections/${c.id}`}
+                image={c.heroImageUrl}
+                eyebrow={c.palette}
+                title={c.name}
+                description={c.tagline}
+                tags={c.bestFor}
+                imageHeight="h-44 md:h-52"
+                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+              />
             </motion.div>
           ))}
         </motion.div>
@@ -273,27 +269,19 @@ export default function Home() {
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
-          {bundles.map((b) => (
-            <motion.div key={b.id} variants={gridItem}>
-              <Link
+          {bundles.slice(0, 6).map((b) => (
+            <motion.div key={b.id} variants={gridItem} className="flex flex-col">
+              <MediaCard
                 href={`/bundles/${b.id}`}
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card transition-colors hover:border-primary"
-              >
-                <div className="relative h-44 overflow-hidden md:h-52">
-                  <Image
-                    src={b.imageUrl}
-                    alt={b.name}
-                    fill
-                    sizes="(min-width: 768px) 33vw, 100vw"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col gap-2 p-5">
-                  <span className="font-serif text-lg text-foreground transition-colors group-hover:text-primary">{b.name}</span>
-                  <p className="line-clamp-2 flex-1 text-sm text-muted-foreground">{b.description}</p>
-                  <span className="text-xs text-muted-foreground">{b.includedProductIds.length} items included</span>
-                </div>
-              </Link>
+                image={b.imageUrl}
+                eyebrow={b.occasion}
+                title={b.name}
+                description={b.tagline}
+                meta={`${b.guests} guests`}
+                metaEnd={`${b.includedProductIds.length} items`}
+                imageHeight="h-44 md:h-52"
+                sizes="(min-width: 768px) 33vw, 100vw"
+              />
             </motion.div>
           ))}
         </motion.div>

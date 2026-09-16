@@ -3,7 +3,9 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, CheckCircle2, X } from "lucide-react";
+import { DUR, EASE, Reveal, SPRING, Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useRequireAccount } from "@/features/auth";
@@ -29,7 +31,14 @@ export default function CancelOrderPage({ params }: { params: Promise<{ orderId:
   const [confirmed, setConfirmed] = useState(false);
 
   if (!account) return null;
-  if (!order || !plan) return <div className="mx-auto w-full max-w-4xl px-4 py-10">Order not found.</div>;
+  if (!order || !plan) {
+    return (
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-24 text-center">
+        <h1 className="font-serif text-2xl">Order not found</h1>
+        <Button variant="outline" nativeButton={false} render={<Link href="/account#order-history">Order history</Link>} />
+      </div>
+    );
+  }
 
   function toggle(planItemId: string) {
     setSelected((s) => {
