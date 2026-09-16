@@ -161,7 +161,7 @@ export default function AccountPage() {
             </Button>
           }>
             <div className="flex items-center gap-5">
-              <div className="flex size-20 shrink-0 items-center justify-center rounded-full bg-primary/10 font-serif text-2xl text-primary ring-1 ring-primary/40">
+              <div className="flex size-20 shrink-0 items-center justify-center rounded-sm bg-primary/10 font-serif text-2xl text-primary ring-1 ring-primary/40">
                 {account.name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
               </div>
               <div className="min-w-0">

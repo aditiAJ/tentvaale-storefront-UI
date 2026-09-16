@@ -30,7 +30,7 @@ export default function ContactPage() {
       </header>
 
       <section className="flex flex-col items-center gap-4 rounded-xl border border-primary/30 bg-card p-8 text-center">
-        <div className="flex size-20 items-center justify-center rounded-full bg-[#25D366]">
+        <div className="flex size-20 items-center justify-center rounded-sm bg-[#25D366]">
           <MessageCircle className="size-10 text-[#1A1714]" />
         </div>
         <h2 className="font-serif text-2xl text-foreground">Chat on WhatsApp</h2>

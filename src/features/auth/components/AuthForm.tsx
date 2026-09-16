@@ -49,7 +49,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
     <div className="flex w-full max-w-md flex-col items-center gap-6 md:gap-7">
       <div className="flex w-full items-center justify-between md:hidden">
         <button
-          className="press -ml-1 flex size-10 items-center justify-center rounded-full transition-colors hover:bg-secondary"
+          className="press -ml-1 flex size-10 items-center justify-center rounded-sm transition-colors hover:bg-secondary"
           onClick={() => router.back()}
           aria-label="Back"
         >
@@ -137,7 +137,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
             />
             <button
               type="button"
-              className="press absolute top-1/2 right-2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground"
+              className="press absolute top-1/2 right-2 flex size-9 -translate-y-1/2 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
             >

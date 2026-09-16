@@ -53,7 +53,7 @@ function TabsIndicator({ className, ...props }: TabsPrimitive.Indicator.Props) {
         // Pill: a raised chip that slides behind the labels.
         "group-data-[variant=default]/tabs-list:top-1 group-data-[variant=default]/tabs-list:left-0 group-data-[variant=default]/tabs-list:h-[var(--active-tab-height)] group-data-[variant=default]/tabs-list:w-[var(--active-tab-width)] group-data-[variant=default]/tabs-list:translate-x-[var(--active-tab-left)] group-data-[variant=default]/tabs-list:rounded-lg group-data-[variant=default]/tabs-list:bg-background group-data-[variant=default]/tabs-list:shadow-e1 group-data-[variant=default]/tabs-list:ring-1 group-data-[variant=default]/tabs-list:ring-foreground/10",
         // Line: a gold rule that slides along the bottom edge.
-        "group-data-[variant=line]/tabs-list:bottom-[-1px] group-data-[variant=line]/tabs-list:left-0 group-data-[variant=line]/tabs-list:h-0.5 group-data-[variant=line]/tabs-list:w-[var(--active-tab-width)] group-data-[variant=line]/tabs-list:translate-x-[var(--active-tab-left)] group-data-[variant=line]/tabs-list:rounded-full group-data-[variant=line]/tabs-list:bg-primary",
+        "group-data-[variant=line]/tabs-list:bottom-[-1px] group-data-[variant=line]/tabs-list:left-0 group-data-[variant=line]/tabs-list:h-0.5 group-data-[variant=line]/tabs-list:w-[var(--active-tab-width)] group-data-[variant=line]/tabs-list:translate-x-[var(--active-tab-left)] group-data-[variant=line]/tabs-list:rounded-sm group-data-[variant=line]/tabs-list:bg-primary",
         className
       )}
       {...props}

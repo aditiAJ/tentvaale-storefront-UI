@@ -65,8 +65,8 @@ export default function AiPlannerPage() {
                 onClick={() => setEventType(t)}
                 className={
                   t === eventType
-                    ? "rounded-full border border-primary bg-primary px-4 py-2 text-sm text-primary-foreground"
-                    : "rounded-full border border-primary/40 px-4 py-2 text-sm text-foreground/80"
+                    ? "rounded-sm border border-primary bg-primary px-4 py-2 text-sm text-primary-foreground"
+                    : "rounded-sm border border-primary/40 px-4 py-2 text-sm text-foreground/80"
                 }
               >
                 {t}
@@ -122,7 +122,7 @@ export default function AiPlannerPage() {
           <label className="text-sm font-medium text-foreground">Style / Theme Keywords</label>
           <div className="flex min-h-12 flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-background px-3 py-2">
             {keywords.map((k) => (
-              <span key={k} className="flex items-center gap-2 rounded-full border border-primary/60 px-3 py-1 text-xs text-foreground">
+              <span key={k} className="flex items-center gap-2 rounded-sm border border-primary/60 px-3 py-1 text-xs text-foreground">
                 <span>{k}</span>
                 <button type="button" className="text-primary" onClick={() => removeKeyword(k)}>
                   <X className="size-3" />

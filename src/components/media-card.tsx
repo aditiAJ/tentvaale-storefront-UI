@@ -72,7 +72,7 @@ export function MediaCard({
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {tags.map((tag) => (
-              <span key={tag} className="rounded-full bg-primary/8 px-2.5 py-0.5 text-[11px] text-primary ring-1 ring-primary/25 ring-inset">
+              <span key={tag} className="rounded-sm bg-primary/8 px-2.5 py-0.5 text-[11px] text-primary ring-1 ring-primary/25 ring-inset">
                 {tag}
               </span>
             ))}

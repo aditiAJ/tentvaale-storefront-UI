@@ -88,7 +88,7 @@ export default function FaqPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search FAQs..."
-            className="w-full rounded-full border border-primary bg-card py-3 pr-4 pl-11 text-sm text-foreground outline-none"
+            className="w-full rounded-sm border border-primary bg-card py-3 pr-4 pl-11 text-sm text-foreground outline-none"
           />
         </div>
       </div>

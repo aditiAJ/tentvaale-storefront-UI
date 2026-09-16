@@ -17,7 +17,7 @@ function segmentStyle(active: boolean): React.CSSProperties {
     minHeight: 56,
     textAlign: "left",
     padding: "0 20px",
-    borderRadius: 8,
+    borderRadius: 6,
     cursor: "pointer",
     background: active ? "var(--ivory-200)" : "var(--surface-card)",
     border: `1px solid ${active ? "var(--border-accent)" : "var(--border-strong)"}`,
@@ -138,7 +138,7 @@ export default function EnquiryDetailsPage() {
             style={{
               width: "100%",
               padding: "14px 16px",
-              borderRadius: 8,
+              borderRadius: 6,
               background: "var(--surface-card)",
               border: "1px solid var(--border-strong)",
               color: "var(--text-primary)",

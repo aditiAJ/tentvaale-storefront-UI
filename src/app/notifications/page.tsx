@@ -48,7 +48,7 @@ export default function NotificationsPage() {
               >
                 <div
                   className={cn(
-                    "flex size-11 shrink-0 items-center justify-center rounded-full",
+                    "flex size-11 shrink-0 items-center justify-center rounded-sm",
                     n.tone === "warning"
                       ? "bg-[color-mix(in_oklab,var(--warning)_14%,transparent)] text-[var(--warning)]"
                       : "bg-primary/10 text-primary",

@@ -533,7 +533,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 <p className="text-[11px] text-muted-foreground">{hint}</p>
               </div>
             </div>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums">{count}</span>
+            <span className="rounded-sm bg-muted px-2 py-0.5 text-xs tabular-nums">{count}</span>
           </header>
           <ul className="flex flex-col divide-y divide-border">{body}</ul>
         </section>
@@ -558,7 +558,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-foreground">{u.product.name}</p>
                     <button
-                      className="mt-0.5 w-fit rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground hover:text-primary"
+                      className="mt-0.5 w-fit rounded-sm bg-muted px-2 py-0.5 text-[11px] text-muted-foreground hover:text-primary"
                       onClick={() => {
                         setView("sub-events");
                         setActiveTab(u.occurrences[0].subEventId);
@@ -603,7 +603,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                     {u.occurrences.map((o) => {
                       const step = byName.get(o.itemId);
                       return (
-                        <span key={o.itemId} className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-[11px]">
+                        <span key={o.itemId} className="flex items-center gap-1 rounded-sm border border-border px-2 py-0.5 text-[11px]">
                           <span className="text-foreground">{o.subEventName}</span>
                           <span className="text-muted-foreground">× {o.quantity}</span>
                           {isReused && step && step.reused > 0 && <span className="text-primary">({step.reused} reused)</span>}
@@ -612,7 +612,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                     })}
                   </div>
                   {needsSharingDecision(u) && (
-                    <div className="flex items-center gap-1 rounded-full bg-muted p-0.5 text-[11px]">
+                    <div className="flex items-center gap-1 rounded-sm bg-muted p-0.5 text-[11px]">
                       {([
                         ["Shared", "Reuse same units"],
                         ["Dedicated", "Keep separate"],
@@ -620,7 +620,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                         <button
                           key={value}
                           onClick={() => setItemSharing(planId, u.productId, value)}
-                          className={cn("flex-1 rounded-full px-2 py-1 transition-all", decision === value ? "glow bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}
+                          className={cn("flex-1 rounded-sm px-2 py-1 transition-all", decision === value ? "glow bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}
                         >
                           {label}
                         </button>
@@ -1004,7 +1004,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="font-serif text-3xl text-foreground md:text-4xl">{plan.name}</h1>
-              <span className={cn("rounded-full px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{plan.status}</span>
+              <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{plan.status}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               <MetaChip icon={CalendarDays} value={startDate ? planDateLabel : undefined} empty="Add dates" onClick={openEditPlan} />
@@ -1021,7 +1021,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   key={c!.id}
                   title={c!.name}
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-full border-2 border-card text-xs font-medium",
+                    "flex size-8 items-center justify-center rounded-sm border-2 border-card text-xs font-medium",
                     i === 0 ? "bg-primary text-primary-foreground" : i === 1 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground",
                   )}
                 >
@@ -1052,7 +1052,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 <Tag {...(s.onClick ? { onClick: s.onClick, type: "button" as const } : {})} className={cn("group flex flex-col items-center gap-1.5 text-center", s.onClick && "cursor-pointer")}>
                   <span
                     className={cn(
-                      "relative z-10 flex size-6 items-center justify-center rounded-full text-[11px] font-semibold ring-4 ring-card transition-colors",
+                      "relative z-10 flex size-6 items-center justify-center rounded-sm text-[11px] font-semibold ring-4 ring-card transition-colors",
                       s.done ? "bg-primary text-primary-foreground" : isCurrent ? "border-2 border-primary bg-card text-primary" : "border border-border bg-card text-muted-foreground",
                     )}
                   >
@@ -1090,7 +1090,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         <div className="flex min-w-0 flex-col gap-5">
           {/* ================= VIEW SWITCH ================= */}
           <div className="-mx-1 overflow-x-auto px-1 py-1">
-            <div className="inline-flex gap-1 rounded-full border border-border bg-card p-1">
+            <div className="inline-flex gap-1 rounded-sm border border-border bg-card p-1">
               {([
                 { key: "sub-events", label: "Functions", icon: LayoutList },
                 { key: "dates", label: "By date", icon: CalendarRange },
@@ -1102,7 +1102,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   key={key}
                   onClick={() => setView(key)}
                   className={cn(
-                    "flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-xs font-medium whitespace-nowrap transition-all duration-200",
+                    "flex h-8 shrink-0 items-center gap-1.5 rounded-sm px-3.5 text-xs font-medium whitespace-nowrap transition-all duration-200",
                     view === key ? "glow bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
@@ -1133,18 +1133,18 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       onClick={() => setActiveTab(f.id)}
                       title={f.sub}
                       className={cn(
-                        "flex h-9 shrink-0 items-center gap-2 rounded-full border pr-1.5 pl-3.5 text-sm whitespace-nowrap transition-colors",
+                        "flex h-9 shrink-0 items-center gap-2 rounded-sm border pr-1.5 pl-3.5 text-sm whitespace-nowrap transition-colors",
                         active ? "glow border-primary bg-primary text-primary-foreground" : "border-border bg-card text-foreground/80 hover:border-primary/50 hover:text-foreground",
                       )}
                     >
                       {f.name}
-                      <span className={cn("min-w-6 rounded-full px-1.5 py-0.5 text-[11px] tabular-nums", active ? "bg-primary-foreground/20" : count ? "bg-muted text-foreground" : "bg-muted text-muted-foreground")}>{count}</span>
+                      <span className={cn("min-w-6 rounded-sm px-1.5 py-0.5 text-[11px] tabular-nums", active ? "bg-primary-foreground/20" : count ? "bg-muted text-foreground" : "bg-muted text-muted-foreground")}>{count}</span>
                     </button>
                   );
                 })}
                 <button
                   onClick={openAddSubEvent}
-                  className="flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-dashed border-border px-3.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+                  className="flex h-9 shrink-0 items-center gap-1.5 rounded-sm border border-dashed border-border px-3.5 text-sm text-muted-foreground transition-colors hover:border-primary hover:text-primary"
                 >
                   <Plus className="size-4" /> Add function
                 </button>
@@ -1285,7 +1285,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   {/* Items */}
                   {activeItems.length === 0 ? (
                     <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border px-6 py-10 text-center">
-                      <span className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <span className="flex size-12 items-center justify-center rounded-sm bg-primary/10 text-primary">
                         <PackageOpen className="size-6" />
                       </span>
                       <div>
@@ -1323,7 +1323,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                                     {item.fabric && ` · ${item.fabric} upholstery`}
                                   </span>
                                   {sharedWith && (
-                                    <span className="flex w-fit items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
+                                    <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
                                       <Repeat className="size-3" /> {sharedWith}
                                     </span>
                                   )}
@@ -1379,8 +1379,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                           <span className={cn(activeTab === f.id && view === "sub-events" ? "text-primary" : "text-muted-foreground")}>{f.name}</span>
                           <span className="text-foreground">{formatRupees(f.total)}</span>
                         </span>
-                        <span className="h-1.5 overflow-hidden rounded-full bg-muted">
-                          <span className="block h-full rounded-full bg-primary/70" style={{ width: `${planTotal ? (f.total / planTotal) * 100 : 0}%` }} />
+                        <span className="h-1.5 overflow-hidden rounded-sm bg-muted">
+                          <span className="block h-full rounded-sm bg-primary/70" style={{ width: `${planTotal ? (f.total / planTotal) * 100 : 0}%` }} />
                         </span>
                       </button>
                     </li>
@@ -1494,7 +1494,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                         setSubEventForm({ ...subEventForm, name: preset });
                       }}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                        "rounded-sm border px-3 py-1.5 text-sm transition-colors",
                         !customFunctionName && subEventForm.name === preset ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40",
                       )}
                     >
@@ -1508,7 +1508,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       setSubEventForm({ ...subEventForm, name: "" });
                     }}
                     className={cn(
-                      "rounded-full border px-3 py-1.5 text-sm transition-colors",
+                      "rounded-sm border px-3 py-1.5 text-sm transition-colors",
                       customFunctionName ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/40",
                     )}
                   >
@@ -1703,7 +1703,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
 function MetaChip({ icon: Icon, value, empty, onClick }: { icon: LucideIcon; value?: string; empty?: string; onClick?: () => void }) {
   const cls = cn(
-    "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors",
+    "flex items-center gap-1.5 rounded-sm border px-3 py-1 text-xs transition-colors",
     value ? "border-border bg-background text-foreground" : "border-dashed border-border text-muted-foreground",
     onClick && "hover:border-primary/50 hover:text-primary",
   );

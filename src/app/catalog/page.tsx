@@ -49,7 +49,7 @@ function FacetGroup({ title, count, defaultOpen, children }: { title: string; co
         <span className="flex items-center gap-2">
           {title}
           {!!count && (
-            <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground normal-case tabular-nums">
+            <span className="rounded-sm bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground normal-case tabular-nums">
               {count}
             </span>
           )}
@@ -122,7 +122,7 @@ function FilterPanel({
                 key={o.value}
                 onClick={() => toggle(f.key, o.value)}
                 className={cn(
-                  "press rounded-full border px-3 py-1.5 text-xs transition-all duration-200 ease-out-quint",
+                  "press rounded-sm border px-3 py-1.5 text-xs transition-all duration-200 ease-out-quint",
                   selection.price?.includes(o.value) ? "glow border-primary bg-primary/15 text-primary" : "border-border text-foreground/80 hover:border-primary/50 hover:bg-primary/5",
                 )}
               >
@@ -393,7 +393,7 @@ function ProductCard({ product, onQuickAdd }: { product: Product; onQuickAdd: (p
 
         {currentAccount && (
           <button
-            className="press absolute top-2.5 left-2.5 flex size-9 items-center justify-center rounded-full bg-background/85 shadow-e1 backdrop-blur transition-colors duration-200 ease-out-quint hover:bg-background"
+            className="press absolute top-2.5 left-2.5 flex size-9 items-center justify-center rounded-sm bg-background/85 shadow-e1 backdrop-blur transition-colors duration-200 ease-out-quint hover:bg-background"
             onClick={() => toggleWishlist(product.id)}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={wishlisted}
@@ -423,13 +423,15 @@ function ProductCard({ product, onQuickAdd }: { product: Product; onQuickAdd: (p
             <span className="font-serif text-lg text-primary">{formatRupees(product.basePrice)}</span>
             <span className="text-xs text-muted-foreground"> / {unitShort(product.rateType)}</span>
           </Link>
+          {/* Labelled outline button: reads as an action at a glance and fills
+              gold on hover, instead of an unlabelled floating icon. */}
           <button
             onClick={() => onQuickAdd(product)}
-            className="press flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-e2 transition-[box-shadow,transform] duration-200 ease-out-quint hover:scale-110 hover:shadow-e3"
+            className="press inline-flex h-8 shrink-0 items-center gap-1 rounded-sm border border-primary px-3 text-xs font-semibold tracking-wide text-primary uppercase transition-colors duration-200 ease-out-quint hover:bg-primary hover:text-primary-foreground focus-visible:bg-primary focus-visible:text-primary-foreground"
             aria-label={`Add ${product.name} to plan`}
-            title="Add to plan"
           >
-            <Plus className="size-4" />
+            <Plus className="size-3.5" strokeWidth={2.5} />
+            Add
           </button>
         </div>
       </div>
@@ -562,7 +564,7 @@ function CatalogContent() {
                   <button className="press flex h-10 items-center gap-2 rounded-lg border border-border px-3.5 text-sm transition-colors duration-200 ease-out-quint hover:border-primary/60 md:hidden">
                     <SlidersHorizontal className="size-4" /> Filters
                     {pills.length > 0 && (
-                      <span className="rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground tabular-nums">{pills.length}</span>
+                      <span className="rounded-sm bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground tabular-nums">{pills.length}</span>
                     )}
                   </button>
                 }
@@ -624,7 +626,7 @@ function CatalogContent() {
                         exit={{ opacity: 0, scale: 0.85 }}
                         transition={{ duration: DUR.fast, ease: EASE.out }}
                         onClick={p.clear}
-                        className="press flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/8 py-1.5 pr-2.5 pl-3.5 text-xs text-primary transition-colors duration-200 ease-out-quint hover:bg-primary/15"
+                        className="press flex items-center gap-1.5 rounded-sm border border-primary/40 bg-primary/8 py-1.5 pr-2.5 pl-3.5 text-xs text-primary transition-colors duration-200 ease-out-quint hover:bg-primary/15"
                       >
                         {p.label} <X className="size-3" />
                       </motion.button>
@@ -655,7 +657,7 @@ function CatalogContent() {
             </Stagger>
           ) : (
             <Reveal immediate className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-20 text-center">
-              <span className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+              <span className="flex size-14 items-center justify-center rounded-sm bg-primary/10">
                 <Search className="size-6 text-primary" />
               </span>
               <p className="font-serif text-xl">No products match</p>

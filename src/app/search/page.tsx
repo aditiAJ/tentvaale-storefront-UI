@@ -40,7 +40,7 @@ function SearchContent() {
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="h-11 rounded-full border-border bg-card pr-10 pl-10"
+          className="h-11 rounded-sm border-border bg-card pr-10 pl-10"
           placeholder="Search"
         />
         {query && (
@@ -101,7 +101,7 @@ function SearchContent() {
                     </Link>
                     {currentAccount && (
                       <button
-                        className="press absolute top-3 right-3 flex size-9 items-center justify-center rounded-full bg-background/85 shadow-e1 backdrop-blur transition-colors hover:bg-background"
+                        className="press absolute top-3 right-3 flex size-9 items-center justify-center rounded-sm bg-background/85 shadow-e1 backdrop-blur transition-colors hover:bg-background"
                         onClick={() => toggleWishlist(p.id)}
                         aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
                         aria-pressed={wishlisted}
@@ -128,7 +128,7 @@ function SearchContent() {
                     <p className="text-sm text-muted-foreground">From {formatRupees(p.basePrice)} / day</p>
                     <Button
                       variant="outline"
-                      className="mt-auto w-full rounded-full"
+                      className="mt-auto w-full rounded-sm"
                       nativeButton={false}
                       render={<Link href={`/catalog/${p.id}`}>Add to Plan</Link>}
                     />
@@ -140,7 +140,7 @@ function SearchContent() {
         </Stagger>
       ) : (
         <Reveal immediate className="mt-8 flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-card/40 px-6 py-20 text-center">
-          <span className="flex size-14 items-center justify-center rounded-full bg-primary/10">
+          <span className="flex size-14 items-center justify-center rounded-sm bg-primary/10">
             <Search className="size-6 text-primary" />
           </span>
           <p className="font-serif text-xl">No products matched &ldquo;{query}&rdquo;</p>

@@ -102,7 +102,7 @@ function PlanCard({ plan }: { plan: Plan }) {
                 title={c!.name}
                 // Stack fans apart slightly on hover so overlapping avatars can
                 // be told apart without a tooltip.
-                className={`flex size-8 items-center justify-center rounded-full border-2 border-card text-xs font-medium transition-transform duration-300 ease-out-quint ${i === 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"} ${i > 0 ? "-ml-2 group-hover:ml-0" : ""}`}
+                className={`flex size-8 items-center justify-center rounded-sm border-2 border-card text-xs font-medium transition-transform duration-300 ease-out-quint ${i === 0 ? "bg-primary text-primary-foreground" : "bg-secondary text-secondary-foreground"} ${i > 0 ? "-ml-2 group-hover:ml-0" : ""}`}
               >
                 {initials(c!.name)}
               </span>

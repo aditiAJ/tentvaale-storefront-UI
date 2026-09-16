@@ -57,7 +57,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
             <p className="mt-3 max-w-2xl text-sm leading-7 text-foreground/85 md:text-base">{collection.tagline}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {collection.bestFor.map((o) => (
-                <span key={o} className="rounded-full bg-background/70 px-3 py-1 text-xs text-foreground ring-1 ring-primary/40 backdrop-blur">
+                <span key={o} className="rounded-sm bg-background/70 px-3 py-1 text-xs text-foreground ring-1 ring-primary/40 backdrop-blur">
                   {o}
                 </span>
               ))}
@@ -73,7 +73,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
             <StaggerItem key={c} distance={10} className="shrink-0">
               <Link
                 href={`/catalog?category=${encodeURIComponent(c)}`}
-                className="press block rounded-full border border-primary/60 px-4 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:bg-primary hover:text-primary-foreground md:px-5"
+                className="press block rounded-sm border border-primary/60 px-4 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:bg-primary hover:text-primary-foreground md:px-5"
               >
                 {c}
               </Link>
@@ -101,7 +101,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
                     </Link>
                     {currentAccount && (
                       <button
-                        className="press absolute top-2.5 right-2.5 flex size-9 items-center justify-center rounded-full bg-background/85 shadow-e1 backdrop-blur transition-colors hover:bg-background"
+                        className="press absolute top-2.5 right-2.5 flex size-9 items-center justify-center rounded-sm bg-background/85 shadow-e1 backdrop-blur transition-colors hover:bg-background"
                         onClick={() => toggleWishlist(p.id)}
                         aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
                         aria-pressed={wishlisted}

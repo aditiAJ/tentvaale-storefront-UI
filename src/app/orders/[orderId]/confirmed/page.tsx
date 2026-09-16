@@ -68,7 +68,7 @@ export default function OrderConfirmedPage({ params }: { params: Promise<{ order
         <div className="relative flex size-20 items-center justify-center">
           {!reduce && (
             <motion.span
-              className="absolute inset-0 rounded-full ring-2 ring-primary"
+              className="absolute inset-0 rounded-sm ring-2 ring-primary"
               initial={{ scale: 0.8, opacity: 0.8 }}
               animate={{ scale: 1.7, opacity: 0 }}
               transition={{ duration: 1, ease: EASE.out, delay: 0.25 }}
@@ -78,7 +78,7 @@ export default function OrderConfirmedPage({ params }: { params: Promise<{ order
             initial={{ scale: reduce ? 1 : 0.3, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={reduce ? { duration: 0.01 } : { ...SPRING.snappy, delay: 0.1 }}
-            className="flex size-20 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_28px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
+            className="flex size-20 items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-[0_8px_28px_-8px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
           >
             <Check className="size-10" strokeWidth={2.5} />
           </motion.div>
@@ -120,7 +120,7 @@ export default function OrderConfirmedPage({ params }: { params: Promise<{ order
               <StaggerItem key={step.key} distance={12} className="relative flex flex-col items-center gap-3 text-center">
                 <div
                   className={cn(
-                    "flex size-12 items-center justify-center rounded-full border transition-colors",
+                    "flex size-12 items-center justify-center rounded-sm border transition-colors",
                     active
                       ? "border-primary bg-primary text-primary-foreground shadow-[0_4px_16px_-6px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
                       : "border-border bg-background text-muted-foreground",

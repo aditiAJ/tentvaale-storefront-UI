@@ -111,7 +111,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
               {[product.category, product.subcategory ?? "Standard"].map((tag) => (
                 <span
                   key={tag}
-                  className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary ring-1 ring-primary/30 ring-inset"
+                  className="rounded-sm bg-primary/10 px-3 py-1 text-xs text-primary ring-1 ring-primary/30 ring-inset"
                 >
                   {tag}
                 </span>
@@ -296,7 +296,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
               initial={{ scale: reduce ? 1 : 0.3, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={reduce ? { duration: 0.01 } : { ...SPRING.snappy, delay: 0.1 }}
-              className="flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary ring-1 ring-primary/40"
+              className="flex size-14 items-center justify-center rounded-sm bg-primary/12 text-primary ring-1 ring-primary/40"
             >
               <Check className="size-7" />
             </motion.div>

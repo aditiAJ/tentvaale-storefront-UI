@@ -28,7 +28,7 @@ function ThemeToggle({ theme, onToggle }: { theme: "day" | "night"; onToggle: ()
         gap: 8,
         minHeight: 44,
         padding: "0 16px",
-        borderRadius: 999,
+        borderRadius: 6,
         background: "transparent",
         border: "1px solid var(--border-subtle)",
         cursor: "pointer",

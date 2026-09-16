@@ -64,8 +64,8 @@ export default function WishlistPage() {
   if (items.length === 0) {
     return (
       <Reveal immediate className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 px-6 py-20 text-center">
-        <div className="relative flex items-center justify-center rounded-full p-6 ring-1 ring-primary/25">
-          <span className="absolute inset-4 rounded-full bg-primary/10 blur-2xl" aria-hidden />
+        <div className="relative flex items-center justify-center rounded-sm p-6 ring-1 ring-primary/25">
+          <span className="absolute inset-4 rounded-sm bg-primary/10 blur-2xl" aria-hidden />
           <Heart className="relative size-24 stroke-[1.25] text-primary" />
         </div>
         <div className="flex flex-col gap-2">
@@ -175,7 +175,7 @@ export default function WishlistPage() {
                     <Checkbox checked={isSelected} onCheckedChange={() => toggleSelect(p.id)} aria-label={`Select ${p.name}`} />
                   </div>
                   <button
-                    className="press absolute top-6 right-6 z-10 flex size-9 items-center justify-center rounded-full bg-background/80 shadow-e1 backdrop-blur transition-colors hover:bg-background"
+                    className="press absolute top-6 right-6 z-10 flex size-9 items-center justify-center rounded-sm bg-background/80 shadow-e1 backdrop-blur transition-colors hover:bg-background"
                     onClick={() => toggleWishlist(p.id)}
                     aria-label={`Remove ${p.name} from wishlist`}
                   >

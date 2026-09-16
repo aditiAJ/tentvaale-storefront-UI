@@ -67,11 +67,11 @@
   --press-offset: 1px;
 
   /* Radius */
-  --radius-button: 8px;
-  --radius-card: 12px;
-  --radius-panel: 16px;
+  --radius-button: 6px;
+  --radius-card: 8px;
+  --radius-panel: 10px;
   --radius-xs: 4px;
-  --radius-pill: 999px;
+  --radius-pill: 6px;
 
   /* Spacing / misc */
   --tap-min: 44px;

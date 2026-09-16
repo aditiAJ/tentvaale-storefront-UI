@@ -72,7 +72,7 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/wishlist"
         onClick={onNavigate}
-        className="press relative flex size-10 items-center justify-center rounded-full text-foreground transition-colors duration-200 ease-out-quint hover:bg-secondary hover:text-primary"
+        className="press relative flex size-10 items-center justify-center rounded-sm text-foreground transition-colors duration-200 ease-out-quint hover:bg-secondary hover:text-primary"
         aria-label={`Wishlist${wishlist.length ? ` (${wishlist.length} items)` : ""}`}
       >
         <Heart className="size-5" />
@@ -81,7 +81,7 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
       <Link
         href="/account"
         onClick={onNavigate}
-        className="press flex size-10 items-center justify-center rounded-full text-foreground transition-colors duration-200 ease-out-quint hover:bg-secondary hover:text-primary"
+        className="press flex size-10 items-center justify-center rounded-sm text-foreground transition-colors duration-200 ease-out-quint hover:bg-secondary hover:text-primary"
         aria-label="Account"
       >
         <User className="size-5" />
@@ -92,14 +92,14 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
           <Link
             href="/login"
             onClick={onNavigate}
-            className="press rounded-full border border-border px-4 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
+            className="press rounded-sm border border-border px-4 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
           >
             Log In
           </Link>
           <Link
             href="/signup"
             onClick={onNavigate}
-            className="press rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
+            className="press rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
           >
             Sign Up
           </Link>
@@ -183,7 +183,7 @@ export function SiteHeader() {
                 type="text"
                 name="q"
                 placeholder="Search products, collections, bundles..."
-                className="h-10 w-full rounded-full border border-border bg-muted pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out-quint placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:bg-background focus:shadow-[0_0_0_3px_var(--ring)]"
+                className="h-10 w-full rounded-sm border border-border bg-muted pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out-quint placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:bg-background focus:shadow-[0_0_0_3px_var(--ring)]"
               />
             </div>
           </form>
@@ -194,7 +194,7 @@ export function SiteHeader() {
       {/* Mobile */}
       <div className="flex h-14 items-center justify-between px-4 md:hidden">
         <button
-          className="press -ml-2 flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+          className="press -ml-2 flex size-10 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-secondary"
           onClick={() => setMobileMenuOpen((v) => !v)}
           aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileMenuOpen}
@@ -220,7 +220,7 @@ export function SiteHeader() {
           <MobileWishlistLink />
           <Link
             href="/account"
-            className="press flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+            className="press flex size-10 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-secondary"
             aria-label="Account"
           >
             <User className="size-5" />
@@ -249,7 +249,7 @@ export function SiteHeader() {
                   type="text"
                   name="q"
                   placeholder="Search products, collections, bundles..."
-                  className="h-11 w-full rounded-full border border-border bg-card pr-4 pl-10 text-sm outline-none transition-colors focus:border-primary"
+                  className="h-11 w-full rounded-sm border border-border bg-card pr-4 pl-10 text-sm outline-none transition-colors focus:border-primary"
                 />
               </form>
               {/* Links cascade in behind the panel opening, 40ms apart. */}
@@ -298,7 +298,7 @@ function MobileWishlistLink() {
   return (
     <Link
       href="/wishlist"
-      className="press relative flex size-10 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary"
+      className="press relative flex size-10 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-secondary"
       aria-label={`Wishlist${wishlist.length ? ` (${wishlist.length} items)` : ""}`}
     >
       <Heart className="size-5" />

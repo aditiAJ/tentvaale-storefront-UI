@@ -107,7 +107,9 @@ export default function Home() {
   };
 
   return (
-    <div className="w-full">
+    // Landing page keeps the original, softer corner scale; the rest of the
+    // app uses the tighter global --radius from globals.css.
+    <div className="w-full [--radius:0.625rem]">
       <section className="relative h-110 w-full overflow-hidden md:h-140">
         <motion.div className="absolute inset-0" variants={heroImage} initial="hidden" animate="visible">
           <Image

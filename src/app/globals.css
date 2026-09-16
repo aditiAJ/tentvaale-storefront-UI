@@ -132,10 +132,9 @@
   --chart-3: #8A6D3E;
   --chart-4: #E6DAC4;
   --chart-5: #221D17;
-  /* Was 0.25rem — every rounded-* utility derives from this, so corners across
-     the product were near-square. 0.625rem lands the derived ramp on the brand
-     spec in tentvaale-tokens.css (button 8px-ish, card 12px, panel 16px). */
-  --radius: 0.625rem;
+  /* Subtle corners app-wide (xl ≈ 8px, 2xl ≈ 11px). The landing page opts
+     back into the original softer 0.625rem scale on its root element. */
+  --radius: 0.375rem;
   --sidebar: #FFFCF6;
   --sidebar-foreground: #221D17;
   --sidebar-primary: #C9A15C;

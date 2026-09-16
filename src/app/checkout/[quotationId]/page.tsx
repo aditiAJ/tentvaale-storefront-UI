@@ -131,7 +131,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
               transition={{ duration: DUR.base, ease: EASE.out }}
               className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-destructive/30 bg-destructive/[0.04] p-8 text-center shadow-e1"
             >
-              <span className="flex size-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
+              <span className="flex size-14 items-center justify-center rounded-sm bg-destructive/10 text-destructive">
                 <TriangleAlert className="size-7" />
               </span>
               <h3 className="font-serif text-2xl text-foreground">Payment Failed</h3>

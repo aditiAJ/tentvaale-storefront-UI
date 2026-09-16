@@ -25,7 +25,7 @@ export function StepRail({ current }: { current: number }) {
                 placeItems: "center",
                 width: 26,
                 height: 26,
-                borderRadius: 999,
+                borderRadius: 6,
                 fontFamily: "var(--font-ui)",
                 fontSize: 11,
                 fontWeight: 700,

@@ -249,7 +249,7 @@ function IconBadge({ icon: Icon, size = "md" }: { icon: LucideIcon; size?: "sm" 
   const box = size === "lg" ? "size-16" : size === "sm" ? "size-9" : "size-11";
   const ic = size === "lg" ? "size-7" : size === "sm" ? "size-4" : "size-5";
   return (
-    <span className={`flex ${box} shrink-0 items-center justify-center rounded-full border border-[#b8862f] text-[#b8862f]`}>
+    <span className={`flex ${box} shrink-0 items-center justify-center rounded-sm border border-[#b8862f] text-[#b8862f]`}>
       <Icon className={ic} strokeWidth={1.5} />
     </span>
   );
@@ -712,7 +712,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ orderId
                     {events.map((e, i) => (
                       <div key={e.key} className="flex items-center justify-between">
                         <span className="flex items-center gap-2">
-                          <span className="flex size-5 items-center justify-center rounded-full bg-[#b8862f] text-[10px] text-white">{i + 1}</span>
+                          <span className="flex size-5 items-center justify-center rounded-sm bg-[#b8862f] text-[10px] text-white">{i + 1}</span>
                           {e.name}
                           {e.date && <span className="text-[#6b6257]">({formatEventDate(e.date)})</span>}
                         </span>
@@ -748,7 +748,7 @@ export default function OrderInvoicePage({ params }: { params: Promise<{ orderId
                   { icon: Sparkles, title: "Others", body: "Additional items or services requested on-site will be charged extra." },
                 ].map(({ icon, title, body }) => (
                   <div key={title} className="avoid-break flex items-start gap-3 border-b border-[#e7dcc8] py-3">
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#0d0d0d] text-[#f7f1e6]">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-sm bg-[#0d0d0d] text-[#f7f1e6]">
                       <IconGlyph icon={icon} className="size-4" strokeWidth={1.5} />
                     </span>
                     <div>
