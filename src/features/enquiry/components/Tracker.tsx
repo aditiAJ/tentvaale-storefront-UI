@@ -20,7 +20,7 @@ export function Tracker({ completedCount = 2 }: { completedCount?: number }) {
                   placeItems: "center",
                   width: 32,
                   height: 32,
-                  borderRadius: 999,
+                  borderRadius: 6,
                   background: done ? "var(--accent)" : "transparent",
                   border: `1px solid ${done ? "var(--accent)" : "var(--border-strong)"}`,
                   fontFamily: "var(--font-ui)",

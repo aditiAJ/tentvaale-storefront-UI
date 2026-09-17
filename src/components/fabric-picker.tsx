@@ -20,7 +20,7 @@ export function FabricPicker({ options, value, onChange }: { options: string[]; 
             type="button"
             onClick={() => onChange(f)}
             className={cn(
-              "h-8 rounded-full border px-3 text-xs transition-all",
+              "h-8 rounded-sm border px-3 text-xs transition-all",
               value === f ? "glow border-primary bg-primary/15 text-primary" : "border-border text-foreground/80 hover:border-primary/50",
             )}
           >

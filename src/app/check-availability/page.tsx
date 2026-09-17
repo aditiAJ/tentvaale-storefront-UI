@@ -118,7 +118,7 @@ function CheckAvailability() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={t === tab ? "rounded-full border border-primary bg-primary px-4 py-2 text-sm text-primary-foreground" : "rounded-full border border-primary/40 px-4 py-2 text-sm text-foreground/80"}
+              className={t === tab ? "rounded-sm border border-primary bg-primary px-4 py-2 text-sm text-primary-foreground" : "rounded-sm border border-primary/40 px-4 py-2 text-sm text-foreground/80"}
             >
               {t}
             </button>
@@ -129,7 +129,7 @@ function CheckAvailability() {
             <div key={card.key} className="flex flex-col gap-4 rounded-lg border border-primary/15 bg-card p-4">
               <div className="relative h-40 overflow-hidden rounded-lg">
                 <ProductThumb imageUrl={card.imageUrl} alt={card.name} className="size-full" />
-                <span className="absolute top-3 left-3 rounded-full border border-primary bg-card/90 px-2 py-1 text-xs text-primary">Available</span>
+                <span className="absolute top-3 left-3 rounded-sm border border-primary bg-card/90 px-2 py-1 text-xs text-primary">Available</span>
               </div>
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm text-foreground">

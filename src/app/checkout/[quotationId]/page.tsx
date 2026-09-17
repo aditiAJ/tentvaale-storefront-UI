@@ -3,7 +3,10 @@
 import { use, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { BadgeCheck, LoaderCircle, LockKeyhole, ShieldCheck, TriangleAlert } from "lucide-react";
+import { DUR, EASE, Reveal } from "@/components/motion";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,10 +24,20 @@ import { formatRupees } from "@/mock-data/seed";
 // Real Razorpay integration doesn't exist yet — this simulates the checkout
 // widget, the signed-webhook round trip, and (per Flow 6) a failure state
 // that leaves no ambiguous payment/order record and lets the owner retry.
+/** The pay CTA is identical on all three tabs — one component, three uses. */
+function PayButton({ total, onPay, disabled }: { total: number; onPay: () => void; disabled: boolean }) {
+  return (
+    <Button size="lg" className="w-full" onClick={onPay} disabled={disabled}>
+      Pay {formatRupees(total)}
+    </Button>
+  );
+}
+
 export default function CheckoutPage({ params }: { params: Promise<{ quotationId: string }> }) {
   const { quotationId } = use(params);
   const account = useRequireAccount();
   const router = useRouter();
+  const reduce = useReducedMotion();
   const { getQuotation, getPlan, payForQuotation } = useMockStore();
   const quotation = getQuotation(quotationId);
   const plan = quotation ? getPlan(quotation.planId) : undefined;
@@ -54,7 +67,14 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
   }, [plan, acceptedLines]);
 
   if (!account) return null;
-  if (!quotation || !plan) return <div className="mx-auto w-full max-w-md px-4 py-10">Quotation not found.</div>;
+  if (!quotation || !plan) {
+    return (
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 px-4 py-24 text-center">
+        <h1 className="font-serif text-2xl">Quotation not found</h1>
+        <p className="text-sm text-muted-foreground">This checkout link may have expired.</p>
+      </div>
+    );
+  }
 
   function handlePay() {
     if (!billingName.trim() || !billingEmail.trim()) {
@@ -76,36 +96,63 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <Reveal immediate className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <p className="text-sm text-muted-foreground">{quotation.isDirectOrder ? "Review & Pay" : "Checkout"}</p>
+          <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">{quotation.isDirectOrder ? "Review & Pay" : "Checkout"}</p>
           <h1 className="font-serif text-3xl text-foreground md:text-4xl">Plan payment</h1>
           <p className="text-muted-foreground">{plan.name}</p>
         </div>
-        {quotation.isDirectOrder && <span className="rounded-full border border-primary px-3 py-1 text-xs text-primary">Direct Order</span>}
-      </div>
+        {quotation.isDirectOrder && <Badge variant="accent">Direct Order</Badge>}
+      </Reveal>
 
       <div className="grid items-start gap-8 md:grid-cols-[1.6fr_1fr]">
+        {/* mode="wait" so the outgoing state clears before the next one lands —
+            the three states differ in height and would otherwise overlap. */}
         <section className="flex flex-col gap-6">
+          <AnimatePresence mode="wait" initial={false}>
           {status === "processing" ? (
-            <div className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-lg bg-card p-8">
+            <motion.div
+              key="processing"
+              initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: reduce ? 0 : -8, transition: { duration: DUR.fast, ease: EASE.in } }}
+              transition={{ duration: DUR.base, ease: EASE.out }}
+              className="flex min-h-48 flex-col items-center justify-center gap-4 rounded-2xl border border-border bg-card p-8 shadow-e1"
+            >
               <LoaderCircle className="size-8 animate-spin text-primary" />
               <p className="text-sm text-muted-foreground">Processing your payment — do not close this window</p>
-            </div>
+            </motion.div>
           ) : status === "failed" ? (
-            <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-lg bg-card p-8 text-center">
-              <TriangleAlert className="size-9 text-destructive" />
+            <motion.div
+              key="failed"
+              initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: reduce ? 0 : -8, transition: { duration: DUR.fast, ease: EASE.in } }}
+              transition={{ duration: DUR.base, ease: EASE.out }}
+              className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-2xl border border-destructive/30 bg-destructive/[0.04] p-8 text-center shadow-e1"
+            >
+              <span className="flex size-14 items-center justify-center rounded-sm bg-destructive/10 text-destructive">
+                <TriangleAlert className="size-7" />
+              </span>
               <h3 className="font-serif text-2xl text-foreground">Payment Failed</h3>
-              <p className="text-base text-foreground">Payment could not be completed</p>
-              <p className="max-w-lg text-sm text-muted-foreground">No charge was made and no order was created. You can safely retry.</p>
-              <Button className="bg-primary text-primary-foreground" onClick={handlePay}>
+              <p className="max-w-lg text-sm leading-6 text-muted-foreground">
+                No charge was made and no order was created. You can safely retry.
+              </p>
+              <Button size="lg" className="mt-1" onClick={handlePay}>
                 Retry Payment
               </Button>
-            </div>
+            </motion.div>
           ) : (
-            <>
+            <motion.div
+              key="idle"
+              initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: reduce ? 0 : -8, transition: { duration: DUR.fast, ease: EASE.in } }}
+              transition={{ duration: DUR.base, ease: EASE.out }}
+              className="flex flex-col gap-6"
+            >
               {/* Folded in from Flowstep screens 55/56 (Direct Order "Review & Pay" variants). */}
-              <div className="flex flex-col gap-4 rounded-lg bg-card p-6">
+              <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-e1">
                 <h2 className="font-serif text-2xl text-foreground">Customer &amp; Billing Information</h2>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-2">
@@ -131,72 +178,69 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
                 </div>
               </div>
 
-              <div className="flex flex-col gap-6 rounded-lg bg-card p-6">
+              <div className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-6 shadow-e1">
                 <div className="flex flex-col gap-2">
                   <h2 className="font-serif text-2xl text-foreground">Payment Method</h2>
                   <p className="text-sm text-muted-foreground">Complete your payment securely with Razorpay.</p>
                 </div>
                 <Tabs defaultValue="UPI" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 bg-muted">
+                  <TabsList className="grid w-full grid-cols-3">
                     <TabsTrigger value="Card">Card</TabsTrigger>
                     <TabsTrigger value="UPI">UPI</TabsTrigger>
                     <TabsTrigger value="Netbanking">Netbanking</TabsTrigger>
                   </TabsList>
                   <TabsContent value="Card" className="flex flex-col gap-4 pt-6">
-                    <Input placeholder="Card number" />
+                    <Input placeholder="Card number" inputMode="numeric" />
                     <div className="grid grid-cols-2 gap-4">
-                      <Input placeholder="MM / YY" />
-                      <Input placeholder="CVV" />
+                      <Input placeholder="MM / YY" inputMode="numeric" />
+                      <Input placeholder="CVV" inputMode="numeric" />
                     </div>
-                    <Button className="w-full bg-primary text-primary-foreground" onClick={handlePay} disabled={acceptedLines.length === 0}>
-                      Pay {formatRupees(total)}
-                    </Button>
+                    <PayButton total={total} onPay={handlePay} disabled={acceptedLines.length === 0} />
                   </TabsContent>
                   <TabsContent value="UPI" className="flex flex-col gap-4 pt-6">
                     <Input placeholder="Enter UPI ID" />
-                    <Button className="w-full bg-primary text-primary-foreground" onClick={handlePay} disabled={acceptedLines.length === 0}>
-                      Pay {formatRupees(total)}
-                    </Button>
+                    <PayButton total={total} onPay={handlePay} disabled={acceptedLines.length === 0} />
                   </TabsContent>
                   <TabsContent value="Netbanking" className="flex flex-col gap-4 pt-6">
-                    <div className="rounded bg-background p-6 text-sm text-muted-foreground">Select your bank to continue.</div>
-                    <Button className="w-full bg-primary text-primary-foreground" onClick={handlePay} disabled={acceptedLines.length === 0}>
-                      Pay {formatRupees(total)}
-                    </Button>
+                    <div className="rounded-xl border border-border bg-muted/40 p-6 text-sm text-muted-foreground">Select your bank to continue.</div>
+                    <PayButton total={total} onPay={handlePay} disabled={acceptedLines.length === 0} />
                   </TabsContent>
                 </Tabs>
                 <div className="grid grid-cols-1 gap-4 border-t border-border pt-5 sm:grid-cols-3">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <LockKeyhole className="size-4 text-primary" /> 256-bit SSL Secured
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <ShieldCheck className="size-4 text-primary" /> PCI DSS Compliant
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <BadgeCheck className="size-4 text-primary" /> Powered by Razorpay
-                  </div>
+                  {[
+                    { icon: LockKeyhole, label: "256-bit SSL Secured" },
+                    { icon: ShieldCheck, label: "PCI DSS Compliant" },
+                    { icon: BadgeCheck, label: "Powered by Razorpay" },
+                  ].map(({ icon: Icon, label }) => (
+                    <div key={label} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Icon className="size-4 shrink-0 text-primary" /> {label}
+                    </div>
+                  ))}
                 </div>
               </div>
-            </>
+            </motion.div>
           )}
+          </AnimatePresence>
         </section>
 
-        <Card className="gap-6 border-border bg-card p-6">
+        {/* Summary follows the form down the page — the total stays in view
+            while the billing fields are filled in. */}
+        <Card className="gap-6 border-border bg-card p-6 shadow-e2 md:sticky md:top-24">
           <CardHeader className="gap-2 p-0">
             <CardTitle className="font-serif text-2xl">Order Summary</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-4 p-0">
+          <CardContent className="flex flex-col gap-3.5 p-0">
             {breakdown.map((b) => (
-              <div key={b.label} className="flex items-center justify-between text-sm">
+              <div key={b.label} className="flex items-center justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">{b.label}</span>
-                <span>{formatRupees(b.amount)}</span>
+                <span className="tabular-nums">{formatRupees(b.amount)}</span>
               </div>
             ))}
-            <div className="flex items-center justify-between border-t border-border pt-4">
+            <div className="flex items-baseline justify-between gap-4 border-t border-border pt-4">
               <span className="font-medium">Total</span>
-              <span className="font-serif text-3xl text-primary">{formatRupees(total)}</span>
+              <span className="font-serif text-3xl text-primary tabular-nums">{formatRupees(total)}</span>
             </div>
-            <p className="text-sm text-muted-foreground">Full amount collected upfront. No partial payment.</p>
+            <p className="text-xs leading-5 text-muted-foreground">Full amount collected upfront. No partial payment.</p>
           </CardContent>
         </Card>
       </div>

@@ -39,7 +39,7 @@ export function EnquiryItemCard({
           backgroundSize: "78% auto",
           backgroundPosition: "center",
           backgroundRepeat: "no-repeat",
-          borderRadius: 8,
+          borderRadius: 6,
           aspectRatio: "1",
         }}
       />
@@ -84,7 +84,7 @@ export function EnquiryItemCard({
                 height: 44,
                 display: "grid",
                 placeItems: "center",
-                borderRadius: 8,
+                borderRadius: 6,
                 background: "transparent",
                 border: "1px solid var(--border-strong)",
                 color: "var(--text-primary)",
@@ -105,7 +105,7 @@ export function EnquiryItemCard({
                 height: 44,
                 display: "grid",
                 placeItems: "center",
-                borderRadius: 8,
+                borderRadius: 6,
                 background: "transparent",
                 border: "1px solid var(--border-strong)",
                 color: "var(--text-primary)",

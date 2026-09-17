@@ -43,6 +43,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      // globals.css sets scroll-behavior: smooth for in-page anchors. This
+      // attribute tells Next 16 to suspend it during route changes, otherwise
+      // the jump to the top of a new page plays as a visible upward scroll.
+      data-scroll-behavior="smooth"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} ${manrope.variable} ${interBrand.variable} h-full antialiased`}
     >

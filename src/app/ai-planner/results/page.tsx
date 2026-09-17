@@ -118,9 +118,9 @@ function AiPlannerResults() {
           <div key={card.key} className="flex flex-col overflow-hidden rounded-lg border border-primary/20 bg-card">
             <div className="relative h-48">
               <ProductThumb imageUrl={card.imageUrl} alt={card.name} className="size-full" />
-              <span className="absolute top-3 left-3 rounded-full border border-primary bg-card/90 px-3 py-1 text-xs text-primary">AI Suggested</span>
+              <span className="absolute top-3 left-3 rounded-sm border border-primary bg-card/90 px-3 py-1 text-xs text-primary">AI Suggested</span>
               <button
-                className="absolute top-3 right-3 rounded-full bg-card/90 p-1 text-foreground/80"
+                className="absolute top-3 right-3 rounded-sm bg-card/90 p-1 text-foreground/80"
                 onClick={() => setDismissed((s) => new Set(s).add(card.key))}
                 aria-label={`Dismiss ${card.name}`}
               >
