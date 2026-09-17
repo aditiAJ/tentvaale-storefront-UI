@@ -158,7 +158,12 @@ export default function AccountPage() {
         </div>
 
         <div id="order-history" className="mb-6 rounded-lg bg-card p-6">
-          <h2 className="font-serif text-xl text-foreground">Order History</h2>
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-serif text-xl text-foreground">Order History</h2>
+            <Link href="/orders" className="text-sm text-primary">
+              View all orders
+            </Link>
+          </div>
           <div className="mt-4">
             {myOrders.map((o, i) => {
               const p = myPlans.find((pl) => pl.id === o.planId);

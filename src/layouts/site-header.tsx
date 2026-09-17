@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/bundles", label: "Bundles" },
   { href: "/catalog", label: "Product Catalog" },
   { href: "/plans", label: "Plan Event" },
+  { href: "/orders", label: "My Orders" },
   { href: "/about", label: "About" },
 ];
 
