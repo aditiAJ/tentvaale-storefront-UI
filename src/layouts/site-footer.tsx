@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { MapPin, Phone } from "lucide-react";
+import { COMPANY, telHref } from "@/lib/company";
+import { SocialLinks } from "@/components/social-icons";
 
 // Flowstep screens 1 (desktop 4-col grid) / 2 (mobile stacked). Bottom tab
 // bar covers primary nav on mobile, so this stays reachable via scroll.
@@ -50,6 +53,29 @@ export function SiteFooter() {
             <p className="max-w-56 text-sm leading-6 text-muted-foreground">
               Furniture, décor and fully styled collections, rented for the day.
             </p>
+            {/* Address and phone reachable from every page, not only /contact. */}
+            <div className="mt-1 flex flex-col gap-2.5">
+              <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <Phone className="mt-0.5 size-4 shrink-0" />
+                <div className="flex flex-col">
+                  {COMPANY.phones.map((phone) => (
+                    <a key={phone.e164} href={telHref(phone)} className="transition-colors hover:text-foreground">
+                      {phone.display}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                <MapPin className="mt-0.5 size-4 shrink-0" />
+                <span className="max-w-56">{COMPANY.address.inline}</span>
+              </div>
+              {COMPANY.email && (
+                <a href={`mailto:${COMPANY.email}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {COMPANY.email}
+                </a>
+              )}
+            </div>
+            <SocialLinks className="mt-2" size="sm" />
           </div>
           {COLUMNS.map((col) => (
             <nav key={col.title} className="flex flex-col gap-3" aria-label={col.title}>

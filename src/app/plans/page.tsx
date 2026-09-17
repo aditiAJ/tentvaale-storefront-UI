@@ -17,7 +17,7 @@ import { NumberStepper } from "@/components/number-stepper";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
-import { COLLECTIONS, formatEventDateRange } from "@/mock-data/seed";
+import { COLLECTIONS, formatEventDateRange, planStatusLabel } from "@/mock-data/seed";
 import type { Plan, PlanStatus } from "@/mock-data/types";
 
 // Flowstep screens 17 (desktop, populated) / 18 (mobile, empty state).
@@ -74,7 +74,7 @@ function PlanCard({ plan }: { plan: Plan }) {
             {/* Scrim keeps the status chip legible on any cover photo. */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-linear-to-b from-black/40 to-transparent" />
             <Badge variant={STATUS_VARIANT[plan.status]} className="absolute top-3 right-3 backdrop-blur-sm">
-              {plan.status}
+              {planStatusLabel(plan.status)}
             </Badge>
           </div>
         )}
@@ -83,7 +83,7 @@ function PlanCard({ plan }: { plan: Plan }) {
             <h2 className="font-serif text-xl leading-snug text-card-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
               {plan.name}
             </h2>
-            {!cover && <Badge variant={STATUS_VARIANT[plan.status]}>{plan.status}</Badge>}
+            {!cover && <Badge variant={STATUS_VARIANT[plan.status]}>{planStatusLabel(plan.status)}</Badge>}
           </div>
           <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
             <div className="flex items-center justify-between gap-2">

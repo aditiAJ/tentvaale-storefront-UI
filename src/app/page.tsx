@@ -15,14 +15,6 @@ import { CATEGORIES } from "@/mock-data/taxonomy";
 // Flowstep screens 1 (desktop) / 2 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 const OCCASIONS = ["Wedding", "Haldi", "Mehendi", "Sufi Night", "Ganpati", "Diwali", "Corporate"];
 
-
-const STATS = [
-  { value: "12,000+", label: "Inventory Items" },
-  { value: "3,500+", label: "Events Styled" },
-  { value: "18", label: "Cities" },
-  { value: "9", label: "Years" },
-];
-
 // Mirrors the real flow: browse -> Plan with sub-events -> Submit for
 // Quotation or Direct Order -> pay -> delivery status on the Order page.
 const HOW_IT_WORKS = [
@@ -287,24 +279,6 @@ export default function Home() {
                 imageHeight="h-44 md:h-52"
                 sizes="(min-width: 768px) 33vw, 100vw"
               />
-            </motion.div>
-          ))}
-        </motion.div>
-      </Section>
-
-      <Section>
-        <SectionHeading title="Why Tentvaale" />
-        <motion.div
-          className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6"
-          variants={gridContainer}
-          initial={skip ? "visible" : "hidden"}
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.4 }}
-        >
-          {STATS.map((s) => (
-            <motion.div key={s.label} variants={gridItem} className="flex flex-col gap-1 rounded-2xl border border-border bg-card p-5">
-              <span className="font-serif text-2xl text-primary md:text-4xl">{s.value}</span>
-              <span className="text-xs text-muted-foreground md:text-sm">{s.label}</span>
             </motion.div>
           ))}
         </motion.div>

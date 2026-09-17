@@ -21,6 +21,7 @@ import {
   MapPin,
   MoreHorizontal,
   MoveRight,
+  Heart,
   Package,
   PackageOpen,
   Split,
@@ -47,12 +48,13 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { ProductThumb } from "@/components/product-thumb";
 import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
+import { RentalTerms } from "@/components/rental-terms";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
 import { canSubmitPlan, planGroupLabel, useMockStore } from "@/mock-data/store";
 import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/mock-data/inventory-sharing";
-import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, planStatusLabel, rateTypeLabel } from "@/mock-data/seed";
 import type { PlanItem, PlanStatus, Product, SubEvent } from "@/mock-data/types";
 
 // Flowstep screens 19 (desktop) / 20 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
@@ -83,7 +85,7 @@ function initials(name: string) {
 export default function PlanDetailPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const account = useRequireAccount();
-  const { getPlan, products, accounts, updatePlanDetails, renamePlanGroup, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, setPlanItemQty, markSetupAdded, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing } = useMockStore();
+  const { getPlan, products, accounts, updatePlanDetails, renamePlanGroup, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, setPlanItemQty, markSetupAdded, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing, wishlist, toggleWishlist } = useMockStore();
   const plan = getPlan(planId);
 
   // null = General, an id = that function, undefined = not chosen yet (auto-pick below).
@@ -228,6 +230,18 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               <DropdownMenuSeparator />
             </>
           )}
+          {/* Move to Wishlist: take it off the plan but keep it saved, rather
+              than making "changed my mind" mean losing the item entirely. */}
+          <DropdownMenuItem
+            onClick={() => {
+              if (!wishlist.includes(item.productId)) toggleWishlist(item.productId);
+              removePlanItem(planId, item.id);
+              toast.success(`Moved ${name} to your wishlist`);
+            }}
+          >
+            <Heart className="size-4" /> Move to Wishlist
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
             onClick={() => {
@@ -1004,7 +1018,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="font-serif text-3xl text-foreground md:text-4xl">{plan.name}</h1>
-              <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{plan.status}</span>
+              <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{planStatusLabel(plan.status)}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               <MetaChip icon={CalendarDays} value={startDate ? planDateLabel : undefined} empty="Add dates" onClick={openEditPlan} />
@@ -1396,6 +1410,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           </section>
 
           {renderSharedProducts()}
+
+          {/* Terms sit in the sidebar next to the totals - the point in the
+              flow where the customer is deciding to commit. */}
+          <RentalTerms />
         </aside>
       </div>
 

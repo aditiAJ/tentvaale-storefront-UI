@@ -28,7 +28,10 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
     <SheetPrimitive.Backdrop
       data-slot="sheet-overlay"
       className={cn(
-        "fixed inset-0 z-50 bg-[color-mix(in_oklab,#12100E_55%,transparent)] transition-opacity duration-200 ease-out-quint data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm",
+        // A drawer is meant to sit BESIDE the page, not replace it: the picker is
+        // used while reading the plan behind it. So no backdrop blur, and a lighter
+        // scrim than the dialog - enough to push the page back, not to hide it.
+        "fixed inset-0 z-50 bg-[color-mix(in_oklab,#12100E_30%,transparent)] transition-opacity duration-200 ease-out-quint data-ending-style:opacity-0 data-starting-style:opacity-0",
         className
       )}
       {...props}

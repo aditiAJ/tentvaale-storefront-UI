@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { COMPANY, telHref, whatsappHref } from "@/lib/company";
+import { SocialLinks } from "@/components/social-icons";
 
 // Flowstep screen 49 (desktop) — static content page, no mobile variant fetched.
 export default function ContactPage() {
@@ -34,9 +36,9 @@ export default function ContactPage() {
           <MessageCircle className="size-10 text-[#1A1714]" />
         </div>
         <h2 className="font-serif text-2xl text-foreground">Chat on WhatsApp</h2>
-        <p className="text-foreground/75">+91 98765 00000</p>
+        <p className="text-foreground/75">{COMPANY.whatsapp.display}</p>
         <a
-          href="https://wa.me/919876500000"
+          href={whatsappHref()}
           target="_blank"
           rel="noreferrer"
           className="w-full rounded-lg bg-primary py-3 text-center text-sm font-medium text-primary-foreground"
@@ -93,27 +95,41 @@ export default function ContactPage() {
       </section>
 
       <section className="flex flex-col gap-5 py-2">
-        <div className="flex items-start gap-4">
-          <Mail className="mt-1 size-5 shrink-0 text-primary" />
-          <div className="flex flex-col gap-1">
-            <span className="text-sm text-foreground">Email</span>
-            <span className="text-sm text-foreground/65">hello@tentvaale.com</span>
+        {/* Email is omitted until the real address is supplied - see lib/company.ts. */}
+        {COMPANY.email && (
+          <div className="flex items-start gap-4">
+            <Mail className="mt-1 size-5 shrink-0 text-primary" />
+            <div className="flex flex-col gap-1">
+              <span className="text-sm text-foreground">Email</span>
+              <a href={`mailto:${COMPANY.email}`} className="text-sm text-foreground/65 underline-offset-4 hover:text-primary hover:underline">
+                {COMPANY.email}
+              </a>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex items-start gap-4">
           <Phone className="mt-1 size-5 shrink-0 text-primary" />
           <div className="flex flex-col gap-1">
             <span className="text-sm text-foreground">Phone</span>
-            <span className="text-sm text-foreground/65">+91 22 4000 1234</span>
+            {COMPANY.phones.map((phone) => (
+              <a key={phone.e164} href={telHref(phone)} className="text-sm text-foreground/65 underline-offset-4 hover:text-primary hover:underline">
+                {phone.display}
+              </a>
+            ))}
           </div>
         </div>
         <div className="flex items-start gap-4">
           <MapPin className="mt-1 size-5 shrink-0 text-primary" />
           <div className="flex flex-col gap-1">
             <span className="text-sm text-foreground">Studio Address</span>
-            <span className="text-sm text-foreground/65">4th Floor, Kamala Mills, Lower Parel, Mumbai 400013</span>
+            <span className="text-sm text-foreground/65">{COMPANY.address.inline}</span>
           </div>
         </div>
+      </section>
+
+      <section className="flex flex-col items-center gap-3 border-t border-primary/20 pt-8">
+        <span className="text-sm text-foreground/70">Follow along</span>
+        <SocialLinks />
       </section>
     </div>
   );

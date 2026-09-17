@@ -428,28 +428,54 @@ function ProductCard({ product, onQuickAdd }: { product: Product; onQuickAdd: (p
   const { currentAccount, wishlist, toggleWishlist } = useMockStore();
   const wishlisted = wishlist.includes(product.id);
   const line = usePlanLine(product.id);
+  // The hover swap uses only AUTHORED alternates (`imageUrls`), never the
+  // derived views from productImages(): those are re-crops of the same
+  // photograph, so cross-fading to one looks like a zoom rather than a second
+  // angle. Until real multi-angle photography exists, cards simply do not swap.
+  const hoverImage = product.imageUrls?.[1];
 
   return (
     // h-full keeps cards in a grid row the same height; the info block sits
     // compactly under the image and any spare height falls below it.
-    <article className="surface-interactive group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-e1 hover:border-primary/50">
+    // No `surface-interactive` here: the listing grid deliberately does not lift
+    // or elevate on hover. The colour changes below are kept as affordance.
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-e1 transition-[box-shadow,border-color] duration-[260ms] ease-out-quint hover:glow hover:border-primary">
       <div className="relative overflow-hidden bg-muted/60">
         <Link href={`/catalog/${product.id}`} className="block">
           {/* 4:3 keeps the photo to roughly 55–60% of the card height. */}
           <ProductThumb
             imageUrl={product.imageUrl}
             alt={product.name}
-            className="aspect-[4/3] w-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.05]"
+            className="aspect-[4/3] w-full rounded-none bg-transparent"
           />
+          {hoverImage && (
+            <ProductThumb
+              imageUrl={hoverImage}
+              alt=""
+              className="absolute inset-0 aspect-[4/3] w-full rounded-none bg-transparent opacity-0 transition-opacity duration-300 ease-out-quint group-hover:opacity-100"
+            />
+          )}
+          {(product.imageUrls?.length ?? 0) > 1 && (
+            <span className="absolute bottom-2 left-2 rounded-sm bg-background/85 px-1.5 py-0.5 text-[10px] font-medium text-foreground/70 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              {product.imageUrls!.length} views
+            </span>
+          )}
         </Link>
         {currentAccount && (
           <button
-            className="press absolute top-2 right-2 flex size-8 items-center justify-center rounded-md bg-background/85 shadow-e1 backdrop-blur transition-colors duration-200 ease-out-quint hover:bg-background"
+            // No chip behind the icon (feedback). A drop-shadow on the glyph
+            // itself keeps it legible over pale photos without a filled box.
+            className="press absolute top-2 right-2 flex size-8 items-center justify-center rounded-md transition-colors duration-200 ease-out-quint"
             onClick={() => toggleWishlist(product.id)}
             aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
             aria-pressed={wishlisted}
           >
-            <Heart className={cn("size-3.5 transition-[transform,color,fill] duration-300 ease-out-quint", wishlisted ? "scale-110 fill-primary text-primary" : "text-foreground")} />
+            <Heart
+              className={cn(
+                "size-4 [filter:drop-shadow(0_1px_2px_rgb(0_0_0/0.45))] transition-[transform,color,fill] duration-300 ease-out-quint",
+                wishlisted ? "scale-110 fill-primary text-primary" : "text-white hover:text-primary"
+              )}
+            />
           </button>
         )}
       </div>
@@ -502,7 +528,14 @@ function CatalogContent() {
   const category = categoryParam ? CATEGORIES.find((c) => slug(c.name) === slug(categoryParam)) : undefined;
   const [sort, setSort] = useState<SortKey>("popularity");
   const [query, setQuery] = useState("");
-  const [subcats, setSubcats] = useState<string[]>([]);
+  // Seeded from the URL so the nav mega-menu can deep-link straight to a
+  // subcategory; after mount it is ordinary local state like the other facets.
+  const subcategoryParam = searchParams.get("subcategory");
+  const [subcats, setSubcats] = useState<string[]>(() => {
+    if (!subcategoryParam || !category) return [];
+    const match = category.subcategories.find((sub) => slug(sub) === slug(subcategoryParam));
+    return match ? [match] : [];
+  });
   const [selection, setSelection] = useState<Selection>({});
   const [quickAdd, setQuickAdd] = useState<Product | null>(null);
 
@@ -713,7 +746,7 @@ function CatalogContent() {
             // stagger delays card N by N × gap, so cards far down a long grid
             // were still invisible after scrolling or filtering. Cards that
             // survive a filter change keep their mounted, visible state.
-            <div ref={gridRef} className="grid scroll-mt-28 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
+            <div ref={gridRef} className="grid scroll-mt-28 grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
               {filtered.map((p, i) => (
                 <Reveal key={p.id} distance={12} duration={DUR.base} delay={(i % 4) * 0.04} className="flex min-w-0 flex-col">
                   <ProductCard product={p} onQuickAdd={setQuickAdd} />
@@ -758,7 +791,7 @@ function CatalogSkeleton() {
       </div>
       <div className="flex gap-8">
         <div className="shimmer hidden h-128 w-64 shrink-0 rounded-2xl bg-muted/70 md:block" />
-        <div className="grid min-w-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
+        <div className="grid min-w-0 flex-1 grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1800px]:grid-cols-6">
           {Array.from({ length: 10 }, (_, i) => (
             <SkeletonCard key={i} />
           ))}

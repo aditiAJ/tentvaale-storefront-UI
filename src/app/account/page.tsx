@@ -16,6 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
+import { planStatusLabel } from "@/mock-data/seed";
 
 // Flowstep screen 40 (desktop) — mobile 41 not fetched; stacks naturally.
 const NAV_SECTIONS = [
@@ -290,7 +291,7 @@ export default function AccountPage() {
                         Order #{o.id} — {p?.name}
                       </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {p?.subEvents[0]?.eventDate ?? "No date"} — {p?.status}
+                        {p?.subEvents[0]?.eventDate ?? "No date"} — {p ? planStatusLabel(p.status) : "Unknown"}
                       </p>
                     </div>
                     <Link href={`/orders/${o.id}`} className="shrink-0 text-sm text-primary underline-offset-4 transition-colors hover:underline">

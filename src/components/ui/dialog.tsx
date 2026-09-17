@@ -33,7 +33,10 @@ function DialogOverlay({
       className={cn(
         // Heavier scrim than the shadcn default: on the charcoal theme a 10%
         // black veil is invisible, so the dialog never separated from the page.
-        "fixed inset-0 isolate z-50 bg-[color-mix(in_oklab,#12100E_55%,transparent)] duration-200 ease-out-quint supports-backdrop-filter:backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-150",
+        // 40% is the compromise - the dialog still reads as modal, but the page
+        // behind stays legible. No backdrop blur: blurring the whole page to
+        // show one panel obscures more than the separation is worth.
+        "fixed inset-0 isolate z-50 bg-[color-mix(in_oklab,#12100E_40%,transparent)] duration-200 ease-out-quint data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 data-closed:duration-150",
         className
       )}
       {...props}

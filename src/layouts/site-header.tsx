@@ -2,13 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, Menu, Heart, User, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Search, Menu, Heart, User, X, ChevronDown } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EASE, DUR, SPRING } from "@/components/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
+import { CATEGORIES } from "@/mock-data/taxonomy";
+
+/** Mirrors the catalog page's own slug rule so its ?category= lookup matches. */
+const slug = (value: string) => value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Flowstep screens 1 (desktop) / 2 (mobile). Desktop: full nav rail +
 // inline search + auth in one row. Mobile: hamburger + wordmark + icons, with
@@ -137,6 +141,109 @@ function NavItem({ href, label, active }: { href: string; label: string; active:
   );
 }
 
+/**
+ * Category mega-menu hung off the Product Catalog nav item.
+ *
+ * Hover opens it, but with a close delay rather than an open delay: dropping
+ * instantly on mouseleave makes the diagonal trip from the trigger down to a
+ * column impossible. Focus and Enter/Space open it too, and Escape closes and
+ * returns focus, so it is not a mouse-only control. The trigger stays a real
+ * link, so a tap on touch (where there is no hover) still goes to /catalog.
+ */
+function CatalogMenu({ active }: { active: boolean }) {
+  const [open, setOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  function show() {
+    clearTimeout(closeTimer.current);
+    setOpen(true);
+  }
+
+  function hide() {
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => setOpen(false), 160);
+  }
+
+  return (
+    <div
+      ref={wrapRef}
+      className="relative"
+      onMouseEnter={show}
+      onMouseLeave={hide}
+      onFocus={show}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+      onKeyDown={(e) => {
+        if (e.key !== "Escape" || !open) return;
+        setOpen(false);
+        wrapRef.current?.querySelector<HTMLAnchorElement>("a")?.focus();
+      }}
+    >
+      <div className="flex items-center gap-1">
+        <NavItem href="/catalog" label="Product Catalog" active={active} />
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="true"
+          aria-label="Browse categories"
+          onClick={() => setOpen((v) => !v)}
+          className="p-0.5 text-foreground/70 transition-colors duration-200 ease-out-quint hover:text-primary"
+        >
+          <ChevronDown className={cn("size-3.5 transition-transform duration-200 ease-out-quint", open && "rotate-180")} />
+        </button>
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, y: -6 }}
+            transition={{ duration: DUR.fast, ease: EASE.out }}
+            className="absolute top-full left-0 z-50 pt-3"
+          >
+            <div className="grid w-[46rem] grid-cols-3 gap-x-6 gap-y-5 rounded-lg border border-border bg-card p-5 shadow-e3">
+              {CATEGORIES.map((category) => (
+                <div key={category.name} className="flex flex-col gap-1.5">
+                  <Link
+                    href={`/catalog?category=${slug(category.name)}`}
+                    onClick={() => setOpen(false)}
+                    className="text-sm font-medium text-foreground transition-colors duration-200 ease-out-quint hover:text-primary"
+                  >
+                    {category.name}
+                  </Link>
+                  {category.subcategories.slice(0, 4).map((sub) => (
+                    <Link
+                      key={sub}
+                      href={`/catalog?category=${slug(category.name)}&subcategory=${slug(sub)}`}
+                      onClick={() => setOpen(false)}
+                      className="text-xs text-muted-foreground transition-colors duration-200 ease-out-quint hover:text-foreground"
+                    >
+                      {sub}
+                    </Link>
+                  ))}
+                </div>
+              ))}
+              <Link
+                href="/catalog"
+                onClick={() => setOpen(false)}
+                className="col-span-3 border-t border-border pt-3 text-xs font-medium text-primary transition-colors duration-200 ease-out-quint hover:text-foreground"
+              >
+                Browse the full catalogue &rarr;
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -170,7 +277,11 @@ export function SiteHeader() {
           <ul className="flex shrink-0 items-center gap-5">
             {NAV_LINKS.map((c) => (
               <li key={c.label}>
-                <NavItem href={c.href} label={c.label} active={isActive(c.href)} />
+                {c.href === "/catalog" ? (
+                  <CatalogMenu active={isActive(c.href)} />
+                ) : (
+                  <NavItem href={c.href} label={c.label} active={isActive(c.href)} />
+                )}
               </li>
             ))}
           </ul>
@@ -181,7 +292,7 @@ export function SiteHeader() {
                 type="text"
                 name="q"
                 placeholder="Search products, collections, bundles..."
-                className="h-10 w-full rounded-sm border border-border bg-muted pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out-quint placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:bg-background focus:shadow-[0_0_0_3px_var(--ring)]"
+                className="h-10 w-full rounded-full border border-border bg-muted pr-4 pl-10 text-sm text-foreground outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out-quint placeholder:text-muted-foreground hover:border-primary/40 focus:border-primary focus:bg-background focus:shadow-[0_0_0_3px_var(--ring)]"
               />
             </div>
           </form>

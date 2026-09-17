@@ -1,4 +1,4 @@
-import type { Bundle, Collection, Product } from "./types";
+import type { Bundle, Collection, PlanStatus, Product } from "./types";
 
 const U = (id: string, w = 800) => `https://images.unsplash.com/${id}?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=${w}`;
 
@@ -387,8 +387,42 @@ export function formatRupees(n: number): string {
   return "₹" + Math.round(n).toLocaleString("en-IN");
 }
 
+// Real multi-angle photography does not exist yet, so a product's extra views
+// are derived: same Unsplash photograph, different crop. That is honest for a
+// prototype (unmistakably the same piece, genuinely different framing) and
+// means no product literal has to carry placeholder URLs. Authored `imageUrls`
+// always wins, so swapping in real photos later is per-product and additive.
+// Local /brand cut-outs have exactly one file and stay single-image.
+const UNSPLASH_HOST = "https://images.unsplash.com/";
+
+export function productImages(product: Product): string[] {
+  if (product.imageUrls?.length) return product.imageUrls;
+  if (!product.imageUrl) return [];
+  if (!product.imageUrl.startsWith(UNSPLASH_HOST)) return [product.imageUrl];
+
+  const photoId = product.imageUrl.slice(UNSPLASH_HOST.length).split("?")[0];
+  const view = (crop: string) => `${UNSPLASH_HOST}${photoId}?cs=tinysrgb&fm=jpg&q=80&w=800&h=800&fit=crop&crop=${crop}`;
+  return [product.imageUrl, view("edges"), view("top")];
+}
+
 export function rateTypeLabel(rateType: Product["rateType"]): string {
   return rateType === "Qty" ? "per unit" : rateType === "SqFt" ? "per sqft" : "per running ft";
+}
+
+// PlanStatus is stored as a single PascalCase token; only "PartiallyAccepted"
+// reads wrong when printed raw, but the whole enum goes through one map so a
+// future multi-word status can't reintroduce the same bug.
+const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
+  Draft: "Draft",
+  Submitted: "Submitted",
+  Quoted: "Quoted",
+  PartiallyAccepted: "Partially Accepted",
+  Ordered: "Ordered",
+  Cancelled: "Cancelled",
+};
+
+export function planStatusLabel(status: PlanStatus): string {
+  return PLAN_STATUS_LABEL[status] ?? status;
 }
 
 // Dates are stored as ISO yyyy-mm-dd; the UI shows them as "9th Sep 2026".

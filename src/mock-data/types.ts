@@ -38,6 +38,12 @@ export interface Product {
   basePrice: number;
   /** Only set where a real product photo was supplied — see ProductThumb for the fallback. */
   imageUrl?: string;
+  /**
+   * Extra views for the gallery and the card's hover swap. Optional: when it is
+   * absent, `productImages()` in seed.ts derives alternates from `imageUrl`, so
+   * a product only needs this once real multi-angle photography exists.
+   */
+  imageUrls?: string[];
   /** Display size for cards, e.g. "200 × 90 × 85 cm". */
   size?: string;
   colours?: string[];
@@ -114,6 +120,13 @@ export interface PlanItem {
   rentalEnd?: string;
   /** Chosen upholstery fabric (shared fabric vocabulary) for Furniture. */
   fabric?: string;
+  /**
+   * Chosen colour, from the product's `colours`. Admin models colour as one
+   * value per product row (Master_Product.IDColor), so when a real backend
+   * lands this resolves to a sibling product rather than a modifier — keeping
+   * it on the line means that migration is a lookup, not a data loss.
+   */
+  colour?: string;
 }
 
 export type PlanCoOwnerRole = "CoOwner" | "ViewOnlyPlanner";

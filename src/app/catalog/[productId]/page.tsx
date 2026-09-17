@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, Heart } from "lucide-react";
 import { Reveal, Stagger, StaggerItem, SPRING } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,23 +14,112 @@ import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductThumb } from "@/components/product-thumb";
+import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
-import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import type { Product } from "@/mock-data/types";
+import { formatRupees, productImages, rateTypeLabel } from "@/mock-data/seed";
 import { CATEGORIES, GLOBAL_FACETS, facetValues, upholsteryOptions } from "@/mock-data/taxonomy";
 import { FabricPicker } from "@/components/fabric-picker";
+import { ColourPicker } from "@/components/colour-picker";
+import { RentalTerms } from "@/components/rental-terms";
+import { useRecentlyViewed } from "@/lib/recently-viewed";
 
 // Flowstep screens 9 (desktop) / 10 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 // The "Added to Plan" confirmation (screens 52/54) is a dialog here rather
 // than an immediate redirect, so the shopper can keep browsing complementary
 // products from the same page.
+/** Mirrors the catalog page's slug rule so ?category= / ?subcategory= match. */
+const slug = (value: string) => value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+/**
+ * One rail shape for Similar / Complements / Recently Viewed. Renders nothing
+ * when empty, so a first-time visitor simply does not see a Recently Viewed
+ * heading over a blank row.
+ */
+function ProductRail({
+  title,
+  products,
+  action,
+}: {
+  title: string;
+  products: Product[];
+  action?: { href: string; label: string };
+}) {
+  if (products.length === 0) return null;
+
+  return (
+    <section className="mt-14 flex flex-col gap-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="font-serif text-2xl text-foreground">{title}</h2>
+        {action && (
+          <Link
+            href={action.href}
+            className="flex items-center gap-1 text-sm text-primary underline-offset-4 transition-colors duration-200 ease-out-quint hover:underline"
+          >
+            {action.label}
+            <ChevronRight className="size-4" />
+          </Link>
+        )}
+      </div>
+      <Stagger gap={0.05} className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {products.map((p) => (
+          <StaggerItem key={p.id} className="flex flex-col">
+            <Link
+              href={`/catalog/${p.id}`}
+              className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-e1 transition-colors duration-200 ease-out-quint hover:border-primary/50"
+            >
+              <div className="overflow-hidden rounded-xl bg-muted/60">
+                <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-32 rounded-none bg-transparent md:h-44" />
+              </div>
+              <h3 className="line-clamp-2 px-1 text-sm leading-snug font-medium text-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
+                {p.name}
+              </h3>
+              <p className="mt-auto px-1 pb-1 text-sm text-muted-foreground">From {formatRupees(p.basePrice)} / day</p>
+            </Link>
+          </StaggerItem>
+        ))}
+      </Stagger>
+    </section>
+  );
+}
+
 export default function ProductPage({ params }: { params: Promise<{ productId: string }> }) {
   const { productId } = use(params);
   const router = useRouter();
   const reduce = useReducedMotion();
-  const { products, currentAccount, plans, addPlanItem } = useMockStore();
+  const { products, currentAccount, plans, addPlanItem, wishlist, toggleWishlist } = useMockStore();
 
   const product = products.find((p) => p.id === productId);
-  const complementary = useMemo(() => products.filter((p) => p.id !== productId).slice(0, 4), [products, productId]);
+  // Was `products.filter(p => p.id !== productId).slice(0, 4)` - literally the
+  // first four rows in the catalogue, unrelated to what you are looking at.
+  // Similar = same shelf (subcategory, else category). Complementary = a
+  // DIFFERENT category that shares a theme, i.e. things that go together in
+  // the same setup rather than things that compete with each other.
+  const similar = useMemo(() => {
+    if (!product) return [];
+    const sameShelf = products.filter(
+      (p) => p.id !== product.id && (product.subcategory ? p.subcategory === product.subcategory : p.category === product.category),
+    );
+    const sameCategory = products.filter((p) => p.id !== product.id && p.category === product.category && !sameShelf.includes(p));
+    return [...sameShelf, ...sameCategory].slice(0, 4);
+  }, [products, product]);
+
+  const complementary = useMemo(() => {
+    if (!product) return [];
+    const themes = product.themes ?? [];
+    const scored = products
+      .filter((p) => p.id !== product.id && p.category !== product.category)
+      .map((p) => ({ p, shared: (p.themes ?? []).filter((t) => themes.includes(t)).length }))
+      .sort((a, b) => b.shared - a.shared);
+    // Keep theme matches first but still fill four tiles for an untagged product.
+    return scored.slice(0, 4).map((entry) => entry.p);
+  }, [products, product]);
+
+  const recentIds = useRecentlyViewed(product?.id);
+  const recentlyViewed = useMemo(
+    () => recentIds.map((id) => products.find((p) => p.id === id)).filter((p): p is NonNullable<typeof p> => Boolean(p)).slice(0, 4),
+    [recentIds, products],
+  );
   const myPlans = useMemo(() => plans.filter((p) => p.ownerAccountId === currentAccount?.id && p.status === "Draft"), [plans, currentAccount]);
 
   const [planId, setPlanId] = useState<string>("");
@@ -40,7 +129,12 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [fabric, setFabric] = useState<string | undefined>(undefined);
+  const [colour, setColour] = useState<string | undefined>(undefined);
   const [addedTo, setAddedTo] = useState<{ planId: string; planName: string; quantity: number; startDate: string; endDate: string } | null>(null);
+  const [activeImage, setActiveImage] = useState(0);
+
+  const images = useMemo(() => (product ? productImages(product) : []), [product]);
+  const wishlisted = product ? wishlist.includes(product.id) : false;
 
   if (!product) {
     return (
@@ -72,6 +166,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
       rentalStart: startDate || undefined,
       rentalEnd: endDate || undefined,
       fabric,
+      colour,
     });
     const plan = myPlans.find((p) => p.id === planId);
     setAddedTo({ planId, planName: plan?.name ?? "your plan", quantity, startDate, endDate });
@@ -95,18 +190,54 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
         {/* Image column sticks while the long configuration panel scrolls — the
             thing being bought stays on screen the whole time it's configured. */}
         <Reveal immediate direction="up" distance={16} className="md:sticky md:top-24 md:self-start">
+          {/* Was a hardcoded #F5EFE6, which put an ivory slab on the charcoal
+              theme. `bg-muted` tracks whichever theme is active. */}
           <ProductThumb
-            imageUrl={product.imageUrl}
+            imageUrl={images[activeImage] ?? product.imageUrl}
             alt={product.name}
-            // Was a hardcoded #F5EFE6, which put an ivory slab on the charcoal
-            // theme. `bg-muted` tracks whichever theme is active.
             className="h-[320px] rounded-2xl bg-muted p-6 shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
           />
+          {images.length > 1 && (
+            <div className="mt-3 flex gap-2.5">
+              {images.map((src, i) => (
+                <button
+                  key={src}
+                  onClick={() => setActiveImage(i)}
+                  aria-label={`View ${i + 1} of ${images.length}`}
+                  aria-current={i === activeImage}
+                  className={cn(
+                    "overflow-hidden rounded-md ring-1 transition-colors duration-200 ease-out-quint",
+                    i === activeImage ? "ring-2 ring-primary" : "ring-border hover:ring-primary/50"
+                  )}
+                >
+                  <ProductThumb imageUrl={src} alt="" className="size-16 rounded-none bg-muted md:size-20" />
+                </button>
+              ))}
+            </div>
+          )}
         </Reveal>
 
         <Reveal immediate direction="up" distance={16} delay={0.08} className="flex flex-col gap-6 rounded-2xl bg-card p-5 shadow-e1 ring-1 ring-foreground/8 md:p-6">
           <div className="flex flex-col gap-4">
-            <h1 className="font-serif text-3xl leading-tight text-foreground md:text-4xl">{product.name}</h1>
+            <div className="flex items-start justify-between gap-4">
+              {/* Trimmed a step (was text-3xl/md:text-4xl) so the name stops
+                  competing with the price below it. */}
+              <h1 className="font-serif text-2xl leading-tight text-foreground md:text-3xl">{product.name}</h1>
+              {currentAccount && (
+                <button
+                  onClick={() => {
+                    toggleWishlist(product.id);
+                    toast.success(wishlisted ? "Removed from wishlist" : "Saved to wishlist");
+                  }}
+                  aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                  aria-pressed={wishlisted}
+                  className="press flex shrink-0 items-center gap-2 rounded-md border border-border px-3 py-2 text-sm text-foreground/75 transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
+                >
+                  <Heart className={cn("size-4", wishlisted && "fill-primary text-primary")} />
+                  <span className="hidden sm:inline">{wishlisted ? "Saved" : "Save"}</span>
+                </button>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {[product.category, product.subcategory ?? "Standard"].map((tag) => (
                 <span
@@ -163,6 +294,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
 
           {upholsteryOptions(product).length > 0 && (
             <div className="border-t border-border pt-4">
+              <ColourPicker options={product.colours ?? []} value={colour} onChange={setColour} />
               <FabricPicker options={upholsteryOptions(product)} value={fabric} onChange={setFabric} />
             </div>
           )}
@@ -226,34 +358,26 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
           ) : (
             <Button size="lg" className="w-full" nativeButton={false} render={<Link href="/signup">Sign up to add to a plan</Link>} />
           )}
+          <RentalTerms />
         </Reveal>
       </section>
 
-      <section className="mt-14 flex flex-col gap-5">
-        <h2 className="font-serif text-2xl text-foreground">Complementary Products</h2>
-        <Stagger gap={0.05} className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          {complementary.map((p) => (
-            <StaggerItem key={p.id} className="flex flex-col">
-              <Link
-                href={`/catalog/${p.id}`}
-                className="surface-interactive group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-e1 hover:border-primary/50"
-              >
-                <div className="overflow-hidden rounded-xl bg-muted/60">
-                  <ProductThumb
-                    imageUrl={p.imageUrl}
-                    alt={p.name}
-                    className="h-32 rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.06] md:h-44"
-                  />
-                </div>
-                <h3 className="line-clamp-2 px-1 text-sm leading-snug font-medium text-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
-                  {p.name}
-                </h3>
-                <p className="mt-auto px-1 pb-1 text-sm text-muted-foreground">From {formatRupees(p.basePrice)} / day</p>
-              </Link>
-            </StaggerItem>
-          ))}
-        </Stagger>
-      </section>
+      {/* Similar first: someone comparing chairs wants the other chairs before
+          they want a matching carpet. */}
+      <ProductRail
+        title="Similar Products"
+        products={similar}
+        action={
+          product.subcategory
+            ? { href: `/catalog?category=${slug(product.category)}&subcategory=${slug(product.subcategory)}`, label: `View all ${product.subcategory.toLowerCase()}` }
+            : { href: `/catalog?category=${slug(product.category)}`, label: `View all ${product.category.toLowerCase()}` }
+        }
+      />
+
+      <ProductRail title="Complements This" products={complementary} />
+
+      <ProductRail title="Recently Viewed" products={recentlyViewed} />
+
 
       {currentAccount && myPlans.length === 0 && (
         <p className="mt-4 text-sm text-muted-foreground">

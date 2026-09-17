@@ -118,6 +118,7 @@ interface StoreContextValue extends StoreState {
       rentalStart?: string;
       rentalEnd?: string;
       fabric?: string;
+      colour?: string;
     },
   ) => void;
   removePlanItem: (planId: string, itemId: string) => void;
@@ -331,6 +332,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         rentalStart?: string;
         rentalEnd?: string;
         fabric?: string;
+        colour?: string;
       },
     ) => {
       updatePlan(planId, (p, accountId) => {
