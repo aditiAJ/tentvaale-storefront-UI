@@ -213,7 +213,7 @@ export default function PlansPage() {
 
   if (myPlans.length === 0) {
     return (
-      <Reveal immediate className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-20 text-center">
+      <Reveal immediate className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 py-20 text-center page-x">
         {/* Gold halo behind the glyph gives the empty state a focal point
             instead of a lone outlined square. */}
         <div className="relative flex size-20 items-center justify-center rounded-2xl bg-card text-primary shadow-e2 ring-1 ring-primary/40">
@@ -237,7 +237,7 @@ export default function PlansPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-12">
+    <div className="mx-auto w-full max-w-6xl py-8 page-x">
       <Reveal immediate className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">My Plans</h1>
         {NewPlanDialog}

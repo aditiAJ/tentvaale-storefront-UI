@@ -98,7 +98,7 @@ function AiPlannerResults() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 md:py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 md:py-10 page-x">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="font-serif text-3xl text-foreground md:text-4xl">Your AI-Suggested Plan</h1>

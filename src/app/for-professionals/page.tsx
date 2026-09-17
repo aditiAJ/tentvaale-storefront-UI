@@ -47,7 +47,7 @@ export default function ForProfessionalsPage() {
 
   if (submitted) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 py-24 text-center page-x">
         <CheckCircle2 className="size-12 text-primary" />
         <h1 className="font-serif text-3xl text-foreground">Application Submitted</h1>
         <p className="text-sm leading-6 text-foreground/70">
@@ -60,7 +60,7 @@ export default function ForProfessionalsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 px-4 py-12 md:px-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-12 py-12 page-x">
       <section className="flex flex-col items-center gap-4 border-b border-primary/15 pb-12 text-center">
         <h1 className="font-serif text-5xl text-foreground">For Event Planners &amp; Professionals</h1>
         <p className="max-w-2xl text-base text-foreground/70">Manage multiple clients, get view-only shares, and plan faster with trade pricing.</p>

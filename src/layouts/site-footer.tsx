@@ -44,8 +44,8 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 export function SiteFooter() {
   return (
     <footer className="mt-16 w-full border-t border-border bg-secondary">
-      <div className="mx-auto w-full max-w-[110rem] px-6 pt-14 pb-12 md:px-12">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-5">
+      <div className="mx-auto w-full max-w-[110rem] pt-14 pb-12 page-x">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-6">
           {/* Wordmark leads the grid on desktop so the footer opens with the
               brand rather than a link column. */}
           <div className="col-span-2 flex flex-col gap-3 md:col-span-1">
@@ -53,29 +53,6 @@ export function SiteFooter() {
             <p className="max-w-56 text-sm leading-6 text-muted-foreground">
               Furniture, décor and fully styled collections, rented for the day.
             </p>
-            {/* Address and phone reachable from every page, not only /contact. */}
-            <div className="mt-1 flex flex-col gap-2.5">
-              <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                <Phone className="mt-0.5 size-4 shrink-0" />
-                <div className="flex flex-col">
-                  {COMPANY.phones.map((phone) => (
-                    <a key={phone.e164} href={telHref(phone)} className="transition-colors hover:text-foreground">
-                      {phone.display}
-                    </a>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
-                <MapPin className="mt-0.5 size-4 shrink-0" />
-                <span className="max-w-56">{COMPANY.address.inline}</span>
-              </div>
-              {COMPANY.email && (
-                <a href={`mailto:${COMPANY.email}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                  {COMPANY.email}
-                </a>
-              )}
-            </div>
-            <SocialLinks className="mt-2" size="sm" />
           </div>
           {COLUMNS.map((col) => (
             <nav key={col.title} className="flex flex-col gap-3" aria-label={col.title}>
@@ -94,9 +71,35 @@ export function SiteFooter() {
               ))}
             </nav>
           ))}
+          {/* Its own column rather than stacked under the wordmark - as part of
+              the brand block it was three times the height of a link column and
+              left a void under the short ones. */}
+          <div className="col-span-2 flex flex-col gap-3 md:col-span-1">
+            <span className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">Get in touch</span>
+            <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
+              <Phone className="mt-0.5 size-4 shrink-0" />
+              <div className="flex flex-col">
+                {COMPANY.phones.map((phone) => (
+                  <a key={phone.e164} href={telHref(phone)} className="transition-colors hover:text-foreground">
+                    {phone.display}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5 text-sm text-muted-foreground">
+              <MapPin className="mt-0.5 size-4 shrink-0" />
+              <span>{COMPANY.address.inline}</span>
+            </div>
+            {COMPANY.email && (
+              <a href={`mailto:${COMPANY.email}`} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                {COMPANY.email}
+              </a>
+            )}
+          </div>
         </div>
         <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 md:flex-row md:items-center">
           <span className="text-xs text-muted-foreground">© 2026 Tentvaale. All rights reserved.</span>
+          <SocialLinks size="sm" className="md:order-last" />
           <div className="flex items-center gap-5">
             <Link href="/terms" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Terms

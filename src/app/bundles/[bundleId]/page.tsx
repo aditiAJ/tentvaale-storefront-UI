@@ -37,7 +37,7 @@ export default function BundlePage({ params }: { params: Promise<{ bundleId: str
 
   if (!bundle) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Bundle not found</h1>
         <Button variant="outline" nativeButton={false} render={<Link href="/bundles">All bundles</Link>} />
       </div>
@@ -59,7 +59,7 @@ export default function BundlePage({ params }: { params: Promise<{ bundleId: str
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 pb-40 md:py-8 md:pb-8">
+    <div className="mx-auto w-full max-w-6xl py-6 pb-40 md:py-8 md:pb-8 page-x">
       <nav className="mb-6 flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/" className="transition-colors hover:text-primary">
           Home

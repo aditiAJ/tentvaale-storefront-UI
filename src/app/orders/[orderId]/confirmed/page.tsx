@@ -37,7 +37,7 @@ export default function OrderConfirmedPage({ params }: { params: Promise<{ order
   if (!account) return null;
   if (!order || !quotation || !plan) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Order not found</h1>
         <Button variant="outline" nativeButton={false} render={<Link href="/account#order-history">Order history</Link>} />
       </div>
@@ -60,7 +60,7 @@ export default function OrderConfirmedPage({ params }: { params: Promise<{ order
   ].filter((b) => b.amount > 0);
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-8 px-4 py-12">
+    <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-8 py-12 page-x">
       <section className="flex flex-col items-center gap-4 text-center">
         {/* The tick springs in on its own, then a gold ring expands past it
             once — the single celebratory beat on the whole flow, and the only

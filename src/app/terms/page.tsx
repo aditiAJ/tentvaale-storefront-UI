@@ -30,7 +30,7 @@ const SECTIONS = [
 
 export default function TermsPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 md:px-8">
+    <div className="mx-auto w-full max-w-3xl py-12 page-x">
       <header className="mb-8 flex flex-col gap-2">
         <h1 className="font-serif text-4xl tracking-tight text-foreground">Terms &amp; Refund Policy</h1>
         <p className="text-sm text-muted-foreground">Last updated: October 2025</p>

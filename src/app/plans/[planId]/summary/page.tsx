@@ -30,7 +30,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
   const plan = getPlan(planId);
 
   if (!account) return null;
-  if (!plan) return <div className="mx-auto w-full max-w-4xl px-4 py-10">Plan not found.</div>;
+  if (!plan) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Plan not found.</div>;
 
   const canSubmit = canSubmitPlan(plan, account.id);
   const usage = getProductUsage(plan, products);
@@ -38,7 +38,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
   const startDate = plan.eventStartDate ?? plan.subEvents[0]?.eventDate;
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pt-6 pb-28 md:px-8">
+    <div className="mx-auto w-full max-w-4xl pt-6 pb-28 page-x">
       <Link href={`/plans/${planId}`} className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-primary">
         <ArrowLeft className="size-4" /> Back to {plan.name}
       </Link>

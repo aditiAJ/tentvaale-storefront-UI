@@ -23,7 +23,7 @@ export default function DirectOrderPage({ params }: { params: Promise<{ planId: 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   if (!account) return null;
-  if (!plan) return <div className="mx-auto w-full max-w-4xl px-4 py-10">Plan not found.</div>;
+  if (!plan) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Plan not found.</div>;
 
   function lineTotal(item: PlanItem) {
     const product = productById.get(item.productId);
@@ -53,7 +53,7 @@ export default function DirectOrderPage({ params }: { params: Promise<{ planId: 
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 pb-28 md:px-8 md:py-10">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 pb-28 md:py-10 page-x">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/">Home</Link>
         <ChevronRight className="size-4" />

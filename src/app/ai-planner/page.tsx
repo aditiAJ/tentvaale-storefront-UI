@@ -46,7 +46,7 @@ export default function AiPlannerPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10 md:px-8 md:py-12">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-8 py-10 md:py-12 page-x">
       <div className="flex flex-col gap-2 text-center">
         <h1 className="font-serif text-4xl text-foreground">Design Your Event with AI</h1>
         <p className="text-sm leading-6 text-foreground/70">

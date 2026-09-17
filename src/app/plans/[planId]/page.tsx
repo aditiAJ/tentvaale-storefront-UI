@@ -122,7 +122,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   if (!account) return null;
-  if (!plan) return <div className="mx-auto w-full max-w-5xl px-4 py-10">Plan not found.</div>;
+  if (!plan) return <div className="mx-auto w-full max-w-5xl py-10 page-x">Plan not found.</div>;
 
   const canSubmit = canSubmitPlan(plan, account.id);
   const owner = accounts.find((a) => a.id === plan.ownerAccountId);
@@ -1007,7 +1007,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pt-6 pb-28 md:px-8 md:pb-12">
+    <div className="mx-auto w-full max-w-7xl pt-6 pb-28 md:pb-12 page-x">
       <Link href="/plans" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary">
         <ArrowLeft className="size-4" /> All plans
       </Link>

@@ -10,7 +10,7 @@ export default function CollectionsPage() {
   const { collections } = useMockStore();
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-12 md:py-14">
+    <div className="mx-auto w-full max-w-7xl py-10 md:py-14 page-x">
       <Reveal immediate className="flex flex-col gap-2">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">Featured Collections</h1>
         <p className="max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">

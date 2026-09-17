@@ -28,7 +28,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
 
   if (!collection) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Collection not found</h1>
         <Button variant="outline" nativeButton={false} render={<Link href="/collections">All collections</Link>} />
       </div>
@@ -66,7 +66,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
         </div>
       </section>
 
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 pt-10 md:px-12">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-4 pt-10 page-x">
         <h2 className="font-serif text-xl text-foreground md:text-2xl">Shop by Category</h2>
         <Stagger gap={0.04} className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2 md:gap-3">
           {collection.categories.map((c) => (
@@ -82,7 +82,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
         </Stagger>
       </section>
 
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-12 md:px-12">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 pt-12 page-x">
         <h2 className="font-serif text-2xl text-foreground md:text-3xl">Shop the Look</h2>
         <Stagger gap={0.05} className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
           {items.map((p) => {
@@ -134,7 +134,7 @@ export default function CollectionPage({ params }: { params: Promise<{ collectio
         </Stagger>
       </section>
 
-      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pt-14 md:px-12">
+      <section className="mx-auto flex w-full max-w-7xl flex-col gap-6 pt-14 page-x">
         <h2 className="font-serif text-2xl text-foreground md:text-3xl">Related Themes</h2>
         <Stagger gap={0.06} className="-mx-1 flex gap-4 overflow-x-auto px-1 pb-2 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
           {related.map((c) => (

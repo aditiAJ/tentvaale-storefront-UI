@@ -127,7 +127,7 @@ export default function AccountPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl gap-8 px-4 py-10 md:px-8">
+    <div className="mx-auto flex w-full max-w-6xl gap-8 py-10 page-x">
       <aside className="hidden w-56 shrink-0 md:block">
         <div className="sticky top-24">
           <h1 className="font-serif text-3xl text-foreground">Account</h1>

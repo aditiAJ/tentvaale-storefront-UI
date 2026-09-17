@@ -34,7 +34,7 @@ function SearchContent() {
   }, [products, query]);
 
   return (
-    <div className="mx-auto w-full max-w-[110rem] px-6 py-6 md:px-8 md:py-8">
+    <div className="mx-auto w-full max-w-[110rem] py-6 md:py-8 page-x">
       <div className="relative mb-4 w-full md:hidden">
         <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -156,7 +156,7 @@ export default function SearchPage() {
   return (
     <Suspense
       fallback={
-        <div className="mx-auto grid w-full max-w-[110rem] grid-cols-2 gap-4 px-6 py-14 md:grid-cols-4 md:gap-6 md:px-8">
+        <div className="mx-auto grid w-full max-w-[110rem] grid-cols-2 gap-4 py-14 md:grid-cols-4 md:gap-6 page-x">
           {Array.from({ length: 8 }, (_, i) => (
             <SkeletonCard key={i} />
           ))}

@@ -25,7 +25,7 @@ export default function PlanSharePage({ params }: { params: Promise<{ planId: st
   const [role, setRole] = useState<PlanCoOwnerRole>("CoOwner");
 
   if (!account) return null;
-  if (!plan) return <div className="mx-auto w-full max-w-2xl px-4 py-10">Plan not found.</div>;
+  if (!plan) return <div className="mx-auto w-full max-w-2xl py-10 page-x">Plan not found.</div>;
 
   const isOwner = plan.ownerAccountId === account.id;
 
@@ -38,7 +38,7 @@ export default function PlanSharePage({ params }: { params: Promise<{ planId: st
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-10">
+    <div className="mx-auto w-full max-w-2xl py-10 page-x">
       <Link href={`/plans/${planId}`} className="text-sm text-muted-foreground hover:underline">
         ← Back to plan
       </Link>

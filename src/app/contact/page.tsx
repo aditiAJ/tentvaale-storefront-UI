@@ -25,7 +25,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 px-4 py-12 md:px-8">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8 py-12 page-x">
       <header className="flex flex-col gap-2 text-center">
         <h1 className="font-serif text-4xl text-foreground">Talk to an Expert</h1>
         <p className="text-sm text-foreground/70">Get help planning your event — we typically reply within the hour on WhatsApp.</p>

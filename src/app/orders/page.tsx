@@ -89,7 +89,7 @@ export default function OrdersPage() {
 
   if (visibleOrders.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 px-6 py-16 text-center">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-4 py-16 text-center page-x">
         <div className="flex size-20 items-center justify-center rounded-2xl border border-primary bg-card text-primary">
           <PackageSearch className="size-10" />
         </div>
@@ -103,7 +103,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 md:px-12">
+    <div className="mx-auto w-full max-w-6xl py-8 page-x">
       <div className="flex items-center justify-between gap-4">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">My Orders</h1>
         <Button variant="outline" className="shrink-0 border-primary/60 text-foreground" nativeButton={false} render={<Link href="/plans">My Plans</Link>} />

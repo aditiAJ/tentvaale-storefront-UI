@@ -33,7 +33,7 @@ export default function CancelOrderPage({ params }: { params: Promise<{ orderId:
   if (!account) return null;
   if (!order || !plan) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Order not found</h1>
         <Button variant="outline" nativeButton={false} render={<Link href="/account#order-history">Order history</Link>} />
       </div>
@@ -59,7 +59,7 @@ export default function CancelOrderPage({ params }: { params: Promise<{ orderId:
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 md:py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 md:py-10 page-x">
       <div className="flex flex-col gap-2">
         <p className="text-sm text-primary">Order #{order.id}</p>
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">Cancel Order Items</h1>

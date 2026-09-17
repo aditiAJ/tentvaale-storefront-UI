@@ -69,7 +69,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
   if (!account) return null;
   if (!quotation || !plan) {
     return (
-      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-md flex-col items-center gap-3 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Quotation not found</h1>
         <p className="text-sm text-muted-foreground">This checkout link may have expired.</p>
       </div>
@@ -95,7 +95,7 @@ export default function CheckoutPage({ params }: { params: Promise<{ quotationId
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 page-x">
       <Reveal immediate className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
           <p className="text-xs tracking-[0.16em] text-muted-foreground uppercase">{quotation.isDirectOrder ? "Review & Pay" : "Checkout"}</p>

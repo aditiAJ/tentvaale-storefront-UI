@@ -27,7 +27,7 @@ export default function NotificationsPage() {
   const unreadCount = NOTIFICATIONS.filter((n) => n.unread).length;
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 py-8 md:px-8 md:py-12">
+    <div className="mx-auto w-full max-w-5xl py-8 md:py-12 page-x">
       <Reveal immediate className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-6">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">Notifications</h1>
         {unreadCount > 0 && <Badge variant="accent">{unreadCount} unread</Badge>}

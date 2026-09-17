@@ -613,7 +613,7 @@ function CatalogContent() {
   );
 
   return (
-    <div className="w-full px-4 py-6 md:px-6 md:py-8">
+    <div className="w-full py-6 md:py-8 page-x">
       <nav className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/" className="transition-colors hover:text-primary">
           Home
@@ -784,7 +784,7 @@ export default function CatalogPage() {
 /** Same grid geometry as the real page, so the swap to content doesn't reflow. */
 function CatalogSkeleton() {
   return (
-    <div className="w-full px-4 py-6 md:px-6 md:py-8">
+    <div className="w-full py-6 md:py-8 page-x">
       <div className="mb-7 flex flex-col gap-2">
         <div className="shimmer h-9 w-64 rounded-lg bg-muted/70" />
         <div className="shimmer h-4 w-96 max-w-full rounded bg-muted/70" />

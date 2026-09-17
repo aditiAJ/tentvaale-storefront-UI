@@ -79,7 +79,7 @@ export default function FaqPage() {
   }, [query]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 py-12 md:px-8">
+    <div className="mx-auto w-full max-w-3xl py-12 page-x">
       <div className="flex flex-col items-center gap-4 text-center">
         <h1 className="font-serif text-4xl text-foreground">Frequently Asked Questions</h1>
         <div className="relative w-full max-w-xl">

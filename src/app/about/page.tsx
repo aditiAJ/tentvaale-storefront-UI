@@ -33,7 +33,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-12 px-6 py-16 md:grid-cols-2 md:px-12">
+      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-12 py-16 md:grid-cols-2 page-x">
         <div className="flex flex-col gap-6">
           <h2 className="font-serif text-4xl text-foreground">Our Story</h2>
           <div className="flex flex-col gap-4 text-base leading-7 text-foreground/75">
@@ -57,7 +57,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-16 md:px-12">
+      <section className="mx-auto max-w-6xl pb-16 page-x">
         <h2 className="mb-8 font-serif text-4xl text-foreground">Our Styling Philosophy</h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {PHILOSOPHY.map((p) => (

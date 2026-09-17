@@ -10,7 +10,6 @@ import { Reveal, Stagger, StaggerItem, SPRING } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ProductThumb } from "@/components/product-thumb";
@@ -126,11 +125,9 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
   const [subEventId, setSubEventId] = useState<string>("__general");
   const [quantity, setQuantity] = useState(1);
   const [length, setLength] = useState(10);
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [fabric, setFabric] = useState<string | undefined>(undefined);
   const [colour, setColour] = useState<string | undefined>(undefined);
-  const [addedTo, setAddedTo] = useState<{ planId: string; planName: string; quantity: number; startDate: string; endDate: string } | null>(null);
+  const [addedTo, setAddedTo] = useState<{ planId: string; planName: string; quantity: number } | null>(null);
   const [activeImage, setActiveImage] = useState(0);
 
   const images = useMemo(() => (product ? productImages(product) : []), [product]);
@@ -138,7 +135,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
 
   if (!product) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Product not found</h1>
         <p className="text-sm text-muted-foreground">It may have been removed, or the link is out of date.</p>
         <Button variant="outline" nativeButton={false} render={<Link href="/catalog">Back to catalog</Link>} />
@@ -163,17 +160,15 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
       quantity,
       subEventId: subEventId === "__general" ? null : subEventId,
       dimensions: needsDimensions ? { length } : undefined,
-      rentalStart: startDate || undefined,
-      rentalEnd: endDate || undefined,
       fabric,
       colour,
     });
     const plan = myPlans.find((p) => p.id === planId);
-    setAddedTo({ planId, planName: plan?.name ?? "your plan", quantity, startDate, endDate });
+    setAddedTo({ planId, planName: plan?.name ?? "your plan", quantity });
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 md:py-8">
+    <div className="mx-auto w-full max-w-6xl py-6 md:py-8 page-x">
       <nav className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground md:mb-6" aria-label="Breadcrumb">
         <Link href="/" className="transition-colors hover:text-primary">
           Home
@@ -258,20 +253,6 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
                   </span>
                 </p>
                 <p className="mt-1.5 text-sm text-primary">{rateTypeLabel(product.rateType).replace(/^\w/, (c) => c.toUpperCase())}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3">
-            <h2 className="font-serif text-xl text-foreground">Rental Dates</h2>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm text-muted-foreground">Start date</Label>
-                <DateWheelPicker value={startDate} onChange={setStartDate} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label className="text-sm text-muted-foreground">End date</Label>
-                <DateWheelPicker value={endDate} min={startDate || undefined} onChange={setEndDate} />
               </div>
             </div>
           </div>
@@ -429,10 +410,6 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
           </DialogHeader>
           {addedTo && (
             <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-muted-foreground">Rental dates</span>
-                <span className="text-foreground">{addedTo.startDate && addedTo.endDate ? `${addedTo.startDate} – ${addedTo.endDate}` : "—"}</span>
-              </div>
               <div className="flex justify-between gap-4">
                 <span className="text-muted-foreground">Quantity</span>
                 <span className="text-foreground">{addedTo.quantity}</span>

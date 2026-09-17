@@ -268,7 +268,7 @@ export function SiteHeader() {
     >
       {/* Desktop */}
       <nav className="hidden w-full md:block">
-        <div className="mx-auto flex w-full max-w-[110rem] items-center gap-6 px-8 py-3">
+        <div className="mx-auto flex w-full max-w-[110rem] items-center gap-6 py-3 page-x">
           <Link href="/" className="press flex shrink-0 items-center" aria-label="Tentvaale home">
             <span className="font-serif text-2xl tracking-wide text-primary transition-colors duration-200 ease-out-quint hover:text-[color-mix(in_oklab,var(--primary),white_18%)]">
               Tentvaale
@@ -301,7 +301,7 @@ export function SiteHeader() {
       </nav>
 
       {/* Mobile */}
-      <div className="flex h-14 items-center justify-between px-4 md:hidden">
+      <div className="flex h-14 items-center justify-between page-x md:hidden">
         <button
           className="press -ml-2 flex size-10 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-secondary"
           onClick={() => setMobileMenuOpen((v) => !v)}
@@ -351,14 +351,14 @@ export function SiteHeader() {
             }}
             className="overflow-hidden border-b border-border bg-background md:hidden"
           >
-            <div className="space-y-4 px-4 py-4">
+            <div className="space-y-4 py-4 page-x">
               <form action="/search" className="relative w-full">
                 <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
                   name="q"
                   placeholder="Search products, collections, bundles..."
-                  className="h-11 w-full rounded-sm border border-border bg-card pr-4 pl-10 text-sm outline-none transition-colors focus:border-primary"
+                  className="h-11 w-full rounded-full border border-border bg-card pr-4 pl-10 text-sm outline-none transition-colors focus:border-primary"
                 />
               </form>
               {/* Links cascade in behind the panel opening, 40ms apart. */}

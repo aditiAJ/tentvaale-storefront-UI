@@ -190,6 +190,21 @@
   --sidebar-ring: rgba(201, 161, 92, 0.5);
 }
 
+/* The one horizontal page gutter. Every page root and both pieces of chrome
+   (header, footer) use this, so content lines up with the nav above it and the
+   footer below it instead of each page inventing its own padding — there were
+   five different systems before this (px-4/md:px-8, px-6/md:px-12,
+   px-4/md:px-6, px-6/md:px-8 and bare px-4). 40px at md matches the site
+   margin asked for in review. Do not hand-tune padding on a page root; change
+   it here. */
+@utility page-x {
+  padding-inline: 1.5rem;
+
+  @media (width >= 48rem) {
+    padding-inline: 2.5rem;
+  }
+}
+
 /* Soft gold halo for the currently selected chip / tab / card. */
 @utility glow {
   box-shadow:

@@ -27,7 +27,7 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ orderI
   if (!account) return null;
   if (!order || !quotation || !plan) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-4 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Order not found</h1>
         <Button variant="outline" nativeButton={false} render={<Link href="/account#order-history">Order history</Link>} />
       </div>
@@ -35,7 +35,7 @@ export default function OrderTrackingPage({ params }: { params: Promise<{ orderI
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 md:py-12">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 md:py-12 page-x">
       <Reveal immediate className="rounded-2xl border border-border bg-card p-6 shadow-e2 md:p-8">
         <div className="flex flex-col items-start justify-between gap-6 md:flex-row">
           <div className="flex flex-col gap-2">

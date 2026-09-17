@@ -49,7 +49,7 @@ const PROJECTS = [
 // Every band below the hero shares this wrapper so gutters, max width and
 // vertical rhythm stay identical down the page.
 function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`mx-auto w-full max-w-7xl px-6 py-10 md:px-12 md:py-14 ${className}`}>{children}</section>;
+  return <section className={`mx-auto w-full max-w-7xl py-10 md:py-14 page-x ${className}`}>{children}</section>;
 }
 
 function SectionHeading({ title, href, linkLabel = "View all" }: { title: string; href?: string; linkLabel?: string }) {
@@ -119,7 +119,7 @@ export default function Home() {
         {/* Fade confined to the bottom band only — the rest of the photo stays fully visible, undimmed. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/85 via-black/40 to-transparent" />
         <motion.div
-          className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 px-6 pb-8 md:gap-6 md:px-12 md:pb-12"
+          className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 pb-8 md:gap-6 md:pb-12 page-x"
           variants={heroContainer}
           initial={skip ? "visible" : "hidden"}
           animate="visible"

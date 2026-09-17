@@ -53,7 +53,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ quot
   if (!account) return null;
   if (!quotation || !plan) {
     return (
-      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-3 px-4 py-24 text-center">
+      <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-3 py-24 text-center page-x">
         <h1 className="font-serif text-2xl">Quotation not found</h1>
         <p className="text-sm text-muted-foreground">This quotation link may have expired.</p>
       </div>
@@ -86,7 +86,7 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ quot
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 page-x">
       {quotation.status !== "Accepted" && (
         <Reveal immediate direction="down" distance={10} className="flex items-center gap-3 rounded-xl border border-destructive/35 bg-destructive/[0.06] px-4 py-3.5 text-sm text-foreground">
           <TriangleAlert className="size-5 shrink-0 text-destructive" />

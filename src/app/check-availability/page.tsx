@@ -101,7 +101,7 @@ function CheckAvailability() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 md:py-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 md:py-10 page-x">
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-primary/20 bg-card px-6 py-4">
         <span className="text-sm text-foreground/70">Checking availability for</span>
         <strong className="text-sm text-foreground">{dateLabel}</strong>

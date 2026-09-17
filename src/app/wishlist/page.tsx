@@ -63,7 +63,7 @@ export default function WishlistPage() {
 
   if (items.length === 0) {
     return (
-      <Reveal immediate className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 px-6 py-20 text-center">
+      <Reveal immediate className="mx-auto flex w-full max-w-md flex-1 flex-col items-center justify-center gap-6 py-20 text-center page-x">
         <div className="relative flex items-center justify-center rounded-sm p-6 ring-1 ring-primary/25">
           <span className="absolute inset-4 rounded-sm bg-primary/10 blur-2xl" aria-hidden />
           <Heart className="relative size-24 stroke-[1.25] text-primary" />
@@ -81,7 +81,7 @@ export default function WishlistPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:py-12">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 py-8 md:py-12 page-x">
       <Reveal immediate className="flex items-end justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="font-serif text-3xl text-foreground md:text-4xl">My Wishlist</h1>
