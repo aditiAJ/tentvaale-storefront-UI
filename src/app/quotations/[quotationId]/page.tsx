@@ -1,10 +1,11 @@
 "use client";
 
 import { use, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { TriangleAlert } from "lucide-react";
+import { Download, TriangleAlert } from "lucide-react";
 import { DUR, EASE, Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -97,9 +98,23 @@ export default function QuotationDetailPage({ params }: { params: Promise<{ quot
         </Reveal>
       )}
 
-      <Reveal immediate className="flex flex-col gap-2">
-        <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Round {quotation.round}</span>
-        <h1 className="font-serif text-3xl text-foreground md:text-4xl">Quotation — Round {quotation.round}</h1>
+      <Reveal immediate className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex flex-col gap-2">
+          <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Round {quotation.round}</span>
+          <h1 className="font-serif text-3xl text-foreground md:text-4xl">Quotation — Round {quotation.round}</h1>
+        </div>
+        {/* Opens the print document in a new tab; ?download=1 fires the print
+            dialog on arrival, same contract as the order invoice. */}
+        <Button
+          variant="outline"
+          className="shrink-0 gap-2"
+          nativeButton={false}
+          render={
+            <Link href={`/quotations/${quotationId}/print?download=1`} target="_blank">
+              <Download className="size-4" /> Download quotation
+            </Link>
+          }
+        />
       </Reveal>
 
       <div className="grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_320px]">

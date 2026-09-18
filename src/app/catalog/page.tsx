@@ -19,7 +19,7 @@ import { NumberStepper } from "@/components/number-stepper";
 import { FabricPicker } from "@/components/fabric-picker";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
-import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import { availableQuantity, formatRupees, rateTypeLabel } from "@/mock-data/seed";
 import { CATEGORIES, GLOBAL_FACETS, facetOptions, facetValues, type CategoryDef, type FacetDef, upholsteryOptions } from "@/mock-data/taxonomy";
 import type { Product, RateType } from "@/mock-data/types";
 
@@ -39,7 +39,7 @@ function matches(p: Product, facets: FacetDef[], selection: Selection) {
 
 /* ---------------- Filters ---------------- */
 
-function FacetGroup({ title, count, defaultOpen, children }: { title: string; count?: number; defaultOpen?: boolean; children: React.ReactNode }) {
+function FacetGroup({ title, count, defaultOpen, action, children }: { title: string; count?: number; defaultOpen?: boolean; action?: React.ReactNode; children: React.ReactNode }) {
   // <details> stays the mechanism (keyboard + no-JS behaviour for free);
   // interpolate-size + the ::details-content rule below give it a real
   // height transition instead of the browser's instant snap.
@@ -54,7 +54,10 @@ function FacetGroup({ title, count, defaultOpen, children }: { title: string; co
             </span>
           )}
         </span>
-        <ChevronDown className="size-3.5 transition-transform duration-300 ease-out-quint group-open:rotate-180" />
+        <span className="flex items-center gap-2">
+          {action}
+          <ChevronDown className="size-3.5 transition-transform duration-300 ease-out-quint group-open:rotate-180" />
+        </span>
       </summary>
       <div className="mt-2.5 flex flex-col gap-2">{children}</div>
     </details>
@@ -87,8 +90,9 @@ function CheckList({ options, selected, onToggle }: { options: { value: string; 
 function FilterPanel({
   products,
   scope,
-  category,
-  onCategory,
+  categories,
+  onToggleCategory,
+  onClearCategories,
   query,
   setQuery,
   subcats,
@@ -99,8 +103,9 @@ function FilterPanel({
 }: {
   products: Product[];
   scope: Product[];
-  category?: CategoryDef;
-  onCategory: (name: string | null) => void;
+  categories: CategoryDef[];
+  onToggleCategory: (name: string) => void;
+  onClearCategories: () => void;
   query: string;
   setQuery: (q: string) => void;
   subcats: string[];
@@ -115,24 +120,10 @@ function FilterPanel({
     if (options.length === 0) return null;
     return (
       <FacetGroup key={f.key} title={f.label} count={selection[f.key]?.length} defaultOpen={open || !!selection[f.key]?.length}>
-        {f.key === "price" ? (
-          <div className="flex flex-wrap gap-1.5">
-            {options.map((o) => (
-              <button
-                key={o.value}
-                onClick={() => toggle(f.key, o.value)}
-                className={cn(
-                  "press rounded-sm border px-3 py-1.5 text-xs transition-all duration-200 ease-out-quint",
-                  selection.price?.includes(o.value) ? "glow border-primary bg-primary/15 text-primary" : "border-border text-foreground/80 hover:border-primary/50 hover:bg-primary/5",
-                )}
-              >
-                {o.value}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <CheckList options={options} selected={selection[f.key] ?? []} onToggle={(v) => toggle(f.key, v)} />
-        )}
+        {/* Price used to be pill chips. It is a tick list like every other facet
+            now - the feedback asked for check marks, and price bands behave the
+            same way as any other multi-select. */}
+        <CheckList options={options} selected={selection[f.key] ?? []} onToggle={(v) => toggle(f.key, v)} />
       </FacetGroup>
     );
   };
@@ -149,21 +140,30 @@ function FilterPanel({
         />
       </div>
 
-      {/* Category tree: category rows expand to their subcategories */}
-      <FacetGroup title="Categories" defaultOpen>
-        <button
-          onClick={() => onCategory(null)}
-          className={cn(
-            "-mx-1 flex items-center justify-between rounded-md px-2 py-2 text-left text-sm transition-colors duration-200 ease-out-quint",
-            !category ? "bg-primary/10 font-medium text-primary" : "text-foreground/80 hover:bg-muted hover:text-foreground",
-          )}
-        >
-          All products
-          <span className="text-[11px] text-muted-foreground tabular-nums">{totalCount(null)}</span>
-        </button>
+      {/* Category tree: multi-select. Every row is a checkbox - categories and
+          subcategories alike - so nothing behaves like a radio any more. */}
+      <FacetGroup
+        title="Categories"
+        defaultOpen
+        count={categories.length}
+        action={
+          categories.length > 0 || subcats.length > 0 ? (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onClearCategories();
+              }}
+              className="text-[11px] font-medium text-primary underline-offset-2 hover:underline"
+            >
+              Clear all
+            </button>
+          ) : undefined
+        }
+      >
         <ul className="-mx-1 flex flex-col">
           {CATEGORIES.map((c) => {
-            const active = category?.name === c.name;
+            const active = categories.some((sel) => sel.name === c.name);
             const open = active || expanded.includes(c.name);
             return (
               <li key={c.name}>
@@ -176,10 +176,13 @@ function FilterPanel({
                   >
                     <ChevronRight className={cn("size-3.5 transition-transform duration-300 ease-out-quint", open && "rotate-90")} />
                   </button>
-                  <button onClick={() => onCategory(c.name)} className={cn("flex flex-1 items-center justify-between py-2 pr-2 text-left text-sm", active && "font-medium")}>
-                    {c.name}
+                  <label className={cn("flex flex-1 cursor-pointer items-center justify-between gap-2 py-2 pr-2 text-left text-sm", active && "font-medium")}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Checkbox checked={active} onCheckedChange={() => onToggleCategory(c.name)} />
+                      <span className="truncate">{c.name}</span>
+                    </span>
                     <span className="text-[11px] text-muted-foreground tabular-nums">{totalCount(c.name)}</span>
-                  </button>
+                  </label>
                 </div>
                 <AnimatePresence initial={false}>
                   {open && (
@@ -195,39 +198,37 @@ function FilterPanel({
                     className="mt-0.5 mb-1 ml-3.5 flex flex-col overflow-hidden border-l border-border pl-2"
                   >
                     {c.subcategories.map((sub) => {
-                      const on = active && subcats.includes(sub);
+                      const on = subcats.includes(sub);
                       const count = products.filter((p) => p.category === c.name && p.subcategory === sub).length;
                       return (
                         <li key={sub}>
-                          <button
-                            onClick={() => {
-                              if (!active) {
-                                onCategory(c.name);
-                                setSubcats([sub]);
-                              } else setSubcats(on ? subcats.filter((s) => s !== sub) : [...subcats, sub]);
-                            }}
-                            disabled={count === 0}
+                          <label
                             className={cn(
-                              "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors duration-200 ease-out-quint disabled:opacity-40",
+                              "flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-[13px] transition-colors duration-200 ease-out-quint",
+                              count === 0 ? "cursor-not-allowed opacity-40" : "cursor-pointer",
                               on ? "font-medium text-primary" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
                             )}
                           >
-                            <span className="flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  "size-1.5 rounded-full transition-[background-color,transform] duration-200 ease-out-quint",
-                                  on ? "scale-125 bg-primary" : "bg-border",
-                                )}
+                            <span className="flex min-w-0 items-center gap-2">
+                              <Checkbox
+                                checked={on}
+                                disabled={count === 0}
+                                onCheckedChange={() => {
+                                  // Ticking a subcategory implies its parent:
+                                  // otherwise the product set excludes it.
+                                  if (!active) onToggleCategory(c.name);
+                                  setSubcats(on ? subcats.filter((x) => x !== sub) : [...subcats, sub]);
+                                }}
                               />
-                              {sub}
+                              <span className="truncate">{sub}</span>
                             </span>
-                            <span className="text-[11px] tabular-nums">{count}</span>
-                          </button>
+                            <span className="text-[11px] text-muted-foreground tabular-nums">{count}</span>
+                          </label>
                         </li>
                       );
                     })}
                   </motion.ul>
-                )}
+                  )}
                 </AnimatePresence>
               </li>
             );
@@ -235,7 +236,8 @@ function FilterPanel({
         </ul>
       </FacetGroup>
 
-      {category && category.facets.map((f) => facetBlock(f, true))}
+      {/* Union of the selected categories' own facets, deduped by key. */}
+      {Array.from(new Map(categories.flatMap((c) => c.facets).map((f) => [f.key, f])).values()).map((f) => facetBlock(f, true))}
 
       {GLOBAL_FACETS.map((f) => facetBlock(f, f.key === "price" || f.key === "colour"))}
     </div>
@@ -343,7 +345,7 @@ function QuickAddDialog({ product, onClose }: { product: Product | null; onClose
 
                 <div className="flex items-center justify-between gap-3">
                   <Label>{product.rateType === "Qty" ? "Quantity" : product.rateType === "SqFt" ? "Area (sqft)" : "Length (running ft)"}</Label>
-                  <NumberStepper value={qty} onChange={setQty} aria-label="Quantity" />
+                  <NumberStepper value={qty} onChange={setQty} max={product.rateType === "Qty" ? availableQuantity(product) : undefined} aria-label="Quantity" />
                 </div>
 
                 <FabricPicker options={upholsteryOptions(product)} value={fabric} onChange={setFabric} />
@@ -439,7 +441,7 @@ function ProductCard({ product, onQuickAdd }: { product: Product; onQuickAdd: (p
     // compactly under the image and any spare height falls below it.
     // No `surface-interactive` here: the listing grid deliberately does not lift
     // or elevate on hover. The colour changes below are kept as affordance.
-    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-e1 transition-[box-shadow,border-color] duration-[260ms] ease-out-quint hover:glow hover:border-primary">
+    <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-e1 transition-[box-shadow,border-color] duration-[260ms] ease-out-quint hover:glow hover:border-[var(--glow)]">
       <div className="relative overflow-hidden bg-muted/60">
         <Link href={`/catalog/${product.id}`} className="block">
           {/* 4:3 keeps the photo to roughly 55–60% of the card height. */}
@@ -524,29 +526,57 @@ function CatalogContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { products } = useMockStore();
+  // ?category= takes a comma-separated list of slugs. A single slug still works,
+  // so every existing link and the nav mega-menu keep functioning unchanged.
   const categoryParam = searchParams.get("category");
-  const category = categoryParam ? CATEGORIES.find((c) => slug(c.name) === slug(categoryParam)) : undefined;
+  const categories = categoryParam
+    ? categoryParam
+        .split(",")
+        .map((raw) => CATEGORIES.find((c) => slug(c.name) === slug(raw)))
+        .filter((c): c is CategoryDef => Boolean(c))
+    : [];
+  // Headings, the blurb and the breadcrumb only make sense for exactly one
+  // category; with several selected the page stays the generic catalogue.
+  const soleCategory = categories.length === 1 ? categories[0] : undefined;
   const [sort, setSort] = useState<SortKey>("popularity");
   const [query, setQuery] = useState("");
   // Seeded from the URL so the nav mega-menu can deep-link straight to a
   // subcategory; after mount it is ordinary local state like the other facets.
   const subcategoryParam = searchParams.get("subcategory");
   const [subcats, setSubcats] = useState<string[]>(() => {
-    if (!subcategoryParam || !category) return [];
-    const match = category.subcategories.find((sub) => slug(sub) === slug(subcategoryParam));
+    if (!subcategoryParam) return [];
+    const match = categories.flatMap((c) => c.subcategories).find((sub) => slug(sub) === slug(subcategoryParam));
     return match ? [match] : [];
   });
   const [selection, setSelection] = useState<Selection>({});
   const [quickAdd, setQuickAdd] = useState<Product | null>(null);
 
-  const categoryFacets = category?.facets ?? [];
+  // With several categories picked, show the union of their own facets -
+  // deduped by key, because e.g. two categories can both define "Upholstery
+  // fabric" and the shopper should see one group, not two.
+  const categoryFacets = Array.from(
+    new Map(categories.flatMap((c) => c.facets).map((f) => [f.key, f])).values(),
+  );
   const allFacets = [...categoryFacets, ...GLOBAL_FACETS];
 
-  function setCategory(name: string | null) {
-    // Category-only facets don't carry over to another category.
+  function pushCategories(names: string[]) {
+    // Category-only facets don't carry over to a different set of categories.
+    setSelection((sel) => Object.fromEntries(Object.entries(sel).filter(([k]) => GLOBAL_FACETS.some((f) => f.key === k))));
+    router.push(names.length ? `/catalog?category=${names.map(slug).join(",")}` : "/catalog", { scroll: false });
+  }
+
+  function toggleCategory(name: string) {
+    const on = categories.some((c) => c.name === name);
+    const next = on ? categories.filter((c) => c.name !== name) : [...categories, CATEGORIES.find((c) => c.name === name)!];
+    // Drop any subcategory belonging to a category being switched off.
+    const keep = new Set(next.flatMap((c) => c.subcategories));
+    setSubcats((subs) => subs.filter((sub) => keep.has(sub)));
+    pushCategories(next.map((c) => c.name));
+  }
+
+  function clearCategories() {
     setSubcats([]);
-    setSelection((s) => Object.fromEntries(Object.entries(s).filter(([k]) => GLOBAL_FACETS.some((f) => f.key === k))));
-    router.push(name ? `/catalog?category=${encodeURIComponent(slug(name))}` : "/catalog", { scroll: false });
+    pushCategories([]);
   }
 
   function toggle(key: string, value: string) {
@@ -560,9 +590,11 @@ function CatalogContent() {
     setQuery("");
     setSubcats([]);
     setSelection({});
+    pushCategories([]);
   }
 
-  const inCategory = category ? products.filter((p) => p.category === category.name) : products;
+  const selectedNames = new Set(categories.map((c) => c.name));
+  const inCategory = selectedNames.size ? products.filter((p) => selectedNames.has(p.category)) : products;
 
   // React Compiler memoizes these; no manual useMemo needed.
   const q = query.trim().toLowerCase();
@@ -587,7 +619,7 @@ function CatalogContent() {
   // changes and the grid's top is above the fold, bring the results back
   // into view. Only scrolls up, never down, so filtering at the top is still.
   const gridRef = useRef<HTMLDivElement>(null);
-  const resultKey = `${category?.name ?? ""}|${sort}|${pills.map((p) => p.key).join(",")}`;
+  const resultKey = `${categories.map((c) => c.name).join(",")}|${sort}|${pills.map((p) => p.key).join(",")}`;
   const lastKey = useRef(resultKey);
   useEffect(() => {
     if (lastKey.current === resultKey) return;
@@ -600,8 +632,9 @@ function CatalogContent() {
     <FilterPanel
       products={products}
       scope={inCategory}
-      category={category}
-      onCategory={setCategory}
+      categories={categories}
+      onToggleCategory={toggleCategory}
+      onClearCategories={clearCategories}
       query={query}
       setQuery={setQuery}
       subcats={subcats}
@@ -619,23 +652,27 @@ function CatalogContent() {
           Home
         </Link>
         <ChevronRight className="size-3 opacity-60" />
-        <Link href="/catalog" className={category ? "transition-colors hover:text-primary" : "text-foreground"}>
+        <Link href="/catalog" className={categories.length ? "transition-colors hover:text-primary" : "text-foreground"}>
           Catalog
         </Link>
-        {category && (
+        {categories.length > 0 && (
           <>
             <ChevronRight className="size-3 opacity-60" />
-            <span className="text-foreground">{category.name}</span>
+            <span className="text-foreground">{soleCategory ? soleCategory.name : `${categories.length} categories`}</span>
           </>
         )}
       </nav>
 
       {/* Heading re-keys on category so switching categories replays the
           entrance — the page visibly answers the click. */}
-      <Reveal key={category?.name ?? "all"} immediate direction="up" distance={12} className="mb-7 flex flex-col gap-1.5">
-        <h1 className="font-serif text-3xl text-foreground md:text-4xl">{category?.name ?? "Product Catalog"}</h1>
+      <Reveal key={categories.map((c) => c.name).join(",") || "all"} immediate direction="up" distance={12} className="mb-7 flex flex-col gap-1.5">
+        <h1 className="font-serif text-3xl text-foreground md:text-4xl">{soleCategory?.name ?? "Product Catalog"}</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-          {category?.blurb ?? "Furniture, décor, lighting and installations to rent for every occasion."}
+          {/* A blurb belongs to one category; with several picked, list them. */}
+          {soleCategory?.blurb ??
+            (categories.length > 0
+              ? categories.map((c) => c.name).join(" · ")
+              : "Furniture, décor, lighting and installations to rent for every occasion.")}
         </p>
       </Reveal>
 

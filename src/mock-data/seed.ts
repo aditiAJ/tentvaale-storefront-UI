@@ -306,7 +306,7 @@ export const BUNDLES: Bundle[] = [
     id: "b3",
     name: "Amber Dunes Lounge",
     tagline: "Golden-hour lounge with brass and pampas",
-    occasion: "Haldi / sundowner",
+    occasion: "Haldi",
     guests: "40–100",
     setupTime: "4 hours",
     highlights: ["Majlis lounge with kilim rugs","Dried pampas hoops and brass urns","Festoon string-light canopy","Works for daytime and sunset"],
@@ -403,6 +403,23 @@ export function productImages(product: Product): string[] {
   const photoId = product.imageUrl.slice(UNSPLASH_HOST.length).split("?")[0];
   const view = (crop: string) => `${UNSPLASH_HOST}${photoId}?cs=tinysrgb&fm=jpg&q=80&w=800&h=800&fit=crop&crop=${crop}`;
   return [product.imageUrl, view("edges"), view("top")];
+}
+
+// Stock figures are not authored per product yet, so they are derived: a stable
+// hash of the id spread across a band chosen by price, because a rental
+// business holds hundreds of ₹300 chairs and two ₹40,000 installations.
+// Authored `availableQuantity` always wins, so real admin figures drop in per
+// product without touching this.
+function derivedStock(product: Product): number {
+  let hash = 0;
+  for (const ch of product.id) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  const [min, max] =
+    product.basePrice <= 500 ? [120, 400] : product.basePrice <= 3000 ? [40, 120] : product.basePrice <= 10000 ? [8, 40] : [2, 10];
+  return min + (hash % (max - min + 1));
+}
+
+export function availableQuantity(product: Product): number {
+  return product.availableQuantity ?? derivedStock(product);
 }
 
 export function rateTypeLabel(rateType: Product["rateType"]): string {

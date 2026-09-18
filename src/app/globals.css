@@ -37,6 +37,7 @@
   --color-secondary: var(--secondary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary: var(--primary);
+  --color-glow: var(--glow);
   --color-popover-foreground: var(--popover-foreground);
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
@@ -106,20 +107,24 @@
   --card-foreground: #221D17;
   --popover: #FFFCF6;
   --popover-foreground: #221D17;
-  --primary: #C9A15C;
-  --primary-foreground: #221D17;
+  --primary: #876E1D;
+  /* Decorative halo only (see @utility glow) - never used for text, so it is
+     tuned for visibility rather than contrast. Light mode's --primary is dark
+     enough to read on ivory, which makes it useless as a bloom. */
+  --glow: #D4AF37;
+  --primary-foreground: #FFFCF6;
   --secondary: #F1E7D6;
   --secondary-foreground: #221D17;
   --muted: #F1E7D6;
   --muted-foreground: #6B5F4F;
-  --accent: #C9A15C;
-  --accent-foreground: #221D17;
+  --accent: #876E1D;
+  --accent-foreground: #FFFCF6;
   --destructive: #A6453B;
   --success: #4F7A57;
   --warning: #A9762A;
   --border: #E6DAC4;
   --input: #E6DAC4;
-  --ring: rgba(184, 134, 62, 0.4);
+  --ring: rgba(135, 110, 29, 0.45);
 
   /* Warm-tinted elevation ramp (charcoal #221D17 at low alpha, never pure
      black — pure black on ivory reads grey and kills the warmth). */
@@ -127,7 +132,7 @@
   --elev-2: 0 2px 4px -2px rgba(34, 29, 23, 0.10), 0 6px 16px -4px rgba(34, 29, 23, 0.10);
   --elev-3: 0 4px 8px -4px rgba(34, 29, 23, 0.12), 0 16px 32px -8px rgba(34, 29, 23, 0.14);
   --elev-4: 0 8px 16px -8px rgba(34, 29, 23, 0.14), 0 32px 64px -16px rgba(34, 29, 23, 0.20);
-  --chart-1: #C9A15C;
+  --chart-1: #876E1D;
   --chart-2: #6B5F4F;
   --chart-3: #8A6D3E;
   --chart-4: #E6DAC4;
@@ -137,12 +142,12 @@
   --radius: 0.375rem;
   --sidebar: #FFFCF6;
   --sidebar-foreground: #221D17;
-  --sidebar-primary: #C9A15C;
-  --sidebar-primary-foreground: #221D17;
+  --sidebar-primary: #876E1D;
+  --sidebar-primary-foreground: #FFFCF6;
   --sidebar-accent: #F1E7D6;
   --sidebar-accent-foreground: #221D17;
   --sidebar-border: #E6DAC4;
-  --sidebar-ring: rgba(184, 134, 62, 0.4);
+  --sidebar-ring: rgba(135, 110, 29, 0.45);
   --font-sans: var(--font-manrope), system-ui, sans-serif;
   --font-serif: var(--font-playfair), Georgia, serif;
 }
@@ -154,20 +159,22 @@
   --card-foreground: #F5EFE6;
   --popover: #161411;
   --popover-foreground: #F5EFE6;
-  --primary: #C9A15C;
+  --primary: #D4AF37;
+  /* Same brand gold as light mode: the halo reads identically in both themes. */
+  --glow: #D4AF37;
   --primary-foreground: #12100E;
   --secondary: #1D1915;
   --secondary-foreground: #F5EFE6;
   --muted: #1D1915;
   --muted-foreground: #B8AFA3;
-  --accent: #C9A15C;
+  --accent: #D4AF37;
   --accent-foreground: #12100E;
   --destructive: #B0655A;
   --success: #6E9174;
   --warning: #C8A97E;
   --border: #24211D;
   --input: #24211D;
-  --ring: rgba(201, 161, 92, 0.5);
+  --ring: rgba(212, 175, 55, 0.5);
 
   /* On near-black, a drop shadow is invisible — depth has to come from a lit
      top edge plus a deeper cast, so dark surfaces still separate from the page. */
@@ -175,19 +182,19 @@
   --elev-2: 0 1px 0 0 rgba(245, 239, 230, 0.05) inset, 0 4px 14px -4px rgba(0, 0, 0, 0.6);
   --elev-3: 0 1px 0 0 rgba(245, 239, 230, 0.06) inset, 0 12px 28px -8px rgba(0, 0, 0, 0.7);
   --elev-4: 0 1px 0 0 rgba(245, 239, 230, 0.07) inset, 0 24px 56px -16px rgba(0, 0, 0, 0.8);
-  --chart-1: #C9A15C;
+  --chart-1: #D4AF37;
   --chart-2: #B8AFA3;
   --chart-3: #8A6D3E;
   --chart-4: #24211D;
   --chart-5: #F5EFE6;
   --sidebar: #161411;
   --sidebar-foreground: #F5EFE6;
-  --sidebar-primary: #C9A15C;
+  --sidebar-primary: #D4AF37;
   --sidebar-primary-foreground: #12100E;
   --sidebar-accent: #1D1915;
   --sidebar-accent-foreground: #F5EFE6;
   --sidebar-border: #24211D;
-  --sidebar-ring: rgba(201, 161, 92, 0.5);
+  --sidebar-ring: rgba(212, 175, 55, 0.5);
 }
 
 /* The one horizontal page gutter. Every page root and both pieces of chrome
@@ -208,8 +215,8 @@
 /* Soft gold halo for the currently selected chip / tab / card. */
 @utility glow {
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--color-primary) 75%, transparent),
-    0 0 22px -4px color-mix(in oklab, var(--color-primary) 70%, transparent);
+    0 0 0 1px color-mix(in oklab, var(--color-glow) 75%, transparent),
+    0 0 22px -4px color-mix(in oklab, var(--color-glow) 70%, transparent);
 }
 
 /* Interactive surface: the standard lift-on-hover / settle-on-press feel used

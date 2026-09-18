@@ -46,6 +46,13 @@ export interface Product {
   imageUrls?: string[];
   /** Display size for cards, e.g. "200 × 90 × 85 cm". */
   size?: string;
+  /**
+   * Max units the warehouse holds — an admin-entered figure, NOT a live
+   * availability count. It tells a customer the ceiling on what they can order;
+   * it does not know what is already booked for their dates. Admin sources it
+   * from `Master_Product_WarehouseStock.TotalStock`.
+   */
+  availableQuantity?: number;
   colours?: string[];
   materials?: string[];
   moods?: string[];

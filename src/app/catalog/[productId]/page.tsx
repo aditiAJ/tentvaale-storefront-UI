@@ -16,7 +16,7 @@ import { ProductThumb } from "@/components/product-thumb";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import type { Product } from "@/mock-data/types";
-import { formatRupees, productImages, rateTypeLabel } from "@/mock-data/seed";
+import { availableQuantity, formatRupees, productImages, rateTypeLabel } from "@/mock-data/seed";
 import { CATEGORIES, GLOBAL_FACETS, facetValues, upholsteryOptions } from "@/mock-data/taxonomy";
 import { FabricPicker } from "@/components/fabric-picker";
 import { ColourPicker } from "@/components/colour-picker";
@@ -124,6 +124,7 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
   const [planId, setPlanId] = useState<string>("");
   const [subEventId, setSubEventId] = useState<string>("__general");
   const [quantity, setQuantity] = useState(1);
+  const stock = product ? availableQuantity(product) : 0;
   const [length, setLength] = useState(10);
   const [fabric, setFabric] = useState<string | undefined>(undefined);
   const [colour, setColour] = useState<string | undefined>(undefined);
@@ -288,13 +289,16 @@ export default function ProductPage({ params }: { params: Promise<{ productId: s
           ) : (
             <div className="flex items-center justify-between border-t border-border pt-4">
               <span className="font-serif text-xl text-foreground">Quantity</span>
-              <NumberStepper value={quantity} onChange={setQuantity} aria-label="Quantity" />
+              <NumberStepper value={quantity} onChange={setQuantity} max={stock} aria-label="Quantity" />
             </div>
           )}
 
-          <div className="flex items-center gap-2.5 rounded-xl bg-[color-mix(in_oklab,var(--success)_10%,transparent)] px-4 py-3 text-sm text-[var(--success)] ring-1 ring-[color-mix(in_oklab,var(--success)_28%,transparent)] ring-inset">
-            <Check className="size-4 shrink-0" />
-            Available for selected dates
+          <div className="flex items-start gap-2.5 rounded-xl bg-[color-mix(in_oklab,var(--success)_10%,transparent)] px-4 py-3 text-sm text-[var(--success)] ring-1 ring-[color-mix(in_oklab,var(--success)_28%,transparent)] ring-inset">
+            <Check className="mt-0.5 size-4 shrink-0" />
+            <span>
+              <strong className="font-medium tabular-nums">{stock}</strong> units in our inventory
+              <span className="block text-xs opacity-80">Maximum you can order. Availability for your dates is confirmed on the quote.</span>
+            </span>
           </div>
 
           {currentAccount ? (
