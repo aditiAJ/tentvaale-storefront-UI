@@ -5,11 +5,12 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowUpDown, ChevronDown, ChevronRight, Heart, Minus, Plus, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowUpDown, ChevronRight, Heart, Minus, Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { DUR, EASE, Reveal } from "@/components/motion";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CheckList, FacetGroup } from "@/components/facets";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,53 +40,7 @@ function matches(p: Product, facets: FacetDef[], selection: Selection) {
 
 /* ---------------- Filters ---------------- */
 
-function FacetGroup({ title, count, defaultOpen, action, children }: { title: string; count?: number; defaultOpen?: boolean; action?: React.ReactNode; children: React.ReactNode }) {
-  // <details> stays the mechanism (keyboard + no-JS behaviour for free);
-  // interpolate-size + the ::details-content rule below give it a real
-  // height transition instead of the browser's instant snap.
-  return (
-    <details open={defaultOpen} className="group border-t border-border py-3 first:border-t-0 first:pt-0 [interpolate-size:allow-keywords]">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 py-0.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase transition-colors duration-200 ease-out-quint select-none hover:text-foreground [&::-webkit-details-marker]:hidden">
-        <span className="flex items-center gap-2">
-          {title}
-          {!!count && (
-            <span className="rounded-sm bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground normal-case tabular-nums">
-              {count}
-            </span>
-          )}
-        </span>
-        <span className="flex items-center gap-2">
-          {action}
-          <ChevronDown className="size-3.5 transition-transform duration-300 ease-out-quint group-open:rotate-180" />
-        </span>
-      </summary>
-      <div className="mt-2.5 flex flex-col gap-2">{children}</div>
-    </details>
-  );
-}
 
-function CheckList({ options, selected, onToggle }: { options: { value: string; count: number }[]; selected: string[]; onToggle: (v: string) => void }) {
-  const [showAll, setShowAll] = useState(false);
-  const visible = showAll ? options : options.slice(0, 6);
-  return (
-    <>
-      {visible.map((o) => (
-        <label key={o.value} className="-mx-1.5 flex cursor-pointer items-center justify-between gap-2 rounded-md px-1.5 py-1 text-sm text-foreground/80 transition-colors duration-200 ease-out-quint hover:bg-muted/60 hover:text-foreground">
-          <span className="flex min-w-0 items-center gap-2">
-            <Checkbox checked={selected.includes(o.value)} onCheckedChange={() => onToggle(o.value)} />
-            <span className="truncate">{o.value}</span>
-          </span>
-          <span className="text-[11px] text-muted-foreground tabular-nums">{o.count}</span>
-        </label>
-      ))}
-      {options.length > 6 && (
-        <button className="w-fit text-xs text-primary hover:underline" onClick={() => setShowAll((v) => !v)}>
-          {showAll ? "Show less" : `Show ${options.length - 6} more`}
-        </button>
-      )}
-    </>
-  );
-}
 
 function FilterPanel({
   products,
