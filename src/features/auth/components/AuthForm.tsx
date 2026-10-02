@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff, ChevronLeft, Loader2 } from "lucide-react";
@@ -11,35 +11,70 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useMockStore } from "@/mock-data/store";
-import type { AccountType } from "@/mock-data/types";
+import { ApiError } from "@/services/api-client";
+import { useSession } from "../session";
+
+/** The two kinds of account the form offers; the backend spells them CUSTOMER and EVENT_PLANNER. */
+type AccountType = "Customer" | "EventPlanner";
+
+/** Only ever follow a path on this site, never an address someone put in the link. */
+function safeNext(value: string | null): string {
+  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/plans";
+}
 
 // Flowstep screens 3 (desktop) / 4 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 // Only the Sign Up tab state was generated — the Log In tab below mirrors its
 // field set (no account-type toggle, adds "Forgot password?").
 export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   const router = useRouter();
-  const { signup, login } = useMockStore();
+  const { signup, login } = useSession();
+  const searchParams = useSearchParams();
   const reduce = useReducedMotion();
   const [tab, setTab] = useState<"signup" | "login">(initialTab);
-  const [emailOrPhone, setEmailOrPhone] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [accountType, setAccountType] = useState<AccountType>("Customer");
   const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!emailOrPhone.trim() || !password) return;
+    setError(null);
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+    if (tab === "signup") {
+      if (!fullName.trim()) {
+        setError("Please tell us your name.");
+        return;
+      }
+      if (password.length < 8) {
+        setError("Choose a password of at least 8 characters.");
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       if (tab === "signup") {
-        signup({ name: emailOrPhone.split("@")[0] || emailOrPhone, email: emailOrPhone, phone: "", accountType });
+        await signup({
+          fullName: fullName.trim(),
+          email: cleanEmail,
+          password,
+          phone: phone.trim() || undefined,
+          accountType: accountType === "EventPlanner" ? "EVENT_PLANNER" : "CUSTOMER",
+        });
         toast.success("Account created — your Plan Event is ready.");
       } else {
-        login(emailOrPhone);
+        await login({ email: cleanEmail, password });
       }
-      router.push("/plans");
+      router.push(safeNext(searchParams.get("next")));
+    } catch (failure) {
+      setError(failure instanceof ApiError ? failure.message : "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -107,20 +142,57 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
       </div>
 
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+        {error && (
+          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {tab === "signup" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="auth-name" className="text-xs text-muted-foreground">
+              Full name
+            </Label>
+            <Input
+              id="auth-name"
+              type="text"
+              autoComplete="name"
+              placeholder="Your full name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="h-12 bg-card"
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-2">
-          <Label htmlFor="auth-identifier" className="text-xs text-muted-foreground">
-            Email or phone
+          <Label htmlFor="auth-email" className="text-xs text-muted-foreground">
+            Email
           </Label>
           <Input
-            id="auth-identifier"
-            type="text"
-            autoComplete="username"
-            placeholder="Enter your email or phone"
-            value={emailOrPhone}
-            onChange={(e) => setEmailOrPhone(e.target.value)}
+            id="auth-email"
+            type="email"
+            autoComplete="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             className="h-12 bg-card"
           />
         </div>
+        {tab === "signup" && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="auth-phone" className="text-xs text-muted-foreground">
+              Phone (optional)
+            </Label>
+            <Input
+              id="auth-phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="+91 …"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="h-12 bg-card"
+            />
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="auth-password" className="text-xs text-muted-foreground">
             Password

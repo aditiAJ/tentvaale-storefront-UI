@@ -1,40 +1,39 @@
 import { apiFetch } from "@/services/api-client";
-import type { Account, AccountType } from "../types";
+import type { LoginPayload, SignupPayload, StorefrontAccount, UpdateProfilePayload } from "../types";
 
-export interface LoginPayload {
-  email: string;
-  password: string;
+/**
+ * Customer sign-up, sign-in and account. The login token never appears here: signing in makes the
+ * storefront's gateway set an httpOnly cookie, and the gateway adds the token to every later call.
+ */
+
+/** Creates the account. It does not sign anyone in; call {@link login} next. */
+export function signup(payload: SignupPayload): Promise<StorefrontAccount> {
+  return apiFetch<StorefrontAccount>("storefront/auth/signup", { method: "POST", body: payload });
 }
 
-export interface SignupPayload {
-  name: string;
-  email: string;
-  phone: string;
-  password: string;
-  accountType: AccountType;
+/**
+ * 422 for a wrong email or password (the same answer for both, on purpose); 429 when there have been
+ * too many wrong attempts for that email, with the wait in the message.
+ */
+export function login(payload: LoginPayload): Promise<void> {
+  return apiFetch<void>("storefront/auth/login", { method: "POST", body: payload });
 }
 
-export interface AuthResult {
-  token: string;
-  account: Account;
+/** Forgets the session cookie. There is nothing to call on the backend. */
+export function logout(): Promise<void> {
+  return apiFetch<void>("storefront/auth/logout", { method: "POST" });
 }
 
-// POST /api/storefront/auth/login — see ARCHITECTURE.md "Auth" section.
-export function login(payload: LoginPayload): Promise<AuthResult> {
-  return apiFetch<AuthResult>("api/storefront/auth/login", {
-    method: "POST",
-    body: payload,
-  });
+/** Who is signed in. 401 when nobody is. */
+export function getCurrentAccount(signal?: AbortSignal): Promise<StorefrontAccount> {
+  return apiFetch<StorefrontAccount>("storefront/account", { signal });
 }
 
-// POST /api/storefront/auth/signup — creates the account and its default Plan Board (Flow 1).
-export function signup(payload: SignupPayload): Promise<AuthResult> {
-  return apiFetch<AuthResult>("api/storefront/auth/signup", {
-    method: "POST",
-    body: payload,
-  });
+/** Name and phone only; the email and account type cannot be changed here. */
+export function updateAccount(payload: UpdateProfilePayload): Promise<StorefrontAccount> {
+  return apiFetch<StorefrontAccount>("storefront/account", { method: "PUT", body: payload });
 }
 
-export function getCurrentAccount(): Promise<Account> {
-  return apiFetch<Account>("api/storefront/auth/me");
-}
+export const authKeys = {
+  me: ["auth", "me"] as const,
+};

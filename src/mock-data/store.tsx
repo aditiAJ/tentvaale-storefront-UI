@@ -3,7 +3,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import type {
   Account,
-  AccountType,
   Address,
   ItemSharingDecision,
   Order,
@@ -43,7 +42,9 @@ function loadState(): StoreState {
     // outright — a stale localStorage entry from before a schema change
     // (e.g. wishlists/addressBook being added) would otherwise come back
     // missing those keys and crash every reader downstream.
-    if (raw) return { ...emptyState(), ...(JSON.parse(raw) as Partial<StoreState>) };
+    // The signed-in account is never taken from storage: only the real session (see
+    // features/auth/session.tsx) may set it, so a stale local login cannot outlive the real one.
+    if (raw) return { ...emptyState(), ...(JSON.parse(raw) as Partial<StoreState>), currentAccountId: null };
   } catch {
     // fall through
   }
@@ -95,8 +96,11 @@ interface StoreContextValue extends StoreState {
   bundles: typeof BUNDLES;
   collections: typeof COLLECTIONS;
 
-  signup: (input: { name: string; email: string; phone: string; accountType: AccountType }) => Account;
-  login: (email: string) => Account;
+  /**
+   * TEMPORARY BRIDGE: makes the local account mirror the real signed-in one (same id, name, email),
+   * creating it, and its first empty plan, on first sight. Removed when plans move to the backend.
+   */
+  syncAccount: (real: { id: string; fullName: string; email: string; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => void;
   logout: () => void;
   upgradeToEventPlanner: () => void;
 
@@ -185,46 +189,47 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, plans: s.plans.map((p) => (p.id === planId ? fn(p, s.currentAccountId ?? "system") : p)) }));
   }
 
-  const signup = useCallback(
-    ({ name, email, phone, accountType }: { name: string; email: string; phone: string; accountType: AccountType }) => {
-      const account: Account = { id: newId("acct"), name, email, phone, accountType };
-      const defaultPlan: Plan = {
-        id: newId("plan"),
-        ownerAccountId: account.id,
-        name: "My Plan Event",
-        status: "Draft",
-        subEvents: [],
-        items: [],
-        coOwners: [],
-        auditLog: [],
-        createdAt: nowIso(),
+  const syncAccount = useCallback(
+    (real: { id: string; fullName: string; email: string; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => {
+      const mirrored: Account = {
+        id: real.id,
+        name: real.fullName,
+        email: real.email,
+        phone: real.phone ?? "",
+        accountType: real.accountType === "EVENT_PLANNER" ? "EventPlanner" : "Customer",
       };
-      setState((s) => ({
-        ...s,
-        accounts: [...s.accounts, account],
-        currentAccountId: account.id,
-        plans: [...s.plans, defaultPlan],
-      }));
-      return account;
+      setState((s) => {
+        const existing = s.accounts.find((a) => a.id === mirrored.id);
+        const unchanged =
+          existing &&
+          existing.name === mirrored.name &&
+          existing.email === mirrored.email &&
+          existing.phone === mirrored.phone &&
+          existing.accountType === mirrored.accountType &&
+          s.currentAccountId === mirrored.id;
+        if (unchanged) return s;
+        const accounts = existing ? s.accounts.map((a) => (a.id === mirrored.id ? mirrored : a)) : [...s.accounts, mirrored];
+        const plans = s.plans.some((p) => p.ownerAccountId === mirrored.id)
+          ? s.plans
+          : [
+              ...s.plans,
+              {
+                id: newId("plan"),
+                ownerAccountId: mirrored.id,
+                name: "My Plan Event",
+                status: "Draft" as const,
+                subEvents: [],
+                items: [],
+                coOwners: [],
+                auditLog: [],
+                createdAt: nowIso(),
+              },
+            ];
+        return { ...s, accounts, plans, currentAccountId: mirrored.id };
+      });
     },
     [],
   );
-
-  const login = useCallback((email: string) => {
-    let account: Account | undefined;
-    setState((s) => {
-      account = s.accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
-      if (account) {
-        return { ...s, currentAccountId: account.id };
-      }
-      // No sign-up flow gate in the mock — logging in with an unseen email
-      // creates the account, matching the co-owner "existing or new" rule (Flow 3).
-      const created: Account = { id: newId("acct"), name: email.split("@")[0], email, phone: "", accountType: "Customer" };
-      account = created;
-      return { ...s, accounts: [...s.accounts, created], currentAccountId: created.id };
-    });
-    return account as Account;
-  }, []);
 
   const logout = useCallback(() => setState((s) => ({ ...s, currentAccountId: null })), []);
 
@@ -731,8 +736,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         products: PRODUCTS,
         bundles: BUNDLES,
         collections: COLLECTIONS,
-        signup,
-        login,
+        syncAccount,
         logout,
         upgradeToEventPlanner,
         createPlan,

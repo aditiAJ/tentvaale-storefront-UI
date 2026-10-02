@@ -14,7 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import { useRequireAccount } from "@/features/auth";
+import { useRequireAccount, useSession } from "@/features/auth";
+import { ApiError } from "@/services/api-client";
 import { useMockStore } from "@/mock-data/store";
 import { planStatusLabel } from "@/mock-data/seed";
 
@@ -85,7 +86,13 @@ function EmptyNote({ children }: { children: React.ReactNode }) {
 export default function AccountPage() {
   const account = useRequireAccount();
   const router = useRouter();
-  const { plans, orders, addresses, addAddress, removeAddress, logout } = useMockStore();
+  const { plans, orders, addresses, addAddress, removeAddress } = useMockStore();
+  const { logout, updateProfile } = useSession();
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileName, setProfileName] = useState("");
+  const [profilePhone, setProfilePhone] = useState("");
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSaving, setProfileSaving] = useState(false);
 
   const [emailNotify, setEmailNotify] = useState(true);
   const [whatsappNotify, setWhatsappNotify] = useState(true);
@@ -157,7 +164,15 @@ export default function AccountPage() {
 
         <Stagger immediate gap={0.05} className="flex flex-col gap-6">
           <Panel id="profile" title="Profile" action={
-            <Button variant="outline" onClick={() => toast.info("Profile editing isn't wired up yet.")}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setProfileName(account.name);
+                setProfilePhone(account.phone);
+                setProfileError(null);
+                setProfileOpen(true);
+              }}
+            >
               Edit Profile
             </Button>
           }>
@@ -313,11 +328,60 @@ export default function AccountPage() {
           </Panel>
         </Stagger>
 
+        <Dialog open={profileOpen} onOpenChange={setProfileOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit profile</DialogTitle>
+            </DialogHeader>
+            <form
+              className="space-y-4"
+              onSubmit={async (event) => {
+                event.preventDefault();
+                if (!profileName.trim()) {
+                  setProfileError("Please enter your name.");
+                  return;
+                }
+                setProfileSaving(true);
+                setProfileError(null);
+                try {
+                  await updateProfile({ fullName: profileName.trim(), phone: profilePhone.trim() });
+                  toast.success("Profile updated");
+                  setProfileOpen(false);
+                } catch (error) {
+                  setProfileError(error instanceof ApiError ? error.message : "Could not save your profile.");
+                } finally {
+                  setProfileSaving(false);
+                }
+              }}
+            >
+              {profileError && (
+                <p role="alert" className="text-sm text-destructive">
+                  {profileError}
+                </p>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="profile-name">Name</Label>
+                <Input id="profile-name" value={profileName} onChange={(e) => setProfileName(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-phone">Phone (optional)</Label>
+                <Input id="profile-phone" inputMode="tel" value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} />
+              </div>
+              <p className="text-xs text-muted-foreground">Your email is {account.email} and cannot be changed here.</p>
+              <DialogFooter>
+                <Button type="submit" disabled={profileSaving}>
+                  {profileSaving ? "Saving…" : "Save"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         <Reveal id="logout" className="mt-6 flex scroll-mt-28 justify-end">
           <Button
             variant="destructive"
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               router.push("/");
             }}
           >

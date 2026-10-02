@@ -9,6 +9,7 @@ import { EASE, DUR, SPRING } from "@/components/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
+import { useSession } from "@/features/auth/session";
 import { CATEGORIES } from "@/mock-data/taxonomy";
 
 /** Mirrors the catalog page's own slug rule so its ?category= lookup matches. */
@@ -71,6 +72,7 @@ function CountBadge({ count }: { count: number }) {
 // Sign Up pair drops away once an account is active.
 function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
   const { currentAccount, wishlist } = useMockStore();
+  const { status } = useSession();
 
   return (
     <div className="flex shrink-0 items-center gap-1.5">
@@ -92,7 +94,7 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
         <User className="size-5" />
       </Link>
       <ThemeToggle />
-      {!currentAccount && (
+      {!currentAccount && status !== "loading" && (
         <div className="ml-1.5 flex items-center gap-2">
           <Link
             href="/login"

@@ -6,6 +6,7 @@ import { MotionConfig } from "framer-motion";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { MockStoreProvider } from "@/mock-data/store";
+import { SessionProvider } from "@/features/auth/session";
 import { EASE, DUR } from "@/components/motion";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -20,8 +21,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <MotionConfig reducedMotion="user" transition={{ duration: DUR.base, ease: EASE.out }}>
         <QueryClientProvider client={queryClient}>
           <MockStoreProvider>
-            {children}
-            <Toaster />
+            <SessionProvider>
+              {children}
+              <Toaster />
+            </SessionProvider>
           </MockStoreProvider>
         </QueryClientProvider>
       </MotionConfig>

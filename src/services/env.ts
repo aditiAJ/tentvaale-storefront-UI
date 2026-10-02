@@ -1,19 +1,9 @@
-// Not validated eagerly here: this module is reachable at import time from
-// every features/*/index.ts barrel (export * from "./api"), so throwing at
-// module evaluation would crash any page that imports an unrelated sibling
-// export (e.g. AuthForm) whenever NEXT_PUBLIC_API_BASE_URL isn't set — which
-// it never is today, since the app runs on the mock store, not this real-API
-// layer. requireEnv is still here for api-client.ts to call at the point an
-// actual request is attempted, so the failure stays loud once this layer is
-// wired to a real backend.
-export function requireEnv(name: string, value: string | undefined): string {
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${name}`);
-  }
-  return value;
-}
+// The browser never receives an API origin. Every request the client makes is same-origin against
+// /api/*, which next.config.ts rewrites to the Spring backend on the server side. That is why there
+// is no NEXT_PUBLIC_API_BASE_URL: exposing one would invite direct cross-origin calls that the
+// backend has no CORS configuration to permit.
+export const API_BASE_PATH = "/api";
 
 export const env = {
-  apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL,
   razorpayKeyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
 };

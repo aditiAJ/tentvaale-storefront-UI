@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMockStore } from "@/mock-data/store";
 
@@ -22,7 +21,7 @@ const STEPS = [
 ];
 
 export default function ForProfessionalsPage() {
-  const { currentAccount, upgradeToEventPlanner } = useMockStore();
+  const { currentAccount } = useMockStore();
 
   const [fullName, setFullName] = useState(currentAccount?.name ?? "");
   const [businessName, setBusinessName] = useState("");
@@ -30,7 +29,6 @@ export default function ForProfessionalsPage() {
   const [phone, setPhone] = useState(currentAccount?.phone ?? "");
   const [years, setYears] = useState("");
   const [about, setAbout] = useState("");
-  const [submitted, setSubmitted] = useState(false);
 
   function scrollToForm() {
     document.getElementById("apply-form")?.scrollIntoView({ behavior: "smooth" });
@@ -41,22 +39,10 @@ export default function ForProfessionalsPage() {
       toast.error("Full name and email are required.");
       return;
     }
-    if (currentAccount) upgradeToEventPlanner();
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col items-center gap-4 py-24 text-center page-x">
-        <CheckCircle2 className="size-12 text-primary" />
-        <h1 className="font-serif text-3xl text-foreground">Application Submitted</h1>
-        <p className="text-sm leading-6 text-foreground/70">
-          {currentAccount
-            ? "Your account has been switched to Event Planner. You can now create multi-client Plans and share view-only access with your clients."
-            : "Thanks — we'll review your application and follow up by email within 2 business days."}
-        </p>
-      </div>
-    );
+    // Planner applications are not accepted online yet (they arrive with the account extras phase).
+    // The old behaviour flipped the local account to Event Planner instantly, which the real account
+    // would never follow, so nothing is claimed or sent here.
+    toast.info("Online planner applications are not open yet, so nothing was submitted. Please contact us to be verified.");
   }
 
   return (
