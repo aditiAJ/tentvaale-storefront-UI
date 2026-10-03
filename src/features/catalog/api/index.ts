@@ -9,6 +9,7 @@ import type {
   Page,
   ProductCard,
   ProductDetail,
+  ProductFilters,
   ProductQuery,
 } from "../types";
 
@@ -27,20 +28,28 @@ export function listOccasions(signal?: AbortSignal): Promise<Occasion[]> {
   return apiFetch<Occasion[]>(`${BASE}/occasions`, { signal });
 }
 
+/** What narrows a listing before any facet or price: shared by the products and their filter counts. */
+function scopeParams(query: ProductQuery): URLSearchParams {
+  const params = new URLSearchParams();
+  if (query.categories?.length) params.set("category", query.categories.join(","));
+  if (query.subcategories?.length) params.set("subcategory", query.subcategories.join(","));
+  if (query.occasion) params.set("occasion", query.occasion);
+  if (query.q?.trim()) params.set("q", query.q.trim());
+  return params;
+}
+
 /**
  * One page of products. Facet filters go as `facet.<code>=a,b` (comma-separated values, any one of
- * which may match); every facet named must match.
+ * which may match); every facet named must match. Price bands repeat as `priceRange`.
  */
 export function listProducts(
   query: ProductQuery = {},
   signal?: AbortSignal,
 ): Promise<Page<ProductCard>> {
-  const params = new URLSearchParams();
-  if (query.category) params.set("category", query.category);
-  if (query.subcategory) params.set("subcategory", query.subcategory);
-  if (query.occasion) params.set("occasion", query.occasion);
+  const params = scopeParams(query);
   if (query.priceMin !== undefined) params.set("priceMin", String(query.priceMin));
   if (query.priceMax !== undefined) params.set("priceMax", String(query.priceMax));
+  for (const band of query.priceRanges ?? []) params.append("priceRange", band);
   if (query.sort) params.set("sort", query.sort);
   if (query.page !== undefined) params.set("page", String(query.page));
   if (query.size !== undefined) params.set("size", String(query.size));
@@ -49,6 +58,17 @@ export function listProducts(
   }
   const suffix = params.size > 0 ? `?${params}` : "";
   return apiFetch<Page<ProductCard>>(`${BASE}/products${suffix}`, { signal });
+}
+
+/**
+ * The filter choices for a listing (global facets, plus those of the categories chosen) with a
+ * count each. Only category, sub-category, occasion and `q` matter here; the counts deliberately
+ * ignore the facets and prices already ticked so they do not jump around as boxes are ticked.
+ */
+export function getProductFilters(query: ProductQuery = {}, signal?: AbortSignal): Promise<ProductFilters> {
+  const params = scopeParams(query);
+  const suffix = params.size > 0 ? `?${params}` : "";
+  return apiFetch<ProductFilters>(`${BASE}/filters${suffix}`, { signal });
 }
 
 export function getProduct(slug: string, signal?: AbortSignal): Promise<ProductDetail> {
@@ -78,6 +98,7 @@ export const catalogKeys = {
   categories: ["catalog", "categories"] as const,
   occasions: ["catalog", "occasions"] as const,
   products: (query: ProductQuery) => ["catalog", "products", query] as const,
+  filters: (query: ProductQuery) => ["catalog", "filters", query] as const,
   product: (slug: string) => ["catalog", "product", slug] as const,
   bundles: (occasion?: string) => ["catalog", "bundles", occasion ?? ""] as const,
   bundle: (slug: string) => ["catalog", "bundle", slug] as const,

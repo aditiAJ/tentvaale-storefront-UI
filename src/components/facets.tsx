@@ -61,11 +61,14 @@ export function CheckList({
   selected,
   onToggle,
   collapseAfter = 6,
+  hideCounts = false,
 }: {
   options: { value: string; count: number }[];
   selected: string[];
   onToggle: (v: string) => void;
   collapseAfter?: number;
+  /** For lists whose counts are not known (the price bands). */
+  hideCounts?: boolean;
 }) {
   const [showAll, setShowAll] = useState(false);
   const visible = showAll ? options : options.slice(0, collapseAfter);
@@ -80,7 +83,7 @@ export function CheckList({
             <Checkbox checked={selected.includes(o.value)} onCheckedChange={() => onToggle(o.value)} />
             <span className="truncate">{o.value}</span>
           </span>
-          <span className="text-[11px] text-muted-foreground tabular-nums">{o.count}</span>
+          {!hideCounts && <span className="text-[11px] text-muted-foreground tabular-nums">{o.count}</span>}
         </label>
       ))}
       {options.length > collapseAfter && (

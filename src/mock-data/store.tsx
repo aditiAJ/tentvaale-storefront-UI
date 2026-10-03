@@ -17,6 +17,7 @@ import type {
   SubEventDetails,
 } from "./types";
 import { BUNDLES, COLLECTIONS, PRODUCTS } from "./seed";
+import { findProduct, useAllProducts } from "./product-registry";
 
 const STORAGE_KEY = "tentvaale.mockstore.v1";
 
@@ -165,6 +166,7 @@ const StoreContext = createContext<StoreContextValue | null>(null);
 export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<StoreState>(emptyState());
   const [hydrated, setHydrated] = useState(false);
+  const allProducts = useAllProducts();
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration, see features/enquiry/context.tsx for the same pattern
@@ -298,7 +300,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   // there rather than defaulting to a choice the customer didn't make.
   const setItemSharing = useCallback((planId: string, productId: string, decision: ItemSharingDecision) => {
     updatePlan(planId, (p, accountId) => {
-      const product = PRODUCTS.find((pr) => pr.id === productId);
+      const product = findProduct(productId);
       return pushAudit({ ...p, itemSharing: { ...p.itemSharing, [productId]: decision } }, "ItemSharingChanged", `${product?.name ?? productId}: ${decision}`, accountId);
     });
   }, []);
@@ -341,7 +343,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       },
     ) => {
       updatePlan(planId, (p, accountId) => {
-        const product = PRODUCTS.find((pr) => pr.id === item.productId);
+        const product = findProduct(item.productId);
         const planItem = { id: newId("item"), ...item };
         return pushAudit({ ...p, items: [...p.items, planItem] }, "ItemAdded", product?.name ?? item.productId, accountId);
       });
@@ -368,7 +370,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   const removePlanItem = useCallback((planId: string, itemId: string) => {
     updatePlan(planId, (p, accountId) => {
       const item = p.items.find((it) => it.id === itemId);
-      const product = PRODUCTS.find((pr) => pr.id === item?.productId);
+      const product = findProduct(item?.productId);
       return pushAudit({ ...p, items: p.items.filter((it) => it.id !== itemId) }, "ItemRemoved", product?.name ?? itemId, accountId);
     });
   }, []);
@@ -444,7 +446,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       function buildLines(itemIds: Set<string>): QuotationLine[] {
         // Skip lines whose product is gone from the catalog (stale saved plans) —
         // the plan page already hides them.
-        const items = plan!.items.filter((it) => itemIds.has(it.id) && PRODUCTS.some((pr) => pr.id === it.productId));
+        const items = plan!.items.filter((it) => itemIds.has(it.id) && findProduct(it.productId));
         // Mock admin negotiation, so the partial-accept UI (Flow 5) has real
         // variety to demonstrate: with 4+ lines, one comes back adjusted
         // (partial stock) and one rejected (out of stock); with 2-3, just one
@@ -452,7 +454,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         const adjustedIndex = items.length >= 2 ? (items.length >= 4 ? 1 : items.length - 1) : -1;
         const rejectedIndex = items.length >= 4 ? 3 : -1;
         return items.map((it, i) => {
-          const product = PRODUCTS.find((pr) => pr.id === it.productId)!;
+          const product = findProduct(it.productId)!;
           const requestedQty = it.dimensions?.length ?? it.quantity;
           const status: QuotationLineStatus = i === rejectedIndex ? "Rejected" : i === adjustedIndex ? "Adjusted" : "Confirmed";
           const confirmedQty = status === "Rejected" ? 0 : status === "Adjusted" ? Math.max(1, Math.floor(requestedQty * 0.6)) : requestedQty;
@@ -523,8 +525,8 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       if (!plan) throw new Error("Plan not found");
       requireOwner(plan);
 
-      const lines: QuotationLine[] = plan.items.filter((it) => PRODUCTS.some((pr) => pr.id === it.productId)).map((it) => {
-        const product = PRODUCTS.find((pr) => pr.id === it.productId)!;
+      const lines: QuotationLine[] = plan.items.filter((it) => findProduct(it.productId)).map((it) => {
+        const product = findProduct(it.productId)!;
         const qty = it.dimensions?.length ?? it.quantity;
         return {
           planItemId: it.id,
@@ -733,7 +735,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         ...state,
         currentAccount,
         hydrated,
-        products: PRODUCTS,
+        products: allProducts,
         bundles: BUNDLES,
         collections: COLLECTIONS,
         syncAccount,

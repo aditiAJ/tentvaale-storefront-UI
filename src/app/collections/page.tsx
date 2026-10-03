@@ -2,12 +2,14 @@
 
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { MediaCard } from "@/components/media-card";
-import { useMockStore } from "@/mock-data/store";
+import { Button } from "@/components/ui/button";
+import { SkeletonCard } from "@/components/ui/skeleton";
+import { useCollections } from "@/features/catalog/hooks";
 
-// Index for the "Featured Collections" nav entry — the [collectionId] detail
-// page already existed, this is the list that leads into it.
+// Index for the "Featured Collections" nav entry; the detail page opens a collection's pieces.
 export default function CollectionsPage() {
-  const { collections } = useMockStore();
+  const query = useCollections();
+  const collections = query.data ?? [];
 
   return (
     <div className="mx-auto w-full max-w-7xl py-10 md:py-14 page-x">
@@ -18,22 +20,38 @@ export default function CollectionsPage() {
         </p>
       </Reveal>
 
-      <Stagger immediate gap={0.06} className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {collections.map((c, i) => (
-          <StaggerItem key={c.id} className="flex flex-col">
-            <MediaCard
-              href={`/collections/${c.id}`}
-              image={c.heroImageUrl}
-              eyebrow={c.palette}
-              title={c.name}
-              description={c.tagline}
-              tags={c.bestFor}
-              metaEnd={`${c.productIds.length} pieces`}
-              priority={i < 3}
-            />
-          </StaggerItem>
-        ))}
-      </Stagger>
+      {query.isError ? (
+        <div role="alert" className="mt-10 flex flex-col items-start gap-3 rounded-2xl border border-border bg-card p-8">
+          <p className="text-sm text-muted-foreground">We couldn&apos;t load the collections just now.</p>
+          <Button variant="outline" onClick={() => query.refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : query.isPending ? (
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </div>
+      ) : collections.length === 0 ? (
+        <div className="mt-10 rounded-2xl border border-border bg-card p-8 text-sm text-muted-foreground">No collections yet. Please check back soon.</div>
+      ) : (
+        <Stagger immediate gap={0.06} className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {collections.map((c) => (
+            <StaggerItem key={c.id} className="flex flex-col">
+              <MediaCard
+                href={`/collections/${c.slug}`}
+                image={c.imageUrl}
+                eyebrow={c.palette}
+                title={c.name}
+                description={c.description}
+                tags={c.occasions.map((o) => o.name)}
+                metaEnd={`${c.productCount} piece${c.productCount === 1 ? "" : "s"}`}
+              />
+            </StaggerItem>
+          ))}
+        </Stagger>
+      )}
     </div>
   );
 }

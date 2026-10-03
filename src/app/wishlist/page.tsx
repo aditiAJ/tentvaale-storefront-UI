@@ -74,7 +74,7 @@ export default function WishlistPage() {
         </div>
         <div className="flex w-full flex-col gap-3 pt-2">
           <Button size="lg" nativeButton={false} render={<Link href="/catalog">Browse Catalog</Link>} />
-          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/collections/royal-heritage">Explore Themes</Link>} />
+          <Button size="lg" variant="outline" nativeButton={false} render={<Link href="/collections">Explore Themes</Link>} />
         </div>
       </Reveal>
     );
@@ -190,7 +190,7 @@ export default function WishlistPage() {
                   </div>
                   <div className="flex flex-col gap-2">
                     <Link
-                      href={`/catalog/${p.id}`}
+                      href={p.slug ? `/catalog/${p.slug}` : `/search?q=${encodeURIComponent(p.name)}`}
                       className="font-serif text-xl leading-snug text-card-foreground transition-colors duration-200 ease-out-quint hover:text-primary"
                     >
                       {p.name}

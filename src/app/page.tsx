@@ -8,12 +8,11 @@ import { useSkipEntrance } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
-import { useMockStore } from "@/mock-data/store";
-import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
-import { CATEGORIES } from "@/mock-data/taxonomy";
+import { formatMoney } from "@/lib/money";
+import { rateUnitLabel } from "@/features/catalog/format";
+import { useBundles, useCategories, useCollections, useOccasions, useProductPreview } from "@/features/catalog/hooks";
 
 // Flowstep screens 1 (desktop) / 2 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
-const OCCASIONS = ["Wedding", "Haldi", "Mehendi", "Sufi Night", "Ganpati", "Diwali", "Corporate"];
 
 // Mirrors the real flow: browse -> Plan with sub-events -> Submit for
 // Quotation or Direct Order -> pay -> delivery status on the Order page.
@@ -67,8 +66,13 @@ function SectionHeading({ title, href, linkLabel = "View all" }: { title: string
 }
 
 export default function Home() {
-  const { products, collections, bundles } = useMockStore();
-  const featuredProducts = products.slice(0, 8);
+  // Every band below the hero is the shop's own data; a band with nothing to show is left out
+  // rather than rendered as an empty heading.
+  const occasions = useOccasions().data ?? [];
+  const categories = useCategories().data ?? [];
+  const featuredProducts = useProductPreview({ sort: "NEWEST" }, 8).data?.items ?? [];
+  const collections = useCollections().data ?? [];
+  const bundles = useBundles().data ?? [];
 
   // Animate skill golden rules kept even at higher drama: only transform/
   // opacity animated (GPU-accelerated), ease-out on entrance, and always a
@@ -149,38 +153,41 @@ export default function Home() {
           />
         </form>
         <div className="flex flex-wrap justify-center gap-3">
-          {OCCASIONS.map((o) => (
+          {occasions.map((o) => (
             <Link
-              key={o}
-              href={`/search?occasion=${encodeURIComponent(o)}`}
+              key={o.id}
+              href={`/catalog?occasion=${encodeURIComponent(o.slug)}`}
               className="rounded-full border border-primary px-5 py-2 text-sm text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
             >
-              {o}
+              {o.name}
             </Link>
           ))}
         </div>
 
-        <motion.div
-          className="mt-4 grid w-full grid-cols-3 gap-x-4 gap-y-6 sm:grid-cols-5 md:grid-cols-9"
-          variants={gridContainer}
-          initial={skip ? "visible" : "hidden"}
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.4 }}
-        >
-          {CATEGORIES.map(({ image, name: label }) => (
-            <motion.div key={label} variants={gridItem}>
-              <Link href={`/catalog?category=${encodeURIComponent(label)}`} className="group flex flex-col items-center gap-2">
-                <div className="size-16 overflow-hidden rounded-full border border-primary/40 transition-colors group-hover:border-primary md:size-20">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={image} alt={label} className="size-full object-cover transition-transform duration-300 group-hover:scale-110" />
-                </div>
-                <span className="text-center text-xs leading-tight text-foreground transition-colors group-hover:text-primary md:text-sm">
-                  {label}
-                </span>
-              </Link>
-            </motion.div>
-          ))}
-        </motion.div>
+        {categories.length > 0 && (
+          <motion.div
+            className="mt-4 flex w-full flex-wrap justify-center gap-x-6 gap-y-6"
+            variants={gridContainer}
+            initial={skip ? "visible" : "hidden"}
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.4 }}
+          >
+            {categories.map((c) => (
+              <motion.div key={c.id} variants={gridItem} className="w-20 md:w-24">
+                <Link href={`/catalog?category=${encodeURIComponent(c.slug)}`} className="group flex flex-col items-center gap-2">
+                  <ProductThumb
+                    imageUrl={c.imageUrl}
+                    alt={c.name}
+                    className="size-16 rounded-full border border-primary/40 transition-colors group-hover:border-primary md:size-20"
+                  />
+                  <span className="text-center text-xs leading-tight text-foreground transition-colors group-hover:text-primary md:text-sm">
+                    {c.name}
+                  </span>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </Section>
 
       <Section className="bg-card/40">
@@ -205,6 +212,7 @@ export default function Home() {
         </motion.div>
       </Section>
 
+      {featuredProducts.length > 0 && (
       <Section>
         <SectionHeading title="Product Catalog" href="/catalog" linkLabel="Browse all" />
         <motion.div
@@ -216,13 +224,13 @@ export default function Home() {
         >
           {featuredProducts.map((p) => (
             <motion.div key={p.id} variants={gridItem}>
-              <Link href={`/catalog/${p.id}`} className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary">
+              <Link href={`/catalog/${p.slug}`} className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary">
                 <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-36 w-full rounded-xl md:h-44" />
                 <div className="flex flex-col gap-1 px-1 pb-1">
                   <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary">{p.name}</span>
-                  <span className="text-xs text-muted-foreground">From {formatRupees(p.basePrice)} / day</span>
+                  <span className="text-xs text-muted-foreground">From {formatMoney(p.dailyRate)} / day</span>
                   <span className="w-fit rounded-full border border-primary/40 px-2 py-0.5 text-[10px] text-primary">
-                    {rateTypeLabel(p.rateType)}
+                    {rateUnitLabel(p.rateType)}
                   </span>
                 </div>
               </Link>
@@ -230,7 +238,9 @@ export default function Home() {
           ))}
         </motion.div>
       </Section>
+      )}
 
+      {collections.length > 0 && (
       <Section>
         <SectionHeading title="Featured Collections" href="/collections" />
         <motion.div
@@ -243,20 +253,21 @@ export default function Home() {
           {collections.slice(0, 4).map((c) => (
             <motion.div key={c.id} variants={gridItem} className="flex flex-col">
               <MediaCard
-                href={`/collections/${c.id}`}
-                image={c.heroImageUrl}
+                href={`/collections/${c.slug}`}
+                image={c.imageUrl}
                 eyebrow={c.palette}
                 title={c.name}
-                description={c.tagline}
-                tags={c.bestFor}
+                description={c.description}
+                tags={c.occasions.map((o) => o.name)}
                 imageHeight="h-44 md:h-52"
-                sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
               />
             </motion.div>
           ))}
         </motion.div>
       </Section>
+      )}
 
+      {bundles.length > 0 && (
       <Section>
         <SectionHeading title="Bundles" href="/bundles" />
         <motion.div
@@ -269,20 +280,20 @@ export default function Home() {
           {bundles.slice(0, 6).map((b) => (
             <motion.div key={b.id} variants={gridItem} className="flex flex-col">
               <MediaCard
-                href={`/bundles/${b.id}`}
+                href={`/bundles/${b.slug}`}
                 image={b.imageUrl}
-                eyebrow={b.occasion}
+                eyebrow={b.occasions[0]?.name}
                 title={b.name}
                 description={b.tagline}
-                meta={`${b.guests} guests`}
-                metaEnd={`${b.includedProductIds.length} items`}
+                meta={<span className="font-serif text-lg text-primary">From {formatMoney(b.fromPricePerEvent)}</span>}
+                metaEnd="per event"
                 imageHeight="h-44 md:h-52"
-                sizes="(min-width: 768px) 33vw, 100vw"
               />
             </motion.div>
           ))}
         </motion.div>
       </Section>
+      )}
 
       <Section>
         <SectionHeading title="Featured Projects" />

@@ -25,6 +25,8 @@ export interface SubCategoryNode {
   id: number;
   name: string;
   slug: string;
+  /** Products a shopper can see in it. */
+  productCount: number;
 }
 
 export interface CategoryNode {
@@ -32,6 +34,8 @@ export interface CategoryNode {
   name: string;
   slug: string;
   imageUrl?: string;
+  /** Products a shopper can see in it, all its sub-categories together. */
+  productCount: number;
   subCategories: SubCategoryNode[];
 }
 
@@ -185,17 +189,48 @@ export interface Page<T> {
   total: number;
 }
 
-export type ProductSort = "NAME" | "PRICE_ASC" | "PRICE_DESC" | "NEWEST";
+/** RELEVANCE puts name matches first and is only meaningful with a search term. */
+export type ProductSort = "NAME" | "PRICE_ASC" | "PRICE_DESC" | "NEWEST" | "RELEVANCE";
 
-/** Every field is optional. `facets` maps a facet code to the values accepted, e.g. colour: ["Red"]. */
+/** A band of the price filter, as the backend reads it: "0-499.99", "10000-" (an end may be open). */
+export type PriceRange = string;
+
+/**
+ * Every field is optional. `categories` and `subcategories` are slugs, any one of which may match.
+ * `facets` maps a facet code to the values accepted, e.g. colour: ["Red"]. `q` is free text: every
+ * word must appear in the product's name, description, category, facets or occasions.
+ */
 export interface ProductQuery {
-  category?: string;
-  subcategory?: string;
+  categories?: string[];
+  subcategories?: string[];
   occasion?: string;
+  q?: string;
   facets?: Record<string, string[]>;
   priceMin?: number;
   priceMax?: number;
+  priceRanges?: PriceRange[];
   sort?: ProductSort;
   page?: number;
   size?: number;
+}
+
+/** One value of a filter and how many products in scope carry it. */
+export interface FacetFilterValue {
+  value: string;
+  count: number;
+}
+
+/** A facet a shopper can filter by, holding only the values that occur in the products in scope. */
+export interface FacetFilter {
+  code: string;
+  label: string;
+  /** "GLOBAL" or "CATEGORY". */
+  scope: string;
+  values: FacetFilterValue[];
+}
+
+export interface ProductFilters {
+  facets: FacetFilter[];
+  /** Products in scope (before any facet or price is applied). */
+  productCount: number;
 }

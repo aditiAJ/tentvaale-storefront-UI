@@ -61,18 +61,18 @@ function CheckAvailability() {
         if (it.kind === "collection") {
           const c = COLLECTIONS.find((x) => x.id === it.id)!;
           const price = Math.min(...c.productIds.map((pid) => PRODUCTS.find((p) => p.id === pid)?.basePrice ?? Infinity));
-          return { key: `c-${c.id}`, kind: "collection" as const, href: `/collections/${c.id}`, name: c.name, imageUrl: c.heroImageUrl, price, priceSuffix: "" };
+          return { key: `c-${c.id}`, kind: "collection" as const, href: "/collections", name: c.name, imageUrl: c.heroImageUrl, price, priceSuffix: "" };
         }
         if (it.kind === "bundle") {
           const b = BUNDLES.find((x) => x.id === it.id)!;
           const price = b.includedProductIds.reduce((sum, pid) => sum + (PRODUCTS.find((p) => p.id === pid)?.basePrice ?? 0), 0);
-          return { key: `b-${b.id}`, kind: "bundle" as const, href: `/bundles/${b.id}`, name: b.name, imageUrl: b.imageUrl, price, priceSuffix: "" };
+          return { key: `b-${b.id}`, kind: "bundle" as const, href: "/bundles", name: b.name, imageUrl: b.imageUrl, price, priceSuffix: "" };
         }
         const p = PRODUCTS.find((x) => x.id === it.id)!;
         return {
           key: `p-${p.id}`,
           kind: "product" as const,
-          href: `/catalog/${p.id}`,
+          href: `/search?q=${encodeURIComponent(p.name)}`,
           name: p.name,
           imageUrl: p.imageUrl,
           price: p.basePrice,

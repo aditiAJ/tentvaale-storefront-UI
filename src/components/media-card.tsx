@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { ProductThumb } from "@/components/product-thumb";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,11 +23,10 @@ export function MediaCard({
   metaEnd,
   imageHeight = "h-48 md:h-56",
   className,
-  priority,
-  sizes = "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw",
 }: {
   href: string;
-  image: string;
+  /** Optional: an item without a photo shows the neutral placeholder. */
+  image?: string;
   title: string;
   /** Small uppercase line above the title — occasion, palette. */
   eyebrow?: string;
@@ -40,8 +39,6 @@ export function MediaCard({
   metaEnd?: React.ReactNode;
   imageHeight?: string;
   className?: string;
-  priority?: boolean;
-  sizes?: string;
 }) {
   return (
     <Link
@@ -52,13 +49,12 @@ export function MediaCard({
       )}
     >
       <div className={cn("relative overflow-hidden bg-muted", imageHeight)}>
-        <Image
-          src={image}
+        {/* A plain <img> (via ProductThumb), not next/image: photos are entered in the admin and can
+            live on any host, which the image optimiser would refuse unless each were allow-listed. */}
+        <ProductThumb
+          imageUrl={image}
           alt={title}
-          fill
-          priority={priority}
-          sizes={sizes}
-          className="object-cover transition-transform duration-600 ease-out-quint group-hover:scale-[1.06]"
+          className="size-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.06]"
         />
         {/* Gold wash on hover, matching the product cards in /catalog. */}
         <span className="pointer-events-none absolute inset-0 bg-linear-to-t from-primary/15 to-transparent opacity-0 transition-opacity duration-300 ease-out-quint group-hover:opacity-100" />

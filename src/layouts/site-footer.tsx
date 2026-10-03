@@ -2,19 +2,11 @@ import Link from "next/link";
 import { MapPin, Phone } from "lucide-react";
 import { COMPANY, telHref } from "@/lib/company";
 import { SocialLinks } from "@/components/social-icons";
+import { useCategories } from "@/features/catalog/hooks";
 
 // Flowstep screens 1 (desktop 4-col grid) / 2 (mobile stacked). Bottom tab
 // bar covers primary nav on mobile, so this stays reachable via scroll.
 const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
-  {
-    title: "Shop",
-    links: [
-      { href: "/catalog?category=furniture", label: "Furniture" },
-      { href: "/catalog?category=mirrors", label: "Mirrors" },
-      { href: "/catalog?category=carpets", label: "Carpets" },
-      { href: "/catalog?category=lighting", label: "Lighting" },
-    ],
-  },
   {
     title: "Company",
     links: [
@@ -42,6 +34,18 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
 ];
 
 export function SiteFooter() {
+  // The Shop column is the shop's own first four categories, so it never links to one that is not there.
+  const categories = useCategories().data ?? [];
+  const columns = [
+    {
+      title: "Shop",
+      links: [
+        ...categories.slice(0, 4).map((c) => ({ href: `/catalog?category=${c.slug}`, label: c.name })),
+        { href: "/catalog", label: "All products" },
+      ],
+    },
+    ...COLUMNS,
+  ];
   return (
     <footer className="mt-16 w-full border-t border-border bg-secondary">
       <div className="mx-auto w-full max-w-[110rem] pt-14 pb-12 page-x">
@@ -54,7 +58,7 @@ export function SiteFooter() {
               Furniture, décor and fully styled collections, rented for the day.
             </p>
           </div>
-          {COLUMNS.map((col) => (
+          {columns.map((col) => (
             <nav key={col.title} className="flex flex-col gap-3" aria-label={col.title}>
               <span className="text-xs font-semibold tracking-[0.14em] text-primary uppercase">{col.title}</span>
               {col.links.map((l) => (

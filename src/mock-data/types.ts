@@ -29,6 +29,8 @@ export type IndoorOutdoor = "Indoor" | "Outdoor" | "Indoor & outdoor";
 // is derived from basePrice) plus its category's own facets in `attributes`.
 export interface Product {
   id: string;
+  /** Set on real products (registered from the backend catalogue): the product page address. */
+  slug?: string;
   name: string;
   /** One of CATEGORIES[].name in taxonomy.ts. */
   category: string;

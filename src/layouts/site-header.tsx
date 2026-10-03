@@ -10,10 +10,8 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import { useSession } from "@/features/auth/session";
-import { CATEGORIES } from "@/mock-data/taxonomy";
+import { useCategories } from "@/features/catalog/hooks";
 
-/** Mirrors the catalog page's own slug rule so its ?category= lookup matches. */
-const slug = (value: string) => value.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Flowstep screens 1 (desktop) / 2 (mobile). Desktop: full nav rail +
 // inline search + auth in one row. Mobile: hamburger + wordmark + icons, with
@@ -153,6 +151,8 @@ function NavItem({ href, label, active }: { href: string; label: string; active:
  * link, so a tap on touch (where there is no hover) still goes to /catalog.
  */
 function CatalogMenu({ active }: { active: boolean }) {
+  // The shop's own category tree. Until it arrives (or if it cannot) the menu just lists no groups.
+  const categories = useCategories().data ?? [];
   const [open, setOpen] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -210,23 +210,23 @@ function CatalogMenu({ active }: { active: boolean }) {
             className="absolute top-full left-0 z-50 pt-3"
           >
             <div className="grid w-[46rem] grid-cols-3 gap-x-6 gap-y-5 rounded-lg border border-border bg-card p-5 shadow-e3">
-              {CATEGORIES.map((category) => (
-                <div key={category.name} className="flex flex-col gap-1.5">
+              {categories.map((category) => (
+                <div key={category.id} className="flex flex-col gap-1.5">
                   <Link
-                    href={`/catalog?category=${slug(category.name)}`}
+                    href={`/catalog?category=${category.slug}`}
                     onClick={() => setOpen(false)}
                     className="text-sm font-medium text-foreground transition-colors duration-200 ease-out-quint hover:text-primary"
                   >
                     {category.name}
                   </Link>
-                  {category.subcategories.slice(0, 4).map((sub) => (
+                  {category.subCategories.slice(0, 4).map((sub) => (
                     <Link
-                      key={sub}
-                      href={`/catalog?category=${slug(category.name)}&subcategory=${slug(sub)}`}
+                      key={sub.id}
+                      href={`/catalog?category=${category.slug}&subcategory=${sub.slug}`}
                       onClick={() => setOpen(false)}
                       className="text-xs text-muted-foreground transition-colors duration-200 ease-out-quint hover:text-foreground"
                     >
-                      {sub}
+                      {sub.name}
                     </Link>
                   ))}
                 </div>
