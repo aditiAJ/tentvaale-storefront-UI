@@ -5,14 +5,14 @@ import { PRODUCTS } from "./seed";
 import type { Product } from "./types";
 
 /**
- * TEMPORARY BRIDGE (storefront Phase 2 until Phase 3): plans, wishlist, quotations and orders still
- * live in the local mock store, which looks products up by id in the old seed list. The catalogue
- * now reads real products from the backend, so a real product put in a plan has to be findable
- * there too. This remembers, in this browser, the real products the shopper has added or saved,
- * in the mock's own shape, and `findProduct` looks in it before the seed.
+ * TEMPORARY BRIDGE for the wishlist (until it moves to the backend, a later phase): the wishlist is
+ * still a per-browser list in the local mock store, which looks products up by id in the old seed
+ * list. The catalogue reads real products from the backend, so a real product the shopper saves
+ * has to be findable there too. This remembers, in this browser, the real products they saved, in
+ * the mock's own shape, and `findProduct` looks in it before the seed.
  *
  * Ids are the backend's product id as text ("42"); a variant is "42-v7". They cannot clash with the
- * seed's ids ("p18"). When plans move to the backend (Phase 3) this file, `catalog/plan-bridge.ts`
+ * seed's ids ("p18"). When the wishlist moves to the backend this file, `catalog/plan-bridge.ts`
  * and the seed products go away together.
  *
  * Prices here are a snapshot from the moment of adding. That is fine for the mock plan screens and

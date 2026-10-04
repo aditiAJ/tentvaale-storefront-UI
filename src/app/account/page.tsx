@@ -24,7 +24,6 @@ const NAV_SECTIONS = [
   { label: "Profile", id: "profile" },
   { label: "Addresses", id: "addresses" },
   { label: "Notifications", id: "notifications" },
-  { label: "Shared Plans", id: "shared-plans" },
   { label: "Order History", id: "order-history" },
   { label: "Logout", id: "logout" },
 ];
@@ -122,7 +121,6 @@ export default function AccountPage() {
   if (!account) return null;
 
   const myPlans = plans.filter((p) => p.ownerAccountId === account.id);
-  const sharedPlans = plans.filter((p) => p.coOwners.some((c) => c.accountId === account.id));
   const myOrders = orders.filter((o) => myPlans.some((p) => p.id === o.planId));
 
   function handleAddAddress() {
@@ -262,27 +260,6 @@ export default function AccountPage() {
               <span className="text-sm text-foreground">WhatsApp notifications</span>
               <Switch checked={whatsappNotify} onCheckedChange={setWhatsappNotify} />
             </Row>
-          </Panel>
-
-          <Panel id="shared-plans" title="Shared / Co-Owned Plans">
-            {sharedPlans.length === 0 ? (
-              <EmptyNote>No shared plans yet.</EmptyNote>
-            ) : (
-              sharedPlans.map((p, i) => {
-                const role = p.coOwners.find((c) => c.accountId === account.id)?.role;
-                return (
-                  <Row key={p.id} first={i === 0}>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-foreground">{p.name}</p>
-                      <p className="mt-1 text-xs text-muted-foreground">{role === "CoOwner" ? "Co-Owner" : "View-Only Planner"}</p>
-                    </div>
-                    <Link href={`/plans/${p.id}`} className="shrink-0 text-sm text-primary underline-offset-4 transition-colors hover:underline">
-                      View Plan
-                    </Link>
-                  </Row>
-                );
-              })
-            )}
           </Panel>
 
           <Panel

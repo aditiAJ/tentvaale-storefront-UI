@@ -1,107 +1,69 @@
 import { apiFetch } from "@/services/api-client";
-import type { SaveResult } from "@/services/api-client";
-import type { QuotationLink } from "@/features/quotations";
-import type { Plan, PlanAuditLogEntry, PlanCoOwner, PlanItem, SubEvent } from "../types";
+import type {
+  AddBundleInput,
+  AddItemInput,
+  Plan,
+  PlanDetailsInput,
+  PlanSummary,
+  SharingDecision,
+  SubEventInput,
+  UpdateItemInput,
+} from "../types";
 
-// Plan Board CRUD (Flow 2).
-export function listPlans(): Promise<Plan[]> {
-  return apiFetch<Plan[]>("api/storefront/plans");
-}
+/**
+ * The plan board. Every change answers with the whole plan as it now stands, so callers replace
+ * what they hold rather than patch it. Only the owner can read or change a plan (anyone else gets a
+ * 404), and only while it is a DRAFT (after that, a 422 says so).
+ */
+const BASE = "storefront/plans";
+const json = (body: unknown) => ({ body });
 
-export function getPlan(planId: string): Promise<Plan> {
-  return apiFetch<Plan>(`api/storefront/plans/${planId}`);
-}
+export const listPlans = (signal?: AbortSignal) => apiFetch<PlanSummary[]>(BASE, { signal });
 
-export function createPlan(name: string): Promise<SaveResult> {
-  return apiFetch<SaveResult>("api/storefront/plans", {
-    method: "POST",
-    body: { name },
-  });
-}
+export const getPlan = (planId: string, signal?: AbortSignal) => apiFetch<Plan>(`${BASE}/${planId}`, { signal });
 
-export function addSubEvent(
-  planId: string,
-  subEvent: Pick<SubEvent, "name" | "eventDate">,
-): Promise<SaveResult> {
-  return apiFetch<SaveResult>(`api/storefront/plans/${planId}/sub-events`, {
-    method: "POST",
-    body: subEvent,
-  });
-}
-
-// Removing a sub-event with tagged items falls back to the general plan list
-// rather than cascading a delete — see Contexts user-flows Flow 2 recommendation.
-export function removeSubEvent(
-  planId: string,
-  subEventId: string,
-): Promise<SaveResult> {
-  return apiFetch<SaveResult>(
-    `api/storefront/plans/${planId}/sub-events/${subEventId}`,
-    { method: "DELETE" },
+/** A new empty draft; the company is the backend's configured default. */
+export const createPlan = (input: PlanDetailsInput) =>
+  apiFetch<Plan>(BASE, { method: "POST", ...json({ name: input.name, eventDate: input.eventDate }) }).then((plan) =>
+    // The create call only takes a name and first date; the rest of the details go in as an update.
+    input.venue || input.eventEndDate || input.guestCount ? updatePlan(plan.id, input) : plan,
   );
-}
 
-export function addPlanItem(
-  planId: string,
-  item: Omit<PlanItem, "id" | "planId">,
-): Promise<SaveResult> {
-  return apiFetch<SaveResult>(`api/storefront/plans/${planId}/items`, {
-    method: "POST",
-    body: item,
-  });
-}
+export const updatePlan = (planId: string, input: PlanDetailsInput) =>
+  apiFetch<Plan>(`${BASE}/${planId}`, { method: "PUT", ...json(input) });
 
-export function removePlanItem(
-  planId: string,
-  itemId: string,
-): Promise<SaveResult> {
-  return apiFetch<SaveResult>(
-    `api/storefront/plans/${planId}/items/${itemId}`,
-    { method: "DELETE" },
-  );
-}
+export const deletePlan = (planId: string) => apiFetch<void>(`${BASE}/${planId}`, { method: "DELETE" });
 
-// Share/collaborate (Flow 3). Co-owners can edit but not submit; event planners are view-only.
-export function addCoOwner(
-  planId: string,
-  email: string,
-  role: PlanCoOwner["role"],
-): Promise<SaveResult> {
-  return apiFetch<SaveResult>(`api/storefront/plans/${planId}/collaborators`, {
-    method: "POST",
-    body: { email, role },
-  });
-}
+export const addSubEvent = (planId: string, input: SubEventInput) =>
+  apiFetch<Plan>(`${BASE}/${planId}/sub-events`, { method: "POST", ...json(input) });
 
-export function removeCoOwner(
-  planId: string,
-  accountId: string,
-): Promise<SaveResult> {
-  return apiFetch<SaveResult>(
-    `api/storefront/plans/${planId}/collaborators/${accountId}`,
-    { method: "DELETE" },
-  );
-}
+export const updateSubEvent = (planId: string, subEventId: string, input: SubEventInput) =>
+  apiFetch<Plan>(`${BASE}/${planId}/sub-events/${subEventId}`, { method: "PUT", ...json(input) });
 
-export function getPlanAuditLog(planId: string): Promise<PlanAuditLogEntry[]> {
-  return apiFetch<PlanAuditLogEntry[]>(
-    `api/storefront/plans/${planId}/audit-log`,
-  );
-}
+/** The function's items stay, now belonging to the plan as a whole. */
+export const removeSubEvent = (planId: string, subEventId: string) =>
+  apiFetch<Plan>(`${BASE}/${planId}/sub-events/${subEventId}`, { method: "DELETE" });
 
-export interface SubmitPlanPayload {
-  // One combined quotation, or split per sub-event — both supported (Flow 4, resolved 2026-09-02).
-  granularity: "Plan" | "PerSubEvent";
-}
+export const addItem = (planId: string, input: AddItemInput) =>
+  apiFetch<Plan>(`${BASE}/${planId}/items`, { method: "POST", ...json(input) });
 
-// Owner-only, server-enforced (Flow 3/4). Rolls Plan.status Draft -> Submitted;
-// rolled back to Draft if the admin quotation-create call fails (Diagrams.md §3).
-export function submitPlanForQuotation(
-  planId: string,
-  payload: SubmitPlanPayload,
-): Promise<QuotationLink[]> {
-  return apiFetch<QuotationLink[]>(`api/storefront/plans/${planId}/submit`, {
-    method: "POST",
-    body: payload,
-  });
-}
+export const updateItem = (planId: string, itemId: string, input: UpdateItemInput) =>
+  apiFetch<Plan>(`${BASE}/${planId}/items/${itemId}`, { method: "PUT", ...json(input) });
+
+export const removeItem = (planId: string, itemId: string) =>
+  apiFetch<Plan>(`${BASE}/${planId}/items/${itemId}`, { method: "DELETE" });
+
+/** The backend expands the bundle into its items, by the bundle's own rule, with the swaps allowed. */
+export const addBundle = (planId: string, input: AddBundleInput) =>
+  apiFetch<Plan>(`${BASE}/${planId}/bundles`, { method: "POST", ...json(input) });
+
+/** `decision` null clears the customer's call for that product. */
+export const decideSharing = (planId: string, productId: number, variantId: number | null, decision: SharingDecision | null) =>
+  apiFetch<Plan>(`${BASE}/${planId}/sharing`, { method: "PUT", ...json({ productId, variantId, decision }) });
+
+/** Cache keys, so a page and anything that refreshes it agree on them. */
+export const planKeys = {
+  all: ["plans"] as const,
+  list: ["plans", "list"] as const,
+  detail: (planId: string) => ["plans", "detail", planId] as const,
+};

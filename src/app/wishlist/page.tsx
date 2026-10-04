@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
 import { Heart } from "lucide-react";
-import { DUR, EASE, Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { DUR, EASE, Reveal } from "@/components/motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,13 +17,22 @@ import { ProductThumb } from "@/components/product-thumb";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
+import { addItem } from "@/features/plans/api";
+import { useCreatePlan, usePlans } from "@/features/plans/hooks";
+import { parseItemKey } from "@/features/plans/keys";
+import { ApiError } from "@/services/api-client";
+import { useQueryClient } from "@tanstack/react-query";
+import { planKeys } from "@/features/plans/api";
 import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
 
 // Flowstep screens 15 (desktop, populated) / 16 (mobile, empty state).
 // Both states are real here — which one shows depends on the actual wishlist.
 export default function WishlistPage() {
   const account = useRequireAccount();
-  const { products, wishlist, toggleWishlist, plans, createPlan, addPlanItem } = useMockStore();
+  const { products, wishlist, toggleWishlist } = useMockStore();
+  const queryClient = useQueryClient();
+  const plansQuery = usePlans();
+  const createPlan = useCreatePlan();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
@@ -32,7 +41,7 @@ export default function WishlistPage() {
   if (!account) return null;
 
   const items = wishlist.map((id) => products.find((p) => p.id === id)).filter(Boolean);
-  const myPlans = plans.filter((p) => p.ownerAccountId === account.id && p.status === "Draft");
+  const myPlans = (plansQuery.data ?? []).filter((p) => p.status === "DRAFT");
 
   function toggleSelect(id: string) {
     setSelected((s) => {
@@ -43,22 +52,42 @@ export default function WishlistPage() {
     });
   }
 
-  function moveToPlan(planId: string) {
+  /** Adds each chosen item to the plan (saved on the backend), taking it off the wishlist as it lands. */
+  async function moveToPlan(planId: string) {
     const ids = selected.size > 0 ? Array.from(selected) : wishlist;
-    for (const productId of ids) {
-      addPlanItem(planId, { productId, quantity: 1, subEventId: null });
-      toggleWishlist(productId);
+    let moved = 0;
+    const refused: string[] = [];
+    for (const key of ids) {
+      const ref = parseItemKey(key);
+      const name = products.find((p) => p.id === key)?.name ?? key;
+      if (!ref) {
+        refused.push(`${name}: no longer available`);
+        continue;
+      }
+      try {
+        await addItem(planId, { productId: ref.productId, variantId: ref.variantId, quantity: 1 });
+        toggleWishlist(key);
+        moved += 1;
+      } catch (error) {
+        refused.push(`${name}: ${error instanceof ApiError ? error.message : "could not be added"}`);
+      }
     }
+    void queryClient.invalidateQueries({ queryKey: planKeys.all });
     setSelected(new Set());
     setMoveDialogOpen(false);
-    toast.success(`Moved ${ids.length} item(s) to plan.`);
+    if (moved > 0) toast.success(`Moved ${moved} item${moved === 1 ? "" : "s"} to plan.`);
+    if (refused.length > 0) toast.error(refused.join("; "));
   }
 
-  function createPlanFromSelected() {
+  async function createPlanFromSelected() {
     if (!newPlanName.trim()) return;
-    const plan = createPlan(newPlanName.trim());
-    moveToPlan(plan.id);
-    setNewPlanName("");
+    try {
+      const plan = await createPlan.mutateAsync({ name: newPlanName.trim() });
+      setNewPlanName("");
+      await moveToPlan(plan.id);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "Couldn't create the plan.");
+    }
   }
 
   if (items.length === 0) {

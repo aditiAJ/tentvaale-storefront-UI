@@ -6,8 +6,9 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
 import { useRequireAccount } from "@/features/auth";
-import { canSubmitPlan, useMockStore } from "@/mock-data/store";
-import { getProductUsage, needsSharingDecision, requiredQuantity } from "@/mock-data/inventory-sharing";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useBoard } from "@/features/plans/hooks";
+import { getProductUsage, needsSharingDecision, requiredQuantity } from "@/features/plans/inventory-sharing";
 import { formatEventDateRange } from "@/mock-data/seed";
 
 // Plan Board redesign, screen 5 (Plan Summary) — the final checklist a
@@ -26,15 +27,15 @@ import { formatEventDateRange } from "@/mock-data/seed";
 export default function PlanSummaryPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const account = useRequireAccount();
-  const { getPlan, products } = useMockStore();
-  const plan = getPlan(planId);
+  const { board: plan, query } = useBoard(planId);
 
   if (!account) return null;
+  if (query.isPending) return <Skeleton className="mx-auto mt-10 h-64 w-full max-w-4xl" />;
   if (!plan) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Plan not found.</div>;
 
-  const canSubmit = canSubmitPlan(plan, account.id);
-  const usage = getProductUsage(plan, products);
-  const decisions = plan.itemSharing ?? {};
+  const canSubmit = plan.editable;
+  const usage = getProductUsage(plan, plan.products);
+  const decisions = plan.itemSharing;
   const startDate = plan.eventStartDate ?? plan.subEvents[0]?.eventDate;
 
   return (
@@ -86,23 +87,14 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
 
       <div className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
         {canSubmit ? (
-          <>
-            <Button
-              variant="outline"
-              className="rounded-lg border-primary text-primary"
-              disabled={plan.items.length === 0}
-              nativeButton={false}
-              render={<Link href={`/plans/${planId}/submit`}>Submit for Quotation</Link>}
-            />
-            <Button
-              className="rounded-lg bg-primary text-primary-foreground"
-              disabled={plan.items.length === 0}
-              nativeButton={false}
-              render={<Link href={`/plans/${planId}/direct-order`}>Direct Order (Pay Now)</Link>}
-            />
-          </>
+          <Button
+            className="rounded-lg bg-primary text-primary-foreground"
+            disabled={plan.items.length === 0}
+            nativeButton={false}
+            render={<Link href={`/plans/${planId}/submit`}>Submit for Quotation</Link>}
+          />
         ) : (
-          <span className="text-sm text-muted-foreground">View-only access — ask the plan owner to submit or order.</span>
+          <span className="text-sm text-muted-foreground">This plan has been sent for a quotation and can no longer be changed.</span>
         )}
       </div>
     </div>

@@ -14,7 +14,6 @@ import {
   ChevronDown,
   Clock,
   GanttChartSquare,
-  History as HistoryIcon,
   LayoutList,
   ListChecks,
   ListTodo,
@@ -28,43 +27,46 @@ import {
   Pencil,
   Plus,
   Repeat,
-  Search,
   Send,
-  Share2,
   Sparkles,
   Trash2,
   Truck,
-  UserPlus,
   Users,
   X,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { ProductThumb } from "@/components/product-thumb";
 import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { RentalTerms } from "@/components/rental-terms";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ApiError } from "@/services/api-client";
 import { useRequireAccount } from "@/features/auth";
-import { canSubmitPlan, planGroupLabel, useMockStore } from "@/mock-data/store";
-import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/mock-data/inventory-sharing";
-import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, planStatusLabel, rateTypeLabel } from "@/mock-data/seed";
-import type { PlanItem, PlanStatus, Product, SubEvent } from "@/mock-data/types";
+import { ItemPicker, type PickedLine } from "@/features/plans/components/ItemPicker";
+import { PLAN_STATUS_LABEL, planGroupLabel, type BoardItem, type BoardProduct, type BoardSubEvent } from "@/features/plans/board";
+import { usePlanActions, useBoard } from "@/features/plans/hooks";
+import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/features/plans/inventory-sharing";
+import { usePlanNudges } from "@/features/plans/nudges";
+import type { PlanStatus } from "@/features/plans/types";
+import { registerProducts } from "@/mock-data/product-registry";
+import { useMockStore } from "@/mock-data/store";
+import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
+
+type PlanItem = BoardItem;
+type Product = BoardProduct;
+type SubEvent = BoardSubEvent;
 
 // Flowstep screens 19 (desktop) / 20 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 const STATUS_STYLE: Record<PlanStatus, string> = {
-  Draft: "border border-muted-foreground text-muted-foreground",
-  Submitted: "border border-primary text-primary",
-  Quoted: "border border-primary text-primary",
-  PartiallyAccepted: "border border-primary text-primary",
-  Ordered: "bg-primary text-primary-foreground",
-  Cancelled: "border border-destructive/60 bg-destructive/10 text-destructive",
+  DRAFT: "border border-muted-foreground text-muted-foreground",
+  SUBMITTED_FOR_QUOTATION: "border border-primary text-primary",
+  QUOTED: "border border-primary text-primary",
+  ORDERED: "bg-primary text-primary-foreground",
 };
 
 const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
@@ -72,21 +74,24 @@ const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", setupDate: "", tea
 // "Add items" outside the setup suggestions opens the same picker on the full catalog.
 const BROWSE_PICKER: (typeof STARTER_SUGGESTIONS)[number] = { key: "browse", label: "product", categories: [] };
 
+const NO_PRODUCTS: BoardProduct[] = [];
+
 // "₹450 per unit" / "₹25 per sqft" — the rate type reads off the price
 // instead of sitting in a column of its own.
 function unitRateLabel(product: Product) {
   return `${formatRupees(product.basePrice)} ${rateTypeLabel(product.rateType)}`;
 }
 
-function initials(name: string) {
-  return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase();
-}
-
 export default function PlanDetailPage({ params }: { params: Promise<{ planId: string }> }) {
   const { planId } = use(params);
   const account = useRequireAccount();
-  const { getPlan, products, accounts, updatePlanDetails, renamePlanGroup, removeSubEvent, removePlanItem, movePlanItem, addPlanItem, setPlanItemQty, markSetupAdded, addSubEvent, updateSubEvent, setItemSharing, clearItemSharing, wishlist, toggleWishlist } = useMockStore();
-  const plan = getPlan(planId);
+  const { wishlist, toggleWishlist } = useMockStore();
+  // The plan lives on the backend: read through `useBoard`, changed through `actions` (each change
+  // is saved, and the plan it answers with replaces what is on screen).
+  const { board: plan, query } = useBoard(planId);
+  const actions = usePlanActions(planId);
+  const nudges = usePlanNudges(planId);
+  const products = plan?.products ?? NO_PRODUCTS;
 
   // null = General, an id = that function, undefined = not chosen yet (auto-pick below).
   const [chosenTab, setActiveTab] = useState<string | null | undefined>(undefined);
@@ -94,7 +99,6 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const [baseNameDraft, setBaseNameDraft] = useState<string | null>(null);
   // Keyed by sub-event id ("general" for the untagged list) so each
   // sub-event gets its own set of starter suggestions to work through.
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<Record<string, string[]>>({});
   // Manual expand/collapse of "Complete your setup", per sub-event; unset = auto.
   const [setupOpen, setSetupOpen] = useState<Record<string, boolean>>({});
   const [subEventDialogOpen, setSubEventDialogOpen] = useState(false);
@@ -102,7 +106,6 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const [customFunctionName, setCustomFunctionName] = useState(false);
   // null = the dialog is adding a new sub-event; an id = editing that one.
   const [editingSubEventId, setEditingSubEventId] = useState<string | null>(null);
-  const [auditLogOpen, setAuditLogOpen] = useState(false);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [planForm, setPlanForm] = useState<{ name: string; venue: string; eventStartDate: string; eventEndDate: string; guestCount?: number }>({
     name: "",
@@ -114,19 +117,31 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const [activeDate, setActiveDate] = useState<string | null>(null);
   // Which starter suggestion opened the product picker — null = picker closed.
   const [pickerFor, setPickerFor] = useState<(typeof STARTER_SUGGESTIONS)[number] | null>(null);
-  const [pickerQuery, setPickerQuery] = useState("");
-  const [pickerShowAll, setPickerShowAll] = useState(false);
-  // productId -> quantity for everything ticked in the picker.
-  const [pickerSelection, setPickerSelection] = useState<Record<string, number>>({});
 
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   if (!account) return null;
-  if (!plan) return <div className="mx-auto w-full max-w-5xl py-10 page-x">Plan not found.</div>;
+  if (query.isPending) return <PlanSkeleton />;
+  if (!plan) {
+    const missing = query.error instanceof ApiError && query.error.status === 404;
+    return (
+      <div role={missing ? undefined : "alert"} className="mx-auto flex w-full max-w-md flex-col items-center gap-4 py-24 text-center page-x">
+        <h1 className="font-serif text-2xl text-foreground">{missing ? "Plan not found" : "We couldn't load this plan"}</h1>
+        <p className="text-sm text-muted-foreground">{missing ? "It may have been deleted, or the link is out of date." : "Check your connection and try again."}</p>
+        <div className="flex gap-2">
+          {!missing && (
+            <Button variant="outline" onClick={() => query.refetch()}>
+              Try again
+            </Button>
+          )}
+          <Button variant="outline" nativeButton={false} render={<Link href="/plans">All plans</Link>} />
+        </div>
+      </div>
+    );
+  }
 
-  const canSubmit = canSubmitPlan(plan, account.id);
-  const owner = accounts.find((a) => a.id === plan.ownerAccountId);
-  const collaborators = [owner, ...plan.coOwners.map((c) => accounts.find((a) => a.id === c.accountId))].filter(Boolean);
+  // A plan sent for a quotation is the vendor's to work from: it can be read, not changed.
+  const canSubmit = plan.editable;
 
   // Before anything is picked: open "Your event" if it has items (or there are
   // no functions), otherwise the first function. A removed function falls back the same way.
@@ -165,8 +180,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const planDateLabel = formatEventDateRange(startDate, plan.eventEndDate);
 
   const suggestionScope = activeTab ?? "general";
-  const availableSuggestions = STARTER_SUGGESTIONS.filter((s) => !(dismissedSuggestions[suggestionScope] ?? []).includes(s.key));
-  const setupAddedKeys = plan.setupAdded?.[suggestionScope] ?? [];
+  const availableSuggestions = STARTER_SUGGESTIONS.filter((s) => !(nudges.dismissed[suggestionScope] ?? []).includes(s.key));
+  const setupAddedKeys = nudges.added[suggestionScope] ?? [];
   const setupAddedCount = availableSuggestions.filter((s) => setupAddedKeys.includes(s.key)).length;
   const setupComplete = setupAddedCount === availableSuggestions.length;
   // Open by default only while this sub-event is still empty; once anything is
@@ -174,24 +189,13 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const setupExpanded = setupOpen[suggestionScope] ?? (activeItems.length === 0 && !setupComplete);
 
   function dismissSuggestion(key: string) {
-    setDismissedSuggestions((d) => ({ ...d, [suggestionScope]: [...(d[suggestionScope] ?? []), key] }));
+    nudges.dismiss(suggestionScope, key);
   }
 
   // A suggestion opens the picker rather than adding a product outright — the
   // customer chooses which entry gate / stage / seating they actually want.
-  const pickerProducts = !pickerFor
-    ? []
-    : products.filter((prod) => {
-        const inCategory = pickerShowAll || pickerFor.categories.includes(prod.category);
-        const matchesQuery = pickerQuery.trim() === "" || prod.name.toLowerCase().includes(pickerQuery.trim().toLowerCase());
-        return inCategory && matchesQuery;
-      });
-
   function openPicker(suggestion: (typeof STARTER_SUGGESTIONS)[number]) {
     setPickerFor(suggestion);
-    setPickerQuery("");
-    setPickerShowAll(false);
-    setPickerSelection({});
   }
 
   // ⋯ on a line: move it to another function (so General items aren't
@@ -218,9 +222,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 {targets.map((t) => (
                   <DropdownMenuItem
                     key={t.id ?? "general"}
-                    onClick={() => {
-                      movePlanItem(planId, item.id, t.id);
-                      toast.success(`Moved ${name} to ${t.name}`);
+                    onClick={async () => {
+                      if (await actions.moveItem(item.id, t.id)) toast.success(`Moved ${name} to ${t.name}`);
                     }}
                   >
                     <MoveRight className="size-4" /> {t.name}
@@ -233,10 +236,14 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           {/* Move to Wishlist: take it off the plan but keep it saved, rather
               than making "changed my mind" mean losing the item entirely. */}
           <DropdownMenuItem
-            onClick={() => {
-              if (!wishlist.includes(item.productId)) toggleWishlist(item.productId);
-              removePlanItem(planId, item.id);
-              toast.success(`Moved ${name} to your wishlist`);
+            onClick={async () => {
+              // The wishlist is still a per-browser list (a later phase); remember the product so it can show there.
+              const product = productById.get(item.productId);
+              if (product) registerProducts([product], { detailed: false });
+              if (await actions.removeItem(item.id)) {
+                if (!wishlist.includes(item.productId)) toggleWishlist(item.productId);
+                toast.success(`Moved ${name} to your wishlist`);
+              }
             }}
           >
             <Heart className="size-4" /> Move to Wishlist
@@ -244,9 +251,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            onClick={() => {
-              removePlanItem(planId, item.id);
-              toast.success(`Removed ${name}`);
+            onClick={async () => {
+              if (await actions.removeItem(item.id)) toast.success(`Removed ${name}`);
             }}
           >
             <Trash2 className="size-4" /> Remove
@@ -633,7 +639,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       ] as const).map(([value, label]) => (
                         <button
                           key={value}
-                          onClick={() => setItemSharing(planId, u.productId, value)}
+                          onClick={() => void actions.decideSharing(u.productId, value === "Shared" ? "SHARED" : "DEDICATED")}
                           className={cn("flex-1 rounded-sm px-2 py-1 transition-all", decision === value ? "glow bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground")}
                         >
                           {label}
@@ -708,7 +714,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                         "rounded-lg border px-4 py-2 text-sm transition-colors",
                         decision === "Shared" ? "border-primary bg-primary text-primary-foreground" : "border-primary text-primary hover:bg-primary/10",
                       )}
-                      onClick={() => setItemSharing(planId, u.productId, "Shared")}
+                      onClick={() => void actions.decideSharing(u.productId, "SHARED")}
                     >
                       Yes, reuse these
                     </button>
@@ -717,12 +723,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                         "rounded-lg border px-4 py-2 text-sm transition-colors",
                         decision === "Dedicated" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/40",
                       )}
-                      onClick={() => setItemSharing(planId, u.productId, "Dedicated")}
+                      onClick={() => void actions.decideSharing(u.productId, "DEDICATED")}
                     >
                       No, keep separate
                     </button>
                     {decision && (
-                      <button className="text-xs text-muted-foreground underline" onClick={() => clearItemSharing(planId, u.productId)}>
+                      <button className="text-xs text-muted-foreground underline" onClick={() => void actions.decideSharing(u.productId, null)}>
                         Undo
                       </button>
                     )}
@@ -739,36 +745,15 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     );
   }
 
-  const selectedIds = Object.keys(pickerSelection);
-  const allPickerSelected = pickerProducts.length > 0 && pickerProducts.every((p) => pickerSelection[p.id]);
-
-  function togglePickerProduct(productId: string) {
-    setPickerSelection((s) => {
-      const next = { ...s };
-      if (next[productId]) delete next[productId];
-      else next[productId] = 1;
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    setPickerSelection((s) => {
-      const next = { ...s };
-      for (const p of pickerProducts) {
-        if (allPickerSelected) delete next[p.id];
-        else next[p.id] ??= 1;
-      }
-      return next;
-    });
-  }
-
-  function addSelectedFromPicker() {
-    for (const productId of selectedIds) {
-      addPlanItem(planId, { productId, quantity: pickerSelection[productId], subEventId: activeTab });
+  // Saves what was ticked in the picker, one line after another; the first refusal stops it.
+  async function addPicked(lines: PickedLine[]): Promise<boolean> {
+    for (const line of lines) {
+      const saved = await actions.addItem({ subEventId: activeTab, productId: line.productId, variantId: line.variantId, quantity: line.quantity });
+      if (!saved) return false;
     }
-    markSetupAdded(planId, suggestionScope, pickerFor!.key);
-    setPickerFor(null);
-    toast.success(`Added ${selectedIds.length} item${selectedIds.length === 1 ? "" : "s"} to ${activeLabel}`);
+    nudges.markAdded(suggestionScope, pickerFor!.key);
+    toast.success(`Added ${lines.length} item${lines.length === 1 ? "" : "s"} to ${activeLabel}`);
+    return true;
   }
 
   // Products used by 2+ sub-events. "Reuse" marks them Shared, so later
@@ -825,7 +810,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       "flex-1 rounded-lg border px-2 py-1.5 text-xs transition-colors",
                       isShared ? "border-primary bg-primary text-primary-foreground" : "border-primary text-primary hover:bg-primary/10",
                     )}
-                    onClick={() => setItemSharing(planId, u.productId, "Shared")}
+                    onClick={() => void actions.decideSharing(u.productId, "SHARED")}
                   >
                     Reuse
                   </button>
@@ -834,7 +819,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       "flex-1 rounded-lg border px-2 py-1.5 text-xs transition-colors",
                       decision === "Dedicated" ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:border-primary/40",
                     )}
-                    onClick={() => setItemSharing(planId, u.productId, "Dedicated")}
+                    onClick={() => void actions.decideSharing(u.productId, "DEDICATED")}
                   >
                     Keep separate
                   </button>
@@ -866,7 +851,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // Only name is required. Date, time, venue, setup/teardown and guest count
   // are logistics the customer often doesn't know yet — they stay optional
   // and can be left blank without blocking the sub-event.
-  function handleSaveSubEvent() {
+  async function handleSaveSubEvent() {
     const f = subEventForm;
     if (!f.name.trim()) return;
     const details = {
@@ -877,9 +862,18 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       startTime: f.startTime || undefined,
       endTime: f.endTime || undefined,
     };
-    if (editingSubEventId) updateSubEvent(planId, editingSubEventId, f.name.trim(), f.eventDate, details);
-    else addSubEvent(planId, f.name.trim(), f.eventDate, details);
-    closeSubEventDialog();
+    const input = {
+      name: f.name.trim(),
+      scheduledOn: f.eventDate || undefined,
+      venue: details.venue,
+      setupOn: details.setupDate,
+      teardownOn: details.teardownDate,
+      guestCount: details.guestCount,
+      startTime: details.startTime,
+      endTime: details.endTime,
+    };
+    const saved = editingSubEventId ? await actions.updateSubEvent(editingSubEventId, input) : await actions.addSubEvent(input);
+    if (saved) closeSubEventDialog();
   }
 
   function closeSubEventDialog() {
@@ -900,16 +894,21 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     setPlanDialogOpen(true);
   }
 
-  function handleSavePlan() {
+  async function handleSavePlan() {
     if (!planForm.name.trim()) return;
-    updatePlanDetails(planId, planForm.name.trim(), {
+    const saved = await actions.updateDetails({
+      name: planForm.name.trim(),
       venue: planForm.venue.trim() || undefined,
-      eventStartDate: planForm.eventStartDate || undefined,
+      eventDate: planForm.eventStartDate || undefined,
       eventEndDate: planForm.eventEndDate || undefined,
       guestCount: planForm.guestCount,
+      // The details form does not touch this, so it must be sent back or it would be cleared.
+      generalLabel: plan!.generalLabel,
     });
-    setPlanDialogOpen(false);
-    toast.success("Event details updated");
+    if (saved) {
+      setPlanDialogOpen(false);
+      toast.success("Event details updated");
+    }
   }
 
   function openAddSubEvent() {
@@ -944,7 +943,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     { label: "Event details", hint: "Dates, venue & guests", done: Boolean(plan.venue && startDate && plan.guestCount), onClick: openEditPlan },
     { label: "Add functions", hint: "Haldi, Sangeet, Wedding…", done: functionsCount > 0, onClick: openAddSubEvent },
     { label: "Pick items", hint: "Décor, furniture, lighting", done: itemsCount > 0 && emptySubEvents.length === 0, onClick: () => setView("sub-events") },
-    { label: "Get a quote", hint: "Submit or order directly", done: plan.status !== "Draft", onClick: undefined },
+    { label: "Get a quote", hint: "Submit or order directly", done: plan.status !== "DRAFT", onClick: undefined },
   ];
   const currentStep = steps.findIndex((s) => !s.done);
   const todos = [
@@ -971,39 +970,28 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   ];
 
   function saveBaseName() {
-    renamePlanGroup(planId, baseNameDraft ?? "");
+    void actions.renameGeneral(baseNameDraft ?? "");
     setBaseNameDraft(null);
   }
 
-  function confirmRemoveSubEvent(se: SubEvent) {
+  async function confirmRemoveSubEvent(se: SubEvent) {
     if (!window.confirm(`Remove ${se.name}? Its items will move to ${baseName}.`)) return;
-    removeSubEvent(planId, se.id);
-    setActiveTab(null);
-    toast.success(`${se.name} removed`);
+    if (await actions.removeSubEvent(se.id)) {
+      setActiveTab(null);
+      toast.success(`${se.name} removed`);
+    }
   }
 
   function openBrowsePicker() {
     openPicker(BROWSE_PICKER);
-    setPickerShowAll(true);
   }
 
   const submitActions = canSubmit ? (
-    <>
-      <Button className="w-full gap-2 rounded-lg" disabled={itemsCount === 0} nativeButton={itemsCount === 0} render={itemsCount === 0 ? undefined : <Link href={`/plans/${planId}/submit`} />}>
-        <Send className="size-4" /> Submit for Quotation
-      </Button>
-      <Button
-        variant="outline"
-        className="w-full gap-2 rounded-lg border-primary text-primary"
-        disabled={itemsCount === 0}
-        nativeButton={itemsCount === 0}
-        render={itemsCount === 0 ? undefined : <Link href={`/plans/${planId}/direct-order`} />}
-      >
-        <Zap className="size-4" /> Direct Order (Pay Now)
-      </Button>
-    </>
+    <Button className="w-full gap-2 rounded-lg" disabled={itemsCount === 0} nativeButton={itemsCount === 0} render={itemsCount === 0 ? undefined : <Link href={`/plans/${planId}/submit`} />}>
+      <Send className="size-4" /> Submit for Quotation
+    </Button>
   ) : (
-    <p className="text-sm text-muted-foreground">View-only access — ask the plan owner to submit or order.</p>
+    <p className="text-sm text-muted-foreground">This plan has been sent for a quotation and can no longer be changed.</p>
   );
 
   return (
@@ -1018,7 +1006,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="font-serif text-3xl text-foreground md:text-4xl">{plan.name}</h1>
-              <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{planStatusLabel(plan.status)}</span>
+              <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{PLAN_STATUS_LABEL[plan.status]}</span>
             </div>
             <div className="flex flex-wrap gap-2">
               <MetaChip icon={CalendarDays} value={startDate ? planDateLabel : undefined} empty="Add dates" onClick={openEditPlan} />
@@ -1029,27 +1017,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="mr-1 flex -space-x-2">
-              {collaborators.map((c, i) => (
-                <span
-                  key={c!.id}
-                  title={c!.name}
-                  className={cn(
-                    "flex size-8 items-center justify-center rounded-sm border-2 border-card text-xs font-medium",
-                    i === 0 ? "bg-primary text-primary-foreground" : i === 1 ? "bg-secondary text-secondary-foreground" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {initials(c!.name)}
-                </span>
-              ))}
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" nativeButton={false} render={<Link href={`/plans/${planId}/share`}><UserPlus className="size-4" /> Invite</Link>} />
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openEditPlan}>
+            <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openEditPlan} disabled={!plan.editable}>
               <Pencil className="size-4" /> Edit
-            </Button>
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" nativeButton={false} render={<Link href={`/plans/${planId}/share`}><Share2 className="size-4" /> Share</Link>} />
-            <Button variant="ghost" size="sm" className="gap-1.5 rounded-lg text-muted-foreground" onClick={() => setAuditLogOpen(true)}>
-              <HistoryIcon className="size-4" /> Activity
             </Button>
           </div>
         </div>
@@ -1080,6 +1049,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           })}
         </ol>
       </section>
+
+      {!plan.editable && (
+        <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
+          This plan has been sent for a quotation, so it can be read but no longer changed. Our team will come back to you with the quotation.
+        </section>
+      )}
 
       {/* ================= TO-DO ================= */}
       {todos.length > 0 && (
@@ -1165,6 +1140,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
 
               {/* ================= SELECTED FUNCTION ================= */}
+              <fieldset disabled={!plan.editable} className="contents">
               <section className="overflow-hidden rounded-2xl border border-border bg-card">
                 <header className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
                   <div className="flex min-w-0 flex-col gap-1">
@@ -1334,7 +1310,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                                   <span className="truncate text-sm font-medium text-foreground">{product.name}</span>
                                   <span className="truncate text-xs text-muted-foreground">
                                     {product.subcategory ?? product.category} · {unitRateLabel(product)}
-                                    {item.fabric && ` · ${item.fabric} upholstery`}
+                                    {!product.available && " · No longer available"}
                                   </span>
                                   {sharedWith && (
                                     <span className="flex w-fit items-center gap-1 rounded-sm bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
@@ -1344,7 +1320,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                                 </span>
                               </span>
                               <span className="order-3 flex items-center gap-2 text-xs text-muted-foreground md:order-none">
-                                <NumberStepper id={`qty-${item.id}`} size="sm" aria-label={`${product.name} quantity`} value={lineQty(item)} onChange={(v) => setPlanItemQty(planId, item.id, v)} />
+                                <NumberStepper id={`qty-${item.id}`} size="sm" aria-label={`${product.name} quantity`} value={lineQty(item)} onChange={(v) => void actions.setQuantity(item.id, v)} />
                                 {item.dimensions && (product.rateType === "SqFt" ? "sqft" : "ft")}
                               </span>
                               <span className="order-4 text-right font-serif text-lg text-primary md:order-none">{formatRupees(linePrice(item))}</span>
@@ -1368,6 +1344,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   )}
                 </div>
               </section>
+              </fieldset>
             </>
           )}
         </div>
@@ -1473,26 +1450,6 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
-      <Dialog open={auditLogOpen} onOpenChange={setAuditLogOpen}>
-                      <DialogContent className="max-h-[70vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Activity</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-2">
-                  {plan.auditLog
-                    .slice()
-                    .reverse()
-                    .map((entry) => (
-                      <div key={entry.id} className="rounded-lg border border-border p-3 text-sm">
-                        <span className="font-medium">{entry.action}</span> — {entry.detail}
-                        <div className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</div>
-                      </div>
-                    ))}
-                  {plan.auditLog.length === 0 && <p className="text-sm text-muted-foreground">No activity yet.</p>}
-                </div>
-              </DialogContent>
-      </Dialog>
 
       <Dialog open={subEventDialogOpen} onOpenChange={(open) => (open ? setSubEventDialogOpen(true) : closeSubEventDialog())}>
                   <DialogContent>
@@ -1612,89 +1569,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             </DialogFooter>
           </DialogContent>
       </Dialog>
-
-            {/* Product picker — opened by a starter suggestion, slides in from the right. */}
-      <Sheet open={pickerFor !== null} onOpenChange={(open) => !open && setPickerFor(null)}>
-        <SheetContent side="right" className="flex w-full flex-col gap-0 sm:max-w-md">
-          <SheetHeader className="gap-1">
-            <SheetTitle>{pickerFor?.key === BROWSE_PICKER.key ? "Add items" : `Choose a ${pickerFor?.label}`}</SheetTitle>
-            <p className="text-sm text-muted-foreground">Adding to {activeLabel} · tick items and set quantities</p>
-          </SheetHeader>
-          <div className="flex flex-col gap-3 px-4 pb-3">
-            <div className="relative">
-              <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search products"
-                className="pl-9"
-                value={pickerQuery}
-                onChange={(e) => setPickerQuery(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">
-                {pickerShowAll ? "All products" : pickerFor?.categories.join(" · ")}
-              </span>
-              <span className="flex items-center gap-3">
-                {pickerProducts.length > 0 && (
-                  <button className="text-primary hover:underline" onClick={toggleSelectAll}>
-                    {allPickerSelected ? "Clear all" : "Select all"}
-                  </button>
-                )}
-                {pickerFor?.key !== BROWSE_PICKER.key && (
-                  <button className="text-primary hover:underline" onClick={() => setPickerShowAll((v) => !v)}>
-                    {pickerShowAll ? "Suggested only" : "Show all products"}
-                  </button>
-                )}
-              </span>
-            </div>
-          </div>
-          <div className="flex-1 overflow-y-auto border-t border-border">
-            {pickerProducts.map((prod) => {
-              const qty = pickerSelection[prod.id];
-              return (
-                <div
-                  key={prod.id}
-                  className={cn("flex w-full items-center gap-3 border-b border-border p-4 transition-colors", qty ? "bg-primary/5" : "hover:bg-secondary")}
-                >
-                  <button className="flex min-w-0 flex-1 items-center gap-3 text-left" onClick={() => togglePickerProduct(prod.id)} aria-pressed={!!qty}>
-                    <span
-                      className={cn(
-                        "flex size-5 shrink-0 items-center justify-center rounded border",
-                        qty ? "border-primary bg-primary text-primary-foreground" : "border-border",
-                      )}
-                    >
-                      {qty && <Check className="size-3" />}
-                    </span>
-                    <ProductThumb imageUrl={prod.imageUrl} alt={prod.name} className="size-14 shrink-0" />
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate text-sm text-foreground">{prod.name}</span>
-                      <span className="text-xs text-muted-foreground">{prod.category}</span>
-                      <span className="text-xs text-primary">{unitRateLabel(prod)}</span>
-                    </span>
-                  </button>
-                  {qty && (
-                    <NumberStepper
-                      size="sm"
-                      className="shrink-0"
-                      aria-label={`${prod.name} quantity`}
-                      value={qty}
-                      onChange={(v) => setPickerSelection((s) => ({ ...s, [prod.id]: v }))}
-                    />
-                  )}
-                </div>
-              );
-            })}
-            {pickerProducts.length === 0 && (
-              <p className="p-6 text-center text-sm text-muted-foreground">No products match. Try &quot;Show all products&quot;.</p>
-            )}
-          </div>
-          <div className="border-t border-border p-4">
-            <Button className="w-full" disabled={selectedIds.length === 0} onClick={addSelectedFromPicker}>
-              {selectedIds.length === 0 ? "Select products to add" : `Add ${selectedIds.length} selected`}
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {/* Product picker: opened by a starter suggestion or "Add items", slides in from the right. */}
+      <ItemPicker prompt={pickerFor} targetLabel={activeLabel} onClose={() => setPickerFor(null)} onAdd={addPicked} />
 
       {/* Mobile action bar — the sidebar's buttons are off-screen on phones */}
       <footer className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
@@ -1704,11 +1580,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         </div>
         <div className="ml-auto flex gap-2">
           {canSubmit && itemsCount > 0 ? (
-            <>
-              <Button variant="outline" size="sm" className="rounded-lg border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}/direct-order`}>Order now</Link>} />
-              <Button size="sm" className="rounded-lg" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Get quote</Link>} />
-            </>
-          ) : (
+            <Button size="sm" className="rounded-lg" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Get quote</Link>} />
+          ) : canSubmit && (
             <Button size="sm" className="rounded-lg" onClick={openBrowsePicker}>
               <Plus className="size-4" /> Add items
             </Button>
@@ -1736,5 +1609,18 @@ function MetaChip({ icon: Icon, value, empty, onClick }: { icon: LucideIcon; val
     </button>
   ) : (
     <span className={cls}>{content}</span>
+  );
+}
+
+function PlanSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-7xl pt-6 pb-28 md:pb-12 page-x" aria-busy="true">
+      <div className="shimmer h-4 w-24 rounded bg-muted/70" />
+      <div className="shimmer mt-3 h-44 rounded-2xl bg-muted/70" />
+      <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
+        <div className="shimmer h-96 rounded-2xl bg-muted/70" />
+        <div className="shimmer h-72 rounded-2xl bg-muted/70" />
+      </div>
+    </div>
   );
 }

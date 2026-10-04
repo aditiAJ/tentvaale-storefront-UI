@@ -1,15 +1,15 @@
+import { itemKey } from "@/features/plans/keys";
 import { registerProducts } from "@/mock-data/product-registry";
 import type { Product, RateType } from "@/mock-data/types";
 import type { ProductCard, ProductDetail, Variant } from "./types";
-import type { Money } from "@/lib/money";
 
 /**
- * TEMPORARY BRIDGE (until storefront Phase 3 moves plans to the backend).
+ * TEMPORARY BRIDGE for the wishlist (until it moves to the backend, a later phase).
  *
- * Adds, saves and bundles still go through the local mock store, which knows products in its own
- * shape. These helpers turn what the catalogue API returned into that shape, remember it in the
- * product registry, and hand back the id the mock store should use. Nothing here is a model of the
- * backend: Phase 3 deletes this file and the plan items carry the real product and variant ids.
+ * Plans are on the backend now and take real product and variant ids. The wishlist is still a
+ * per-browser list in the local mock store, which knows products in its own shape. These helpers turn
+ * what the catalogue API returned into that shape, remember it in the product registry, and hand back
+ * the id the wishlist uses ("42", or "42-v7" for a variant). Nothing here is a model of the backend.
  */
 const RATE: Record<ProductCard["rateType"], RateType> = { QTY: "Qty", SQFT: "SqFt", RFT: "RFt" };
 
@@ -20,9 +20,7 @@ const RATE: Record<ProductCard["rateType"], RateType> = { QTY: "Qty", SQFT: "SqF
 const UNKNOWN_STOCK = 999;
 
 /** The id the mock store uses for a variant of a product ("42-v7"); the bare id when there is none. */
-export function planProductId(productId: number, variantId?: number | null): string {
-  return variantId ? `${productId}-v${variantId}` : String(productId);
-}
+export const planProductId = itemKey;
 
 function sizeOf(detail: ProductDetail): string | undefined {
   const d = detail.dimensions;
@@ -80,33 +78,3 @@ export function registerDetail(detail: ProductDetail, variant?: Variant | null):
   return products[products.length - 1].id;
 }
 
-/** One line of a bundle as the shopper has set it up (after any swaps). */
-export interface BundleLine {
-  productId: number;
-  variantId?: number | null;
-  name: string;
-  slug?: string;
-  imageUrl?: string;
-  dailyRate: Money;
-  quantity: number;
-}
-
-/**
- * Remembers the products of a bundle and returns what to add to a plan: one line per item, with the
- * quantity the bundle sets. The bundle response does not say how an item is rated, so each is
- * treated as per unit; a product already registered from its own page keeps its real rate type.
- */
-export function registerBundleLines(lines: BundleLine[]): { productId: string; quantity: number }[] {
-  const products: Product[] = lines.map((line) => ({
-    id: planProductId(line.productId, line.variantId),
-    slug: line.slug,
-    name: line.name,
-    category: "Bundle",
-    rateType: "Qty",
-    basePrice: line.dailyRate.amount,
-    imageUrl: line.imageUrl,
-    availableQuantity: UNKNOWN_STOCK,
-  }));
-  registerProducts(products, { detailed: false });
-  return lines.map((line, i) => ({ productId: products[i].id, quantity: line.quantity }));
-}

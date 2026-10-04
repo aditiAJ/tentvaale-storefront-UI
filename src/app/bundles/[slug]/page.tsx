@@ -18,8 +18,20 @@ import { ApiError } from "@/services/api-client";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
 import { useBundle, useBundles } from "@/features/catalog/hooks";
-import { registerBundleLines, type BundleLine } from "@/features/catalog/plan-bridge";
 import type { BundleDetail } from "@/features/catalog/types";
+import { usePlanActions } from "@/features/plans/hooks";
+import { PlanTargetFields, usePlanTarget } from "@/features/plans/target";
+import type { Money } from "@/lib/money";
+
+/** One line of the bundle as the shopper has set it up: each item, or the alternative swapped in. */
+interface BundleLine {
+  productId: number;
+  variantId?: number | null;
+  name: string;
+  imageUrl?: string;
+  dailyRate: Money;
+  quantity: number;
+}
 
 // Flowstep screens 11 (desktop) / 12 (mobile).
 // Each included item can be swapped for one of the alternatives the vendor allows for it (and only
@@ -71,10 +83,10 @@ export default function BundlePage({ params }: { params: Promise<{ slug: string 
 function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: number; slug: string; name: string; imageUrl?: string }[] }) {
   const router = useRouter();
   const reduce = useReducedMotion();
-  const { currentAccount, plans, addPlanItem } = useMockStore();
-  const myPlans = plans.filter((p) => p.ownerAccountId === currentAccount?.id && p.status === "Draft");
+  const { currentAccount } = useMockStore();
+  const target = usePlanTarget();
+  const actions = usePlanActions(target.planId);
 
-  const [planId, setPlanId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   // item index -> index into that item's swap options (undefined = the bundle's own pick).
@@ -103,26 +115,29 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
   const subtotal = lines.reduce((sum, l) => sum + l.dailyRate.amount * l.quantity, 0);
   const subtotalMoney = { ...bundle.fromPricePerEvent, amount: subtotal };
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!currentAccount) {
       router.push("/signup");
       return;
     }
-    if (!planId) {
-      toast.error("Choose a plan to add this bundle to.");
+    if (!target.planId) {
+      toast.error("Create a plan first, then add this bundle to it.");
       return;
     }
-    for (const line of registerBundleLines(lines)) {
-      addPlanItem(planId, {
-        productId: line.productId,
-        quantity: line.quantity,
-        subEventId: null,
-        rentalStart: startDate || undefined,
-        rentalEnd: endDate || undefined,
-      });
-    }
+    // The backend expands the bundle into its items; only the swaps the shopper chose are sent.
+    const saved = await actions.addBundle({
+      bundleSlug: bundle.slug,
+      subEventId: target.subEventId,
+      rentalStart: startDate || undefined,
+      rentalEnd: endDate || undefined,
+      swaps: bundle.items.flatMap((item, i) => {
+        const option = swaps[i] === undefined ? undefined : item.swapOptions[swaps[i]!];
+        return option ? [{ productId: item.productId, variantId: item.variantId, toProductId: option.productId, toVariantId: option.variantId }] : [];
+      }),
+    });
+    if (!saved) return;
     toast.success(`${bundle.name} added — ${lines.length} items in your plan.`);
-    router.push(`/plans/${planId}`);
+    router.push(`/plans/${target.planId}`);
   }
 
   const guests = bundle.guestMin && bundle.guestMax ? `${bundle.guestMin}–${bundle.guestMax}` : bundle.guestMax ? `Up to ${bundle.guestMax}` : bundle.guestMin ? `${bundle.guestMin}+` : "Any";
@@ -238,7 +253,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
             <CardTitle className="font-serif text-2xl text-foreground">Plan this bundle</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 p-0">
-            <Button size="lg" onClick={handleAdd} disabled={lines.length === 0}>
+            <Button size="lg" onClick={handleAdd} disabled={lines.length === 0 || actions.saving}>
               Add Full Bundle to Plan
             </Button>
             <div className="flex flex-col gap-4 border-t border-border pt-5">
@@ -254,20 +269,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
                 </div>
               </div>
             </div>
-            {currentAccount && (
-              <Select value={planId} onValueChange={(v) => v && setPlanId(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Add to: Select a Plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {myPlans.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {currentAccount && <PlanTargetFields target={target} className="flex flex-col gap-3" />}
           </CardContent>
           <CardFooter className="justify-between rounded-none border-t border-border bg-transparent p-0 pt-5">
             <span className="text-sm text-muted-foreground">Bundle subtotal</span>
@@ -314,7 +316,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
           <span className="text-[11px] text-muted-foreground">Bundle subtotal</span>
           <span className="font-serif text-lg text-primary">{formatMoney(subtotalMoney)}</span>
         </div>
-        <Button size="lg" className="flex-1" onClick={handleAdd} disabled={lines.length === 0}>
+        <Button size="lg" className="flex-1" onClick={handleAdd} disabled={lines.length === 0 || actions.saving}>
           Add Full Bundle to Plan
         </Button>
       </motion.div>

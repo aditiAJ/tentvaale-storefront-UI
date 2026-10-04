@@ -4,20 +4,13 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type {
   Account,
   Address,
-  ItemSharingDecision,
   Order,
   Plan,
   PlanAuditAction,
-  PlanCoOwnerRole,
-  PlanEventDetails,
   Quotation,
-  QuotationLine,
-  QuotationLineStatus,
-  SubEvent,
-  SubEventDetails,
 } from "./types";
 import { BUNDLES, COLLECTIONS, PRODUCTS } from "./seed";
-import { findProduct, useAllProducts } from "./product-registry";
+import { useAllProducts } from "./product-registry";
 
 const STORAGE_KEY = "tentvaale.mockstore.v1";
 
@@ -45,7 +38,9 @@ function loadState(): StoreState {
     // missing those keys and crash every reader downstream.
     // The signed-in account is never taken from storage: only the real session (see
     // features/auth/session.tsx) may set it, so a stale local login cannot outlive the real one.
-    if (raw) return { ...emptyState(), ...(JSON.parse(raw) as Partial<StoreState>), currentAccountId: null };
+    // Plans now live on the backend, so any plans, quotations or orders the old local demo saved here
+    // are dropped rather than shown beside real ones.
+    if (raw) return { ...emptyState(), ...(JSON.parse(raw) as Partial<StoreState>), currentAccountId: null, plans: [], quotations: [], orders: [] };
   } catch {
     // fall through
   }
@@ -60,26 +55,9 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-class OwnerOnlyError extends Error {}
-
-// Owner and full co-owners can submit for quotation / direct order; view-only
-// planners can't.
-// ponytail: permission gate switched off for now (owner was being blocked);
-// restore the owner/co-owner check below when roles are sorted out.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function canSubmitPlan(plan: Plan, accountId: string | null | undefined): boolean {
-  return true;
-  // return !!accountId && (plan.ownerAccountId === accountId || plan.coOwners.some((c) => c.accountId === accountId && c.role === "CoOwner"));
-}
-
 /** Label for a plan's items that aren't tied to a function. */
 export function planGroupLabel(plan: Pick<Plan, "generalLabel">): string {
   return plan.generalLabel?.trim() || "Your event";
-}
-
-// "Velvet Lounge Sofa (Velvet)" on quotes, orders and invoices when a fabric was chosen.
-function lineName(productName: string, fabric?: string): string {
-  return fabric ? `${productName} (${fabric})` : productName;
 }
 
 function pushAudit(plan: Plan, action: PlanAuditAction, detail: string, accountId: string): Plan {
@@ -99,48 +77,15 @@ interface StoreContextValue extends StoreState {
 
   /**
    * TEMPORARY BRIDGE: makes the local account mirror the real signed-in one (same id, name, email),
-   * creating it, and its first empty plan, on first sight. Removed when plans move to the backend.
+   * creating it on first sight. Removed with the rest of this store when wishlist and addresses move to the backend.
    */
   syncAccount: (real: { id: string; fullName: string; email: string; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => void;
   logout: () => void;
   upgradeToEventPlanner: () => void;
 
-  createPlan: (name: string, details?: PlanEventDetails) => Plan;
-  updatePlanDetails: (planId: string, name: string, details: PlanEventDetails) => void;
-  renamePlanGroup: (planId: string, label: string) => void;
-  addSubEvent: (planId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
-  updateSubEvent: (planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => void;
-  removeSubEvent: (planId: string, subEventId: string) => void;
-  setItemSharing: (planId: string, productId: string, decision: ItemSharingDecision) => void;
-  clearItemSharing: (planId: string, productId: string) => void;
-  addPlanItem: (
-    planId: string,
-    item: {
-      productId: string;
-      quantity: number;
-      subEventId: string | null;
-      dimensions?: { length: number; width?: number };
-      rentalStart?: string;
-      rentalEnd?: string;
-      fabric?: string;
-      colour?: string;
-    },
-  ) => void;
-  removePlanItem: (planId: string, itemId: string) => void;
-  movePlanItem: (planId: string, itemId: string, subEventId: string | null) => void;
-  adjustPlanItemQty: (planId: string, itemId: string, delta: number) => void;
-  setPlanItemQty: (planId: string, itemId: string, qty: number) => void;
-  markSetupAdded: (planId: string, scope: string, key: string) => void;
-  addBundleToPlan: (planId: string, bundleId: string, rental?: { rentalStart?: string; rentalEnd?: string }) => void;
-
-  addCoOwner: (planId: string, email: string, name: string, role: PlanCoOwnerRole) => void;
-  removeCoOwner: (planId: string, accountId: string) => void;
-
-  submitPlanForQuotation: (planId: string, granularity: "Plan" | "PerSubEvent") => Quotation[];
   acceptQuotationLines: (quotationId: string, planItemIds: string[]) => void;
   rejectQuotation: (quotationId: string, resolution: "Draft" | "Cancelled") => void;
   payForQuotation: (quotationId: string) => Order;
-  createDirectOrderQuotation: (planId: string) => Quotation;
 
   previewCancellation: (orderId: string) => {
     lines: { planItemId: string; productName: string; subEventLabel: string; amount: number; cancellable: boolean; reason?: string }[];
@@ -181,16 +126,6 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
 
   const currentAccount = state.accounts.find((a) => a.id === state.currentAccountId) ?? null;
 
-  function requireOwner(plan: Plan) {
-    if (!canSubmitPlan(plan, state.currentAccountId)) {
-      throw new OwnerOnlyError("Only the plan owner or a co-owner can do this.");
-    }
-  }
-
-  function updatePlan(planId: string, fn: (p: Plan, accountId: string) => Plan) {
-    setState((s) => ({ ...s, plans: s.plans.map((p) => (p.id === planId ? fn(p, s.currentAccountId ?? "system") : p)) }));
-  }
-
   const syncAccount = useCallback(
     (real: { id: string; fullName: string; email: string; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => {
       const mirrored: Account = {
@@ -211,23 +146,7 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
           s.currentAccountId === mirrored.id;
         if (unchanged) return s;
         const accounts = existing ? s.accounts.map((a) => (a.id === mirrored.id ? mirrored : a)) : [...s.accounts, mirrored];
-        const plans = s.plans.some((p) => p.ownerAccountId === mirrored.id)
-          ? s.plans
-          : [
-              ...s.plans,
-              {
-                id: newId("plan"),
-                ownerAccountId: mirrored.id,
-                name: "My Plan Event",
-                status: "Draft" as const,
-                subEvents: [],
-                items: [],
-                coOwners: [],
-                auditLog: [],
-                createdAt: nowIso(),
-              },
-            ];
-        return { ...s, accounts, plans, currentAccountId: mirrored.id };
+        return { ...s, accounts, currentAccountId: mirrored.id };
       });
     },
     [],
@@ -243,327 +162,6 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
       accounts: s.accounts.map((a) => (a.id === s.currentAccountId ? { ...a, accountType: "EventPlanner" as const } : a)),
     }));
   }, []);
-
-  const createPlan = useCallback(
-    (name: string, details?: PlanEventDetails) => {
-      if (!state.currentAccountId) throw new Error("Not signed in");
-      const plan: Plan = {
-        id: newId("plan"),
-        ownerAccountId: state.currentAccountId,
-        name,
-        ...details,
-        status: "Draft",
-        subEvents: [],
-        items: [],
-        coOwners: [],
-        auditLog: [],
-        createdAt: nowIso(),
-      };
-      setState((s) => ({ ...s, plans: [...s.plans, plan] }));
-      return plan;
-    },
-    [state.currentAccountId],
-  );
-
-  const addSubEvent = useCallback((planId: string, name: string, eventDate: string, details?: SubEventDetails) => {
-    updatePlan(planId, (p, accountId) => {
-      const subEvent: SubEvent = { id: newId("sub"), name, eventDate, ...details };
-      return pushAudit({ ...p, subEvents: [...p.subEvents, subEvent] }, "SubEventAdded", name, accountId);
-    });
-  }, []);
-
-  // Header "edit" on the plan page: name + event details (venue, dates, guests).
-  const updatePlanDetails = useCallback((planId: string, name: string, details: PlanEventDetails) => {
-    updatePlan(planId, (p, accountId) => pushAudit({ ...p, name, ...details }, "PlanEdited", name, accountId));
-  }, []);
-
-  const renamePlanGroup = useCallback((planId: string, label: string) => {
-    updatePlan(planId, (p) => ({ ...p, generalLabel: label.trim() || undefined }));
-  }, []);
-
-  const updateSubEvent = useCallback((planId: string, subEventId: string, name: string, eventDate: string, details?: SubEventDetails) => {
-    updatePlan(planId, (p, accountId) =>
-      pushAudit(
-        {
-          ...p,
-          subEvents: p.subEvents.map((se) => (se.id === subEventId ? { ...se, name, eventDate, ...details } : se)),
-        },
-        "SubEventEdited",
-        name,
-        accountId,
-      ),
-    );
-  }, []);
-
-  // Manual only — never inferred from overlap/timing. A product with no entry
-  // is undecided, distinct from "Dedicated"; clearItemSharing puts it back
-  // there rather than defaulting to a choice the customer didn't make.
-  const setItemSharing = useCallback((planId: string, productId: string, decision: ItemSharingDecision) => {
-    updatePlan(planId, (p, accountId) => {
-      const product = findProduct(productId);
-      return pushAudit({ ...p, itemSharing: { ...p.itemSharing, [productId]: decision } }, "ItemSharingChanged", `${product?.name ?? productId}: ${decision}`, accountId);
-    });
-  }, []);
-
-  const clearItemSharing = useCallback((planId: string, productId: string) => {
-    updatePlan(planId, (p) => {
-      if (!p.itemSharing || !(productId in p.itemSharing)) return p;
-      const next = { ...p.itemSharing };
-      delete next[productId];
-      return { ...p, itemSharing: next };
-    });
-  }, []);
-
-  const removeSubEvent = useCallback((planId: string, subEventId: string) => {
-    updatePlan(planId, (p, accountId) => {
-      const subEvent = p.subEvents.find((se) => se.id === subEventId);
-      // Fall back to the general plan list rather than cascade-delete tagged items.
-      const items = p.items.map((it) => (it.subEventId === subEventId ? { ...it, subEventId: null } : it));
-      return pushAudit(
-        { ...p, subEvents: p.subEvents.filter((se) => se.id !== subEventId), items },
-        "SubEventRemoved",
-        subEvent?.name ?? subEventId,
-        accountId,
-      );
-    });
-  }, []);
-
-  const addPlanItem = useCallback(
-    (
-      planId: string,
-      item: {
-        productId: string;
-        quantity: number;
-        subEventId: string | null;
-        dimensions?: { length: number; width?: number };
-        rentalStart?: string;
-        rentalEnd?: string;
-        fabric?: string;
-        colour?: string;
-      },
-    ) => {
-      updatePlan(planId, (p, accountId) => {
-        const product = findProduct(item.productId);
-        const planItem = { id: newId("item"), ...item };
-        return pushAudit({ ...p, items: [...p.items, planItem] }, "ItemAdded", product?.name ?? item.productId, accountId);
-      });
-    },
-    [],
-  );
-
-  const addBundleToPlan = useCallback((planId: string, bundleId: string, rental?: { rentalStart?: string; rentalEnd?: string }) => {
-    const bundle = BUNDLES.find((b) => b.id === bundleId);
-    if (!bundle) return;
-    updatePlan(planId, (p, accountId) => {
-      const newItems = bundle.includedProductIds.map((productId) => ({
-        id: newId("item"),
-        productId,
-        quantity: 1,
-        subEventId: null,
-        rentalStart: rental?.rentalStart,
-        rentalEnd: rental?.rentalEnd,
-      }));
-      return pushAudit({ ...p, items: [...p.items, ...newItems] }, "ItemAdded", `${bundle.name} (bundle, ${newItems.length} items)`, accountId);
-    });
-  }, []);
-
-  const removePlanItem = useCallback((planId: string, itemId: string) => {
-    updatePlan(planId, (p, accountId) => {
-      const item = p.items.find((it) => it.id === itemId);
-      const product = findProduct(item?.productId);
-      return pushAudit({ ...p, items: p.items.filter((it) => it.id !== itemId) }, "ItemRemoved", product?.name ?? itemId, accountId);
-    });
-  }, []);
-
-  // Re-tag a line to another sub-event (or back to the general list). Flow 2
-  // treats sub-event tagging as a label on the item, so this is a field swap,
-  // not a remove-and-re-add.
-  const movePlanItem = useCallback((planId: string, itemId: string, subEventId: string | null) => {
-    updatePlan(planId, (p) => ({
-      ...p,
-      items: p.items.map((it) => (it.id === itemId ? { ...it, subEventId } : it)),
-    }));
-  }, []);
-
-  const adjustPlanItemQty = useCallback((planId: string, itemId: string, delta: number) => {
-    updatePlan(planId, (p) => ({
-      ...p,
-      items: p.items.map((it) => (it.id === itemId ? { ...it, quantity: Math.max(1, it.quantity + delta) } : it)),
-    }));
-  }, []);
-
-  // Absolute quantity edit from the plan line. Dimension-priced lines carry
-  // their billable amount in dimensions.length, so that's what gets set.
-  const setPlanItemQty = useCallback((planId: string, itemId: string, qty: number) => {
-    const value = Math.max(1, Math.floor(qty) || 1);
-    updatePlan(planId, (p) => ({
-      ...p,
-      items: p.items.map((it) =>
-        it.id !== itemId ? it : it.dimensions ? { ...it, dimensions: { ...it.dimensions, length: value } } : { ...it, quantity: value },
-      ),
-    }));
-  }, []);
-
-  const markSetupAdded = useCallback((planId: string, scope: string, key: string) => {
-    updatePlan(planId, (p) => {
-      const done = p.setupAdded?.[scope] ?? [];
-      return done.includes(key) ? p : { ...p, setupAdded: { ...p.setupAdded, [scope]: [...done, key] } };
-    });
-  }, []);
-
-  const addCoOwner = useCallback((planId: string, email: string, name: string, role: PlanCoOwnerRole) => {
-    setState((s) => {
-      let account = s.accounts.find((a) => a.email.toLowerCase() === email.toLowerCase());
-      const accounts = account ? s.accounts : [...s.accounts, (account = { id: newId("acct"), name, email, phone: "", accountType: "Customer" })];
-      const accountId = s.currentAccountId ?? "system";
-      const plans = s.plans.map((p) => {
-        if (p.id !== planId) return p;
-        if (p.coOwners.some((c) => c.accountId === account!.id)) return p;
-        return pushAudit({ ...p, coOwners: [...p.coOwners, { accountId: account!.id, email, name, role }] }, "CoOwnerAdded", email, accountId);
-      });
-      return { ...s, accounts, plans };
-    });
-  }, []);
-
-  const removeCoOwner = useCallback((planId: string, accountId: string) => {
-    updatePlan(planId, (p, actingAccountId) => {
-      const co = p.coOwners.find((c) => c.accountId === accountId);
-      return pushAudit(
-        { ...p, coOwners: p.coOwners.filter((c) => c.accountId !== accountId) },
-        "CoOwnerRemoved",
-        co?.email ?? accountId,
-        actingAccountId,
-      );
-    });
-  }, []);
-
-  const submitPlanForQuotation = useCallback(
-    (planId: string, granularity: "Plan" | "PerSubEvent") => {
-      const plan = state.plans.find((p) => p.id === planId);
-      if (!plan) throw new Error("Plan not found");
-      requireOwner(plan);
-
-      function buildLines(itemIds: Set<string>): QuotationLine[] {
-        // Skip lines whose product is gone from the catalog (stale saved plans) —
-        // the plan page already hides them.
-        const items = plan!.items.filter((it) => itemIds.has(it.id) && findProduct(it.productId));
-        // Mock admin negotiation, so the partial-accept UI (Flow 5) has real
-        // variety to demonstrate: with 4+ lines, one comes back adjusted
-        // (partial stock) and one rejected (out of stock); with 2-3, just one
-        // adjusted; a single line always confirms as requested.
-        const adjustedIndex = items.length >= 2 ? (items.length >= 4 ? 1 : items.length - 1) : -1;
-        const rejectedIndex = items.length >= 4 ? 3 : -1;
-        return items.map((it, i) => {
-          const product = findProduct(it.productId)!;
-          const requestedQty = it.dimensions?.length ?? it.quantity;
-          const status: QuotationLineStatus = i === rejectedIndex ? "Rejected" : i === adjustedIndex ? "Adjusted" : "Confirmed";
-          const confirmedQty = status === "Rejected" ? 0 : status === "Adjusted" ? Math.max(1, Math.floor(requestedQty * 0.6)) : requestedQty;
-          const reason =
-            status === "Adjusted"
-              ? `Only ${confirmedQty} available — adjusted to ${confirmedQty}`
-              : status === "Rejected"
-                ? "Out of stock for these dates"
-                : undefined;
-          return {
-            planItemId: it.id,
-            productId: it.productId,
-            productName: lineName(product.name, it.fabric),
-            requestedQty,
-            confirmedQty,
-            unitPrice: product.basePrice,
-            status,
-            reason,
-            accepted: false,
-          } satisfies QuotationLine;
-        });
-      }
-
-      const groups: { subEventId: string | null; itemIds: Set<string> }[] =
-        granularity === "Plan"
-          ? [{ subEventId: null, itemIds: new Set(plan.items.map((it) => it.id)) }]
-          : [
-              ...plan.subEvents.map((se) => ({
-                subEventId: se.id,
-                itemIds: new Set(plan.items.filter((it) => it.subEventId === se.id).map((it) => it.id)),
-              })),
-              { subEventId: null, itemIds: new Set(plan.items.filter((it) => it.subEventId === null).map((it) => it.id)) },
-            ].filter((g) => g.itemIds.size > 0);
-
-      const newQuotations: Quotation[] = groups
-        .map((g) => ({
-        id: newId("quo"),
-        planId,
-        subEventId: g.subEventId,
-        round: 1,
-        lines: buildLines(g.itemIds),
-        validUntil: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: "Open" as const,
-      }))
-        .filter((q) => q.lines.length > 0);
-      if (newQuotations.length === 0) throw new Error("No valid items to quote — add products to the plan first.");
-
-      setState((s) => ({
-        ...s,
-        quotations: [...s.quotations, ...newQuotations],
-        plans: s.plans.map((p) =>
-          p.id === planId ? pushAudit({ ...p, status: "Quoted" }, "PlanSubmitted", granularity, s.currentAccountId ?? "system") : p,
-        ),
-      }));
-
-      return newQuotations;
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.plans, state.currentAccountId],
-  );
-
-  // Direct Order (Flow 4 branch): skips the negotiation loop entirely — every
-  // line is pre-confirmed and pre-accepted at list price, so the existing
-  // checkout/payment flow can be reused unchanged for "pay now" orders.
-  const createDirectOrderQuotation = useCallback(
-    (planId: string) => {
-      const plan = state.plans.find((p) => p.id === planId);
-      if (!plan) throw new Error("Plan not found");
-      requireOwner(plan);
-
-      const lines: QuotationLine[] = plan.items.filter((it) => findProduct(it.productId)).map((it) => {
-        const product = findProduct(it.productId)!;
-        const qty = it.dimensions?.length ?? it.quantity;
-        return {
-          planItemId: it.id,
-          productId: it.productId,
-          productName: lineName(product.name, it.fabric),
-          requestedQty: qty,
-          confirmedQty: qty,
-          unitPrice: product.basePrice,
-          status: "Confirmed",
-          accepted: true,
-        };
-      });
-
-      const quotation: Quotation = {
-        id: newId("quo"),
-        planId,
-        subEventId: null,
-        round: 1,
-        lines,
-        validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        status: "Accepted",
-        isDirectOrder: true,
-      };
-
-      setState((s) => ({
-        ...s,
-        quotations: [...s.quotations, quotation],
-        plans: s.plans.map((p) =>
-          p.id === planId ? pushAudit({ ...p, status: "PartiallyAccepted" }, "PlanSubmitted", "DirectOrder", s.currentAccountId ?? "system") : p,
-        ),
-      }));
-
-      return quotation;
-    },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [state.plans, state.currentAccountId],
-  );
 
   const acceptQuotationLines = useCallback((quotationId: string, planItemIds: string[]) => {
     setState((s) => {
@@ -741,25 +339,6 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
         syncAccount,
         logout,
         upgradeToEventPlanner,
-        createPlan,
-        updatePlanDetails,
-        renamePlanGroup,
-        addSubEvent,
-        updateSubEvent,
-        removeSubEvent,
-        setItemSharing,
-        clearItemSharing,
-        addPlanItem,
-        removePlanItem,
-        movePlanItem,
-        adjustPlanItemQty,
-        setPlanItemQty,
-        markSetupAdded,
-        addBundleToPlan,
-        addCoOwner,
-        removeCoOwner,
-        submitPlanForQuotation,
-        createDirectOrderQuotation,
         acceptQuotationLines,
         rejectQuotation,
         payForQuotation,
@@ -787,4 +366,3 @@ export function useMockStore() {
   return ctx;
 }
 
-export { OwnerOnlyError };

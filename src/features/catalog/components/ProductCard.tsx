@@ -7,40 +7,26 @@ import { ProductThumb } from "@/components/product-thumb";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
+import { useActivePlanLine } from "@/features/plans/active";
+import { usePlanActions } from "@/features/plans/hooks";
 import { rateUnitShort } from "../format";
 import { registerCard } from "../plan-bridge";
 import type { ProductCard as ProductCardData } from "../types";
 
-/**
- * Where this product already sits in the shopper's draft plans (latest wins). Plans are still the
- * local mock store's (storefront Phase 3), keyed by the bridge's product id.
- */
-function usePlanLine(productId: string) {
-  const { currentAccount, plans } = useMockStore();
-  if (!currentAccount) return null;
-  for (let i = plans.length - 1; i >= 0; i--) {
-    const plan = plans[i];
-    if (plan.ownerAccountId !== currentAccount.id || plan.status !== "Draft") continue;
-    const item = [...plan.items].reverse().find((it) => it.productId === productId);
-    if (item) return { planId: plan.id, planName: plan.name, itemId: item.id, qty: item.dimensions?.length ?? item.quantity };
-  }
-  return null;
-}
 
 /**
  * Compact − qty + control shown in place of Add once the product is in a plan. Plain buttons, not
  * NumberStepper: that one captures the mouse wheel, which would hijack page scrolling while the
  * cursor crosses a card.
  */
-function CardQty({ card, line }: { card: ProductCardData; line: NonNullable<ReturnType<typeof usePlanLine>> }) {
-  const { setPlanItemQty, removePlanItem } = useMockStore();
+function CardQty({ card, line }: { card: ProductCardData; line: NonNullable<ReturnType<typeof useActivePlanLine>> }) {
+  const actions = usePlanActions(line.planId);
   const unit = card.rateType === "QTY" ? "" : ` ${rateUnitShort(card.rateType)}`;
 
-  function dec() {
-    if (line.qty <= 1) {
-      removePlanItem(line.planId, line.itemId);
-      toast(`Removed ${card.name} from ${line.planName}`);
-    } else setPlanItemQty(line.planId, line.itemId, line.qty - 1);
+  async function dec() {
+    if (line.quantity <= 1) {
+      if (await actions.removeItem(line.itemId)) toast(`Removed ${card.name} from ${line.planName}`);
+    } else void actions.setQuantity(line.itemId, line.quantity - 1);
   }
 
   return (
@@ -48,15 +34,15 @@ function CardQty({ card, line }: { card: ProductCardData; line: NonNullable<Retu
       className="flex h-8 shrink-0 items-center overflow-hidden rounded-md border border-primary bg-primary/10 text-primary"
       title={`In ${line.planName}`}
     >
-      <button onClick={dec} className="flex h-full w-7 items-center justify-center transition-colors hover:bg-primary hover:text-primary-foreground" aria-label={line.qty <= 1 ? `Remove ${card.name} from plan` : `Decrease ${card.name}`}>
+      <button onClick={dec} className="flex h-full w-7 items-center justify-center transition-colors hover:bg-primary hover:text-primary-foreground" aria-label={line.quantity <= 1 ? `Remove ${card.name} from plan` : `Decrease ${card.name}`}>
         <Minus className="size-3.5" />
       </button>
       <span className="min-w-7 px-1 text-center text-xs font-semibold tabular-nums" aria-live="polite">
-        {line.qty}
+        {line.quantity}
         {unit}
       </span>
       <button
-        onClick={() => setPlanItemQty(line.planId, line.itemId, line.qty + 1)}
+        onClick={() => void actions.setQuantity(line.itemId, line.quantity + 1)}
         className="flex h-full w-7 items-center justify-center transition-colors hover:bg-primary hover:text-primary-foreground"
         aria-label={`Increase ${card.name}`}
       >
@@ -70,7 +56,7 @@ export function ProductCard({ card, onQuickAdd }: { card: ProductCardData; onQui
   const { currentAccount, wishlist, toggleWishlist } = useMockStore();
   const planId = String(card.id);
   const wishlisted = wishlist.includes(planId);
-  const line = usePlanLine(planId);
+  const line = useActivePlanLine(card.id);
   const href = `/catalog/${card.slug}`;
 
   return (

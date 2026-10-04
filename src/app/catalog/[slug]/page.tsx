@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { NumberStepper } from "@/components/number-stepper";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductThumb } from "@/components/product-thumb";
 import { RentalTerms } from "@/components/rental-terms";
@@ -24,6 +23,8 @@ import { useProduct } from "@/features/catalog/hooks";
 import { quantityLabel, rateUnitLabel } from "@/features/catalog/format";
 import { ProductRail } from "@/features/catalog/components/ProductRail";
 import { planProductId, registerDetail } from "@/features/catalog/plan-bridge";
+import { usePlanActions } from "@/features/plans/hooks";
+import { PlanTargetFields, usePlanTarget } from "@/features/plans/target";
 import type { ProductCard, ProductDetail } from "@/features/catalog/types";
 
 // Flowstep screens 9 (desktop) / 10 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
@@ -72,15 +73,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const { slug } = use(params);
   const router = useRouter();
   const reduce = useReducedMotion();
-  const { currentAccount, plans, addPlanItem, wishlist, toggleWishlist } = useMockStore();
+  const { currentAccount, wishlist, toggleWishlist } = useMockStore();
   const query = useProduct(slug);
   const product = query.data;
 
   const recentlyViewed = useRecentlyViewed(useMemo(() => (product ? cardOf(product) : undefined), [product])).slice(0, 4);
-  const myPlans = useMemo(() => plans.filter((p) => p.ownerAccountId === currentAccount?.id && p.status === "Draft"), [plans, currentAccount]);
+  const target = usePlanTarget();
+  const actions = usePlanActions(target.planId);
 
-  const [planId, setPlanId] = useState<string>("");
-  const [subEventId, setSubEventId] = useState<string>("__general");
   const [quantity, setQuantity] = useState(1);
   const [length, setLength] = useState(10);
   const [variantId, setVariantId] = useState<number | undefined>(undefined);
@@ -114,7 +114,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const stock = variant?.maxOrderable ?? product.maxOrderable;
   const needsDimensions = product.rateType !== "QTY";
   const wishlisted = wishlist.includes(planProductId(product.id));
-  const selectedPlan = myPlans.find((p) => p.id === planId);
   const size = sizeOf(product);
   const rows: [string, string][] = [
     ...(size ? [["Size", size] as [string, string]] : []),
@@ -122,24 +121,24 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
     ...(product.occasions.length > 0 ? [["Suits", product.occasions.map((o) => o.name).join(", ")] as [string, string]] : []),
   ];
 
-  function handleAdd() {
+  async function handleAdd() {
     if (!currentAccount) {
       router.push("/signup");
       return;
     }
-    if (!planId) {
-      toast.error("Choose a plan to add this to.");
+    if (!target.planId) {
+      toast.error("Create a plan first, then add this to it.");
       return;
     }
     if (!product) return;
     const amount = needsDimensions ? length : quantity;
-    addPlanItem(planId, {
-      productId: registerDetail(product, variant),
-      quantity: needsDimensions ? 1 : quantity,
-      subEventId: subEventId === "__general" ? null : subEventId,
-      dimensions: needsDimensions ? { length } : undefined,
+    const saved = await actions.addItem({
+      subEventId: target.subEventId,
+      productId: product.id,
+      variantId: variant?.id ?? null,
+      quantity: amount,
     });
-    setAddedTo({ planId, planName: myPlans.find((p) => p.id === planId)?.name ?? "your plan", quantity: amount });
+    if (saved) setAddedTo({ planId: target.planId, planName: saved.name, quantity: amount });
   }
 
   return (
@@ -293,40 +292,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
           {currentAccount ? (
             <>
-              <div className="hidden flex-col gap-2 md:flex">
-                <Label className="text-sm text-muted-foreground">Add to</Label>
-                <Select value={planId} onValueChange={(v) => v && setPlanId(v)}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a Plan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {myPlans.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedPlan && selectedPlan.subEvents.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Tag to sub-event</Label>
-                  <Select value={subEventId} onValueChange={(v) => v && setSubEventId(v)}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__general">General (no sub-event)</SelectItem>
-                      {selectedPlan.subEvents.map((se) => (
-                        <SelectItem key={se.id} value={se.id}>
-                          {se.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <Button size="lg" className="w-full" onClick={handleAdd}>
+              <PlanTargetFields target={target} className="grid grid-cols-2 gap-3" />
+              <Button size="lg" className="w-full" onClick={handleAdd} disabled={!target.planId || actions.saving}>
                 Add to Plan
               </Button>
             </>
@@ -346,12 +313,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       <ProductRail title="Complements This" products={product.complements.slice(0, 4)} />
       <ProductRail title="Recently Viewed" products={recentlyViewed} />
 
-      {currentAccount && myPlans.length === 0 && (
-        <p className="mt-4 text-sm text-muted-foreground">
-          You don&apos;t have a Draft plan yet — <Link href="/plans" className="text-primary underline">create one</Link> to add items.
-        </p>
-      )}
-
       {/* Mobile sticky add bar: slides up once, above the fixed tab bar. */}
       {currentAccount && (
         <motion.div
@@ -360,19 +321,10 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           transition={reduce ? { duration: 0.01 } : SPRING.soft}
           className="fixed inset-x-0 bottom-16 z-30 flex items-center gap-2 border-t border-border bg-background/95 p-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.4)] supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl md:hidden"
         >
-          <Select value={planId} onValueChange={(v) => v && setPlanId(v)}>
-            <SelectTrigger className="h-11 flex-1 border-primary/40 bg-card">
-              <SelectValue placeholder="Add to: Select a Plan" />
-            </SelectTrigger>
-            <SelectContent>
-              {myPlans.map((p) => (
-                <SelectItem key={p.id} value={p.id}>
-                  {p.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="lg" onClick={handleAdd}>
+          <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+            {target.plan ? <>Adding to <span className="text-foreground">{target.plan.name}</span></> : "Create a plan to add this"}
+          </span>
+          <Button size="lg" onClick={handleAdd} disabled={!target.planId || actions.saving}>
             Add to Plan
           </Button>
         </motion.div>

@@ -1,5 +1,5 @@
-import type { ItemSharingDecision, Plan, Product } from "./types";
-import { formatEventDate } from "./seed";
+import { formatEventDate } from "@/mock-data/seed";
+import { lineQuantity, planGroupLabel, type BoardDecision, type BoardPlan, type BoardProduct } from "./board";
 
 export interface ProductOccurrence {
   itemId: string;
@@ -12,7 +12,7 @@ export interface ProductOccurrence {
 
 export interface ProductUsage {
   productId: string;
-  product: Product;
+  product: BoardProduct;
   occurrences: ProductOccurrence[];
   /** Occurrences tagged to a specific sub-event — General/Untagged excluded, since sharing is about reuse *between functions*, not the untagged bucket. */
   subEventOccurrences: ProductOccurrence[];
@@ -30,17 +30,17 @@ function subEventTimeWindow(eventDate: string, startTime?: string, endTime?: str
 // sub-event (or the general list) that uses it. This is read-only derived
 // state — nothing here decides Shared vs Dedicated, it just lays out the
 // facts so the customer can.
-export function getProductUsage(plan: Plan, products: Product[]): ProductUsage[] {
+export function getProductUsage(plan: BoardPlan, products: BoardProduct[]): ProductUsage[] {
   const byProduct = new Map<string, ProductOccurrence[]>();
   for (const item of plan.items) {
     const subEvent = item.subEventId ? plan.subEvents.find((se) => se.id === item.subEventId) : undefined;
     const occurrence: ProductOccurrence = {
       itemId: item.id,
       subEventId: item.subEventId,
-      subEventName: subEvent?.name ?? (plan.generalLabel?.trim() || "Your event"),
+      subEventName: subEvent?.name ?? planGroupLabel(plan),
       timeWindow: subEvent ? subEventTimeWindow(subEvent.eventDate, subEvent.startTime, subEvent.endTime) : undefined,
       sortKey: subEvent?.eventDate ? `${subEvent.eventDate}T${subEvent.startTime ?? "00:00"}` : "~",
-      quantity: item.dimensions?.length ?? item.quantity,
+      quantity: lineQuantity(item),
     };
     byProduct.set(item.productId, [...(byProduct.get(item.productId) ?? []), occurrence]);
   }
@@ -65,7 +65,7 @@ export function needsSharingDecision(usage: ProductUsage): boolean {
 // their Shared/Dedicated call (or the safe stack-everything default while
 // undecided). General/Untagged quantity always adds on top, since it isn't
 // part of any specific function's reuse question.
-export function requiredQuantity(usage: ProductUsage, decision: ItemSharingDecision | undefined): number {
+export function requiredQuantity(usage: ProductUsage, decision: BoardDecision | undefined): number {
   const generalQty = usage.occurrences.filter((o) => o.subEventId === null).reduce((sum, o) => sum + o.quantity, 0);
   if (usage.subEventOccurrences.length === 0) return generalQty;
   if (usage.subEventOccurrences.length === 1 || decision !== "Shared") {
