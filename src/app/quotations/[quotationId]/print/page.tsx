@@ -3,38 +3,37 @@
 import { use, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
-import { useRequireAccount } from "@/features/auth";
-import { useMockStore } from "@/mock-data/store";
+import { useRequireAccount, useSession } from "@/features/auth";
+import { useQuotation } from "@/features/quotations";
 import { COMPANY } from "@/lib/company";
-import { formatEventDateRange, formatRupees } from "@/mock-data/seed";
-import { planGroupLabel } from "@/mock-data/store";
+import { formatMoney } from "@/lib/money";
 
 /**
  * Printable quotation, opened from the quotation page's "Download" button.
  *
- * Same mechanism as the order invoice (`?download=1` fires window.print once
- * the page has settled, document.title names the PDF) but a much lighter
- * document: a quotation is a priced line list, not a tax invoice, so it has no
- * GST block, no per-warehouse challan and no payment ledger.
+ * `?download=1` fires window.print once the page has settled, and document.title names the PDF. It
+ * prints what the backend says (lines, delivery, discount, total, deposit, validity) and calculates
+ * nothing. A quotation the vendor has not sent has no prices, so there is nothing to print.
  *
- * Deliberately NOT themed. A document that gets printed and emailed is black
- * on white regardless of the viewer's theme — printing the charcoal palette
- * wastes ink and reads badly on paper.
+ * Deliberately NOT themed: a document that gets printed and emailed is black on white regardless of
+ * the viewer's theme.
  */
-export default function QuotationPrintPage({ params }: { params: Promise<{ quotationId: string }> }) {
-  const { quotationId } = use(params);
-  const account = useRequireAccount();
-  const { getQuotation, getPlan } = useMockStore();
+const day = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const formatDay = (iso?: string) => (iso ? day.format(new Date(`${iso}T00:00:00`)) : "");
 
-  const quotation = getQuotation(quotationId);
-  const plan = quotation ? getPlan(quotation.planId) : undefined;
-  const quoteNo = quotation ? `TV-QT-${new Date().getFullYear()}-${quotation.id.slice(-6).toUpperCase()}` : "";
-  const ready = Boolean(account && quotation && plan);
+export default function QuotationPrintPage({ params }: { params: Promise<{ quotationId: string }> }) {
+  const { quotationId: requestId } = use(params);
+  const signedIn = useRequireAccount();
+  const { account } = useSession();
+  const query = useQuotation(requestId);
+  const quotation = query.data;
+  const printable = Boolean(quotation && quotation.totalAmount);
+  const ready = Boolean(signedIn && account && printable);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !quotation) return;
     const previousTitle = document.title;
-    document.title = `Tentvaale-Quotation-${quoteNo}`;
+    document.title = `Tentvaale-Quotation-${quotation.quotationNumber}`;
     let timer: ReturnType<typeof setTimeout> | undefined;
     if (new URLSearchParams(window.location.search).has("download")) {
       timer = setTimeout(() => window.print(), 250);
@@ -43,17 +42,17 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
       clearTimeout(timer);
       document.title = previousTitle;
     };
-  }, [ready, quoteNo]);
+  }, [ready, quotation]);
 
-  if (!account) return null;
-  if (!quotation || !plan) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Quotation not found.</div>;
-
-  // Rejected lines are listed but not charged, so the customer can see what was
-  // declined and why rather than silently finding items missing.
-  const priced = quotation.lines.filter((l) => l.status !== "Rejected");
-  const rejected = quotation.lines.filter((l) => l.status === "Rejected");
-  const total = priced.reduce((sum, l) => sum + l.unitPrice * l.confirmedQty, 0);
-  const scope = quotation.subEventId ? plan.subEvents.find((se) => se.id === quotation.subEventId)?.name : planGroupLabel(plan);
+  if (!signedIn || !account) return null;
+  if (query.isPending) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Loading…</div>;
+  if (!quotation || !printable) {
+    return (
+      <div className="mx-auto w-full max-w-4xl py-10 page-x">
+        {query.isError ? "Quotation not found." : "This quotation has not been sent yet, so there is nothing to print."}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f2f2f2] text-[#1a1a1a]">
@@ -67,10 +66,10 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
       `}</style>
 
       <div className="quote-toolbar sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 border-b border-[#b8862f]/30 bg-[#0d0d0d]/95 px-4 py-3 backdrop-blur md:px-8">
-        <Link href={`/quotations/${quotationId}`} className="flex items-center gap-2 text-sm text-[#f7f1e6] hover:text-[#d4a64a]">
+        <Link href={`/quotations/${requestId}`} className="flex items-center gap-2 text-sm text-[#f7f1e6] hover:text-[#d4a64a]">
           <ArrowLeft className="size-4" /> Back to quotation
         </Link>
-        <span className="hidden text-sm text-[#f7f1e6]/70 sm:inline">Quotation {quoteNo}</span>
+        <span className="hidden text-sm text-[#f7f1e6]/70 sm:inline">Quotation {quotation.quotationNumber}</span>
         <button onClick={() => window.print()} className="flex items-center gap-2 rounded-lg bg-[#b8862f] px-4 py-2 text-sm font-medium text-[#0d0d0d] hover:bg-[#d4a64a]">
           <Download className="size-4" /> Download PDF
         </button>
@@ -89,26 +88,17 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
             </div>
             <div className="text-right">
               <p className="text-lg font-semibold">QUOTATION</p>
-              <p className="mt-1 text-xs text-[#555]">{quoteNo}</p>
-              <p className="text-xs text-[#555]">Round {quotation.round}</p>
-              <p className="text-xs text-[#555]">Valid until {quotation.validUntil}</p>
+              <p className="mt-1 text-xs text-[#555]">{quotation.quotationNumber}</p>
+              {quotation.versions.length > 0 && <p className="text-xs text-[#555]">Version {quotation.versions.length}</p>}
+              {quotation.validUntil && <p className="text-xs text-[#555]">Valid until {formatDay(quotation.validUntil)}</p>}
             </div>
           </header>
 
-          <section className="mt-6 grid grid-cols-2 gap-6 text-sm">
-            <div>
-              <p className="text-[11px] tracking-wider text-[#888] uppercase">Prepared for</p>
-              <p className="mt-1 font-medium">{account.name}</p>
-              <p className="text-xs text-[#555]">{account.email}</p>
-              {account.phone && <p className="text-xs text-[#555]">{account.phone}</p>}
-            </div>
-            <div>
-              <p className="text-[11px] tracking-wider text-[#888] uppercase">Event</p>
-              <p className="mt-1 font-medium">{plan.name}</p>
-              <p className="text-xs text-[#555]">{scope}</p>
-              <p className="text-xs text-[#555]">{formatEventDateRange(plan.eventStartDate ?? plan.subEvents[0]?.eventDate, plan.eventEndDate)}</p>
-              {plan.venue && <p className="text-xs text-[#555]">{plan.venue}</p>}
-            </div>
+          <section className="mt-6 text-sm">
+            <p className="text-[11px] tracking-wider text-[#888] uppercase">Prepared for</p>
+            <p className="mt-1 font-medium">{account.fullName}</p>
+            <p className="text-xs text-[#555]">{account.email}</p>
+            {account.phone && <p className="text-xs text-[#555]">{account.phone}</p>}
           </section>
 
           <table className="mt-8 w-full border-collapse text-sm">
@@ -116,51 +106,57 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
               <tr className="border-y border-[#ddd] text-left text-[11px] tracking-wider text-[#888] uppercase">
                 <th className="py-2.5 font-medium">Item</th>
                 <th className="py-2.5 text-right font-medium">Qty</th>
-                <th className="py-2.5 text-right font-medium">Unit</th>
+                <th className="py-2.5 text-right font-medium">Days</th>
+                <th className="py-2.5 text-right font-medium">Per day</th>
                 <th className="py-2.5 text-right font-medium">Amount</th>
               </tr>
             </thead>
             <tbody>
-              {priced.map((line) => (
-                <tr key={line.planItemId} className="border-b border-[#eee] align-top">
-                  <td className="py-3 pr-4">
-                    {line.productName}
-                    {line.reason && <span className="mt-0.5 block text-xs text-[#8a6d1f]">{line.reason}</span>}
-                  </td>
-                  <td className="py-3 text-right tabular-nums">{line.confirmedQty}</td>
-                  <td className="py-3 text-right tabular-nums">{formatRupees(line.unitPrice)}</td>
-                  <td className="py-3 text-right tabular-nums">{formatRupees(line.unitPrice * line.confirmedQty)}</td>
+              {quotation.lines.map((line, index) => (
+                <tr key={index} className="border-b border-[#eee] align-top">
+                  <td className="py-3 pr-4">{line.productName}</td>
+                  <td className="py-3 text-right tabular-nums">{line.quantity}</td>
+                  <td className="py-3 text-right tabular-nums">{line.rentalDays}</td>
+                  <td className="py-3 text-right tabular-nums">{formatMoney(line.unitRatePerDay)}</td>
+                  <td className="py-3 text-right tabular-nums">{formatMoney(line.lineTotal)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
+              <tr>
+                <td className="pt-3 text-xs text-[#555]" colSpan={4}>Items</td>
+                <td className="pt-3 text-right tabular-nums">{formatMoney(quotation.subtotalAmount)}</td>
+              </tr>
+              {quotation.deliveryCharge && quotation.deliveryCharge.amount > 0 && (
+                <tr>
+                  <td className="pt-1 text-xs text-[#555]" colSpan={4}>Delivery</td>
+                  <td className="pt-1 text-right tabular-nums">{formatMoney(quotation.deliveryCharge)}</td>
+                </tr>
+              )}
+              {quotation.discountAmount && quotation.discountAmount.amount > 0 && (
+                <tr>
+                  <td className="pt-1 text-xs text-[#555]" colSpan={4}>Discount</td>
+                  <td className="pt-1 text-right tabular-nums">−{formatMoney(quotation.discountAmount)}</td>
+                </tr>
+              )}
               <tr className="border-t-2 border-[#b8862f]">
-                <td className="py-3 text-sm font-semibold" colSpan={3}>
-                  Total
-                </td>
-                <td className="py-3 text-right text-base font-semibold tabular-nums">{formatRupees(total)}</td>
+                <td className="py-3 text-sm font-semibold" colSpan={4}>Total</td>
+                <td className="py-3 text-right text-base font-semibold tabular-nums">{formatMoney(quotation.totalAmount)}</td>
               </tr>
             </tfoot>
           </table>
 
-          {rejected.length > 0 && (
-            <section className="mt-6 border-t border-[#eee] pt-4">
-              <p className="text-[11px] tracking-wider text-[#888] uppercase">Not available</p>
-              <ul className="mt-2 flex flex-col gap-1 text-xs text-[#555]">
-                {rejected.map((line) => (
-                  <li key={line.planItemId}>
-                    {line.productName}
-                    {line.reason ? ` — ${line.reason}` : ""}
-                  </li>
-                ))}
-              </ul>
-            </section>
+          {quotation.securityDeposit && quotation.securityDeposit.amount > 0 && (
+            <p className="mt-4 text-xs text-[#555]">
+              Refundable security deposit: <span className="font-medium text-[#1a1a1a]">{formatMoney(quotation.securityDeposit)}</span>,
+              collected with the order and returned after your items come back in good condition.
+            </p>
           )}
 
           <footer className="mt-10 border-t border-[#eee] pt-4 text-[11px] leading-5 text-[#777]">
-            <p>Prices are per day unless stated otherwise and exclude a refundable security deposit, collected with the order.</p>
-            <p>This quotation is valid until {quotation.validUntil}. Rental charges are non-refundable once an order is confirmed.</p>
-            <p className="mt-2">Indicative terms — full rental terms and policies are provided with the order confirmation.</p>
+            <p>Prices are per day. Taxes are not included in this quotation.</p>
+            {quotation.validUntil && <p>This quotation is valid until {formatDay(quotation.validUntil)}.</p>}
+            <p className="mt-2">Full rental terms and policies are provided with the order confirmation.</p>
           </footer>
         </div>
       </div>

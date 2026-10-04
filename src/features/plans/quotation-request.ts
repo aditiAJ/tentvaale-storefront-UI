@@ -1,11 +1,12 @@
 import { apiFetch } from "@/services/api-client";
+import type { QuotationStage } from "@/features/quotations/types";
 
 /**
  * Sending a plan to the vendor for pricing. The backend turns the plan into a draft quotation the
  * vendor reviews and sends back, links it to this plan, and locks the plan against further edits.
- * (The rest of the quotation journey, seeing and accepting the quotation, is a later phase.)
+ * The customer then follows it through features/quotations.
  */
-export type QuotationRequestStatus = string;
+export type QuotationRequestStatus = "SUBMITTED" | "ORDERED" | "REJECTED" | "CANCELLED";
 
 export interface QuotationRequest {
   id: string;
@@ -16,6 +17,8 @@ export interface QuotationRequest {
   orderId?: string;
   orderNumber?: string;
   status: QuotationRequestStatus;
+  /** Where it stands for the customer: being prepared, ready, revision requested, ordered ... */
+  stage: QuotationStage;
   submittedAt: string;
 }
 

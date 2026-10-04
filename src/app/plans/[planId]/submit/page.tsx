@@ -100,6 +100,7 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
         </p>
         <div className="flex gap-3">
           <Button variant="outline" nativeButton={false} render={<Link href={`/plans/${planId}`}>View my plan</Link>} />
+          <Button nativeButton={false} render={<Link href={`/quotations/${sent.id}`}>View quotation</Link>} />
           <Button nativeButton={false} render={<Link href="/plans">All plans</Link>} />
         </div>
       </div>

@@ -54,6 +54,7 @@ import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown
 import { usePlanNudges } from "@/features/plans/nudges";
 import type { PlanStatus } from "@/features/plans/types";
 import { registerProducts } from "@/mock-data/product-registry";
+import { PlanQuotationLink } from "@/features/quotations";
 import { useMockStore } from "@/mock-data/store";
 import { FUNCTION_PRESETS, STARTER_SUGGESTIONS, formatEventDate, formatEventDateRange, formatRupees, rateTypeLabel } from "@/mock-data/seed";
 
@@ -1053,6 +1054,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       {!plan.editable && (
         <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
           This plan has been sent for a quotation, so it can be read but no longer changed. Our team will come back to you with the quotation.
+          <PlanQuotationLink planId={plan.id} />
         </section>
       )}
 
