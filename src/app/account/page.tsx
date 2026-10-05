@@ -16,8 +16,9 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useRequireAccount, useSession } from "@/features/auth";
 import { ApiError } from "@/services/api-client";
+import { STATUS_COPY, useOrders } from "@/features/orders";
+import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
-import { planStatusLabel } from "@/mock-data/seed";
 
 // Flowstep screen 40 (desktop) — mobile 41 not fetched; stacks naturally.
 const NAV_SECTIONS = [
@@ -85,7 +86,8 @@ function EmptyNote({ children }: { children: React.ReactNode }) {
 export default function AccountPage() {
   const account = useRequireAccount();
   const router = useRouter();
-  const { plans, orders, addresses, addAddress, removeAddress } = useMockStore();
+  const { addresses, addAddress, removeAddress } = useMockStore();
+  const ordersQuery = useOrders();
   const { logout, updateProfile } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileName, setProfileName] = useState("");
@@ -120,8 +122,7 @@ export default function AccountPage() {
 
   if (!account) return null;
 
-  const myPlans = plans.filter((p) => p.ownerAccountId === account.id);
-  const myOrders = orders.filter((o) => myPlans.some((p) => p.id === o.planId));
+  const myOrders = ordersQuery.data ?? [];
 
   function handleAddAddress() {
     if (!addrLabel.trim() || !addrDetail.trim()) return;
@@ -271,27 +272,28 @@ export default function AccountPage() {
               </Link>
             }
           >
-            {myOrders.length === 0 ? (
+            {ordersQuery.isPending ? (
+              <EmptyNote>Loading your orders…</EmptyNote>
+            ) : ordersQuery.isError ? (
+              <EmptyNote>We couldn&apos;t load your orders just now.</EmptyNote>
+            ) : myOrders.length === 0 ? (
               <EmptyNote>No orders yet.</EmptyNote>
             ) : (
-              myOrders.map((o, i) => {
-                const p = myPlans.find((pl) => pl.id === o.planId);
-                return (
-                  <Row key={o.id} first={i === 0}>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm text-foreground">
-                        Order #{o.id} — {p?.name}
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {p?.subEvents[0]?.eventDate ?? "No date"} — {p ? planStatusLabel(p.status) : "Unknown"}
-                      </p>
-                    </div>
-                    <Link href={`/orders/${o.id}`} className="shrink-0 text-sm text-primary underline-offset-4 transition-colors hover:underline">
-                      View Order
-                    </Link>
-                  </Row>
-                );
-              })
+              myOrders.slice(0, 5).map((o, i) => (
+                <Row key={o.orderId} first={i === 0}>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-foreground">
+                      {o.orderNumber} — {o.planName}
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {STATUS_COPY[o.status].label} · {formatMoney(o.totalAmount)}
+                    </p>
+                  </div>
+                  <Link href={`/orders/${o.orderId}`} className="shrink-0 text-sm text-primary underline-offset-4 transition-colors hover:underline">
+                    View Order
+                  </Link>
+                </Row>
+              ))
             )}
           </Panel>
 

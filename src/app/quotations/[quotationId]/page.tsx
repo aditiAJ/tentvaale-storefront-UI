@@ -97,6 +97,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
     try {
       const request = await actions.accept.mutateAsync();
       toast.success(`Order placed. Your order is ${request.orderNumber ?? "confirmed"}.`);
+      if (request.orderId) router.push(`/orders/${request.orderId}?placed=1`);
     } catch (error) {
       toast.error(message(error, "We couldn't accept the quotation just now."));
     }
@@ -216,9 +217,14 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
             <CheckCircle2 className="size-5 text-primary" /> Order {quotation.orderNumber ?? "confirmed"}
           </p>
           <p className="text-sm leading-6 text-muted-foreground">
-            Your order is confirmed at the total above. Our team will be in touch about delivery and payment.
+            Your order is confirmed at the total above. You can follow it from your orders page.
           </p>
-          <Button variant="outline" nativeButton={false} render={<Link href={`/plans/${quotation.planId}`}>View my plan</Link>} />
+          <div className="flex flex-wrap gap-3">
+            {quotation.orderId && (
+              <Button nativeButton={false} render={<Link href={`/orders/${quotation.orderId}`}>View my order</Link>} />
+            )}
+            <Button variant="outline" nativeButton={false} render={<Link href={`/plans/${quotation.planId}`}>View my plan</Link>} />
+          </div>
         </section>
       )}
 
