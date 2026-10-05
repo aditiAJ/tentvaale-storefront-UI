@@ -80,9 +80,9 @@ export const STAGE_COPY: Record<
     text: "We have your request and are revising the quotation. The earlier version is kept below.",
   },
   ACCEPTED: {
-    label: "Accepted",
+    label: "Approved by our team",
     tone: "success",
-    text: "This quotation has been accepted and is being turned into an order.",
+    text: "Our team has approved this quotation. Place your order below to confirm it.",
   },
   ORDERED: { label: "Order confirmed", tone: "success", text: "This quotation became an order." },
   REJECTED: { label: "Rejected", tone: "destructive", text: "This quotation was rejected." },

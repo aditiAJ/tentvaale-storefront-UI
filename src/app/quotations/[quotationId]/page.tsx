@@ -83,6 +83,8 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
   const copy = STAGE_COPY[quotation.stage];
   const showPrices = quotation.totalAmount !== undefined;
   const canDecide = quotation.stage === "READY";
+  // Approved by our team: nothing left to negotiate, the customer only has to place the order.
+  const canPlaceOrder = quotation.stage === "ACCEPTED";
   const busy = actions.accept.isPending || actions.requestChanges.isPending || actions.reject.isPending;
 
   function openDialog(which: "changes" | "reject") {
@@ -94,7 +96,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
   async function accept() {
     try {
       const request = await actions.accept.mutateAsync();
-      toast.success(`Accepted. Your order is ${request.orderNumber ?? "confirmed"}.`);
+      toast.success(`Order placed. Your order is ${request.orderNumber ?? "confirmed"}.`);
     } catch (error) {
       toast.error(message(error, "We couldn't accept the quotation just now."));
     }
@@ -181,6 +183,16 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
               total={quotation.totalAmount}
               deposit={quotation.securityDeposit}
             />
+            {canPlaceOrder && (
+              <div className="mt-2 flex flex-col gap-2.5">
+                <Button size="lg" className="w-full" onClick={accept} disabled={busy}>
+                  {actions.accept.isPending ? "Placing order…" : "Accept and place order"}
+                </Button>
+                <p className="text-xs leading-5 text-muted-foreground">
+                  This confirms your booking at the total shown. You will see your order number straight away.
+                </p>
+              </div>
+            )}
             {canDecide && (
               <div className="mt-2 flex flex-col gap-2.5">
                 <Button size="lg" className="w-full" onClick={accept} disabled={busy}>
