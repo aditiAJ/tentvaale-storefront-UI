@@ -1,7 +1,7 @@
 import type { CatalogRateType } from "@/features/catalog/types";
 import type { Product, RateType } from "@/mock-data/types";
 import { itemKey } from "./keys";
-import type { Plan, PlanItem, PlanStatus } from "./types";
+import type { Plan, PlanBundle, PlanItem, PlanStatus } from "./types";
 
 /**
  * The plan in the shape the plan board screens work with: one flat list of lines, each tagged with
@@ -65,6 +65,8 @@ export interface BoardPlan {
   items: BoardItem[];
   itemSharing: Record<string, BoardDecision>;
   products: BoardProduct[];
+  /** Bundles on the plan, each priced from its items as they are now. */
+  bundles: PlanBundle[];
 }
 
 const RATE: Record<CatalogRateType, BoardRateType> = { QTY: "Qty", SQFT: "SqFt", RFT: "RFt" };
@@ -137,6 +139,7 @@ export function toBoard(plan: Plan): BoardPlan {
       plan.sharing.map((s): [string, BoardDecision] => [itemKey(s.productId, s.variantId), s.decision === "SHARED" ? "Shared" : "Dedicated"]),
     ),
     products: [...products.values()],
+    bundles: plan.bundles ?? [],
   };
 }
 

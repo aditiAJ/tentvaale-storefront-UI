@@ -1,5 +1,6 @@
 "use client";
 
+import { BundlePrice } from "@/components/bundle-price";
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,7 +12,6 @@ import { Input } from "@/components/ui/input";
 import { MediaCard } from "@/components/media-card";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatMoney } from "@/lib/money";
 import { ProductCard } from "@/features/catalog/components/ProductCard";
 import { QuickAddDialog } from "@/features/catalog/components/QuickAddDialog";
 import { useBundles, useCollections, useProductList } from "@/features/catalog/hooks";
@@ -156,7 +156,7 @@ function SearchContent() {
                   eyebrow={b.occasions[0]?.name}
                   title={b.name}
                   description={b.tagline}
-                  meta={<span className="font-serif text-lg text-primary">From {formatMoney(b.fromPricePerEvent)}</span>}
+                  meta={<BundlePrice bundle={b} />}
                   metaEnd="per event"
                 />
               </StaggerItem>

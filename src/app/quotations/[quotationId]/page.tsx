@@ -1,5 +1,6 @@
 "use client";
 
+import { POLICY_LABEL, taxLines } from "@/features/quotations/tax";
 import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -18,6 +19,9 @@ import {
   useQuotation,
   useQuotationActions,
   type CustomerQuotation,
+  type DepositWaiver,
+  type PolicyRef,
+  type QuotationTax,
   type QuotationLine,
   type QuotationVersion,
 } from "@/features/quotations";
@@ -181,6 +185,10 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
               subtotal={quotation.subtotalAmount}
               delivery={quotation.deliveryCharge}
               discount={quotation.discountAmount}
+              bundleDiscounts={quotation.bundleDiscounts}
+              tax={quotation.tax}
+              depositWaiver={quotation.depositWaiver}
+              policies={quotation.policies}
               total={quotation.totalAmount}
               deposit={quotation.securityDeposit}
             />
@@ -313,12 +321,20 @@ function Totals({
   discount,
   total,
   deposit,
+  bundleDiscounts,
+  tax,
+  depositWaiver,
+  policies,
 }: {
   subtotal?: Money;
   delivery?: Money;
   discount?: Money;
   total?: Money;
   deposit?: Money;
+  bundleDiscounts?: { name: string; percent: number; amount: Money }[];
+  tax?: QuotationTax;
+  depositWaiver?: DepositWaiver;
+  policies?: PolicyRef[];
 }) {
   const row = (label: string, value?: Money, negative = false) => (
     <div className="flex items-baseline justify-between gap-3 text-sm">
@@ -333,16 +349,37 @@ function Totals({
     <>
       <h2 className="font-serif text-2xl text-foreground">Your quotation</h2>
       {row("Items", subtotal)}
-      {delivery && delivery.amount > 0 && row("Delivery", delivery)}
+      {(bundleDiscounts ?? []).map((bundle) => row(`${bundle.name} (${bundle.percent}% off)`, bundle.amount, true))}
       {discount && discount.amount > 0 && row("Discount", discount, true)}
+      {taxLines(tax).map((line) => row(line.label, line.value))}
+      {delivery && delivery.amount > 0 && row("Delivery", delivery)}
       <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
         <span className="text-sm font-medium text-foreground">Total</span>
         <span className="font-serif text-3xl text-primary tabular-nums">{formatMoney(total)}</span>
       </div>
-      {deposit && deposit.amount > 0 && (
+      {depositWaiver?.waived && (
+        <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
+          <span className="text-foreground">Deposit waived.</span> No security deposit is collected for this order.
+        </p>
+      )}
+      {deposit && deposit.amount > 0 && !depositWaiver?.waived && (
         <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
           Plus a refundable security deposit of <span className="text-foreground tabular-nums">{formatMoney(deposit)}</span>,
-          returned after your items come back in good condition.
+          returned after your items come back in good condition. No GST on the deposit.
+        </p>
+      )}
+      {(policies ?? []).length > 0 && (
+        <p className="text-xs leading-5 text-muted-foreground">
+          This quotation follows our{" "}
+          {(policies ?? []).map((policy, i) => (
+            <span key={policy.kind}>
+              {i > 0 ? ", " : ""}
+              <a className="text-primary hover:underline" href={`/policies/${policy.kind.toLowerCase()}?version=${policy.version}`} target="_blank" rel="noreferrer">
+                {(POLICY_LABEL[policy.kind] ?? policy.kind).toLowerCase()}
+              </a>
+            </span>
+          ))}
+          .
         </p>
       )}
     </>

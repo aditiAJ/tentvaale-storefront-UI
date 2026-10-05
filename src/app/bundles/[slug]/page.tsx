@@ -20,6 +20,7 @@ import { useMockStore } from "@/mock-data/store";
 import { useBundle, useBundles } from "@/features/catalog/hooks";
 import type { BundleDetail } from "@/features/catalog/types";
 import { usePlanActions } from "@/features/plans/hooks";
+import { sendBundleForQuotation } from "@/features/plans/quotation-request";
 import { PlanTargetFields, usePlanTarget } from "@/features/plans/target";
 import type { Money } from "@/lib/money";
 
@@ -114,6 +115,32 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
   // A display estimate for one day; the quotation is what prices the plan.
   const subtotal = lines.reduce((sum, l) => sum + l.dailyRate.amount * l.quantity, 0);
   const subtotalMoney = { ...bundle.fromPricePerEvent, amount: subtotal };
+  const percent = bundle.discountPercent ?? 0;
+  // The same percentage applies to what the shopper has set up (swaps change the sum, not the percentage).
+  const discountedMoney = { ...bundle.fromPricePerEvent, amount: Math.round(subtotal * (100 - percent)) / 100 };
+  const anySwap = Object.values(swaps).some((v) => v !== undefined);
+  const [sending, setSending] = useState(false);
+
+  async function handleSend() {
+    if (!currentAccount) {
+      router.push("/signup");
+      return;
+    }
+    setSending(true);
+    try {
+      const request = await sendBundleForQuotation({
+        bundleSlug: bundle.slug,
+        rentalStart: startDate || undefined,
+        rentalEnd: endDate || undefined,
+      });
+      toast.success(`${bundle.name} sent for a quotation`);
+      router.push(`/quotations/${request.id}`);
+    } catch (error) {
+      toast.error(error instanceof ApiError ? error.message : "We couldn't send that just now. Please try again.");
+    } finally {
+      setSending(false);
+    }
+  }
 
   async function handleAdd() {
     if (!currentAccount) {
@@ -168,8 +195,16 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
         )}
         <h1 className="font-serif text-3xl leading-tight text-foreground md:text-4xl">{bundle.name}</h1>
         {bundle.tagline && <p className="text-lg text-foreground/85">{bundle.tagline}</p>}
-        <p className="font-serif text-2xl text-primary">
-          From {formatMoney(subtotalMoney)} <span className="font-sans text-sm text-muted-foreground">/ event</span>
+        <p className="flex flex-wrap items-baseline gap-2 font-serif text-2xl text-primary">
+          {percent > 0 ? (
+            <>
+              <span className="text-lg text-muted-foreground line-through tabular-nums">{formatMoney(subtotalMoney)}</span>
+              <span className="tabular-nums">{formatMoney(discountedMoney)}</span>
+            </>
+          ) : (
+            <>From {formatMoney(subtotalMoney)}</>
+          )}
+          <span className="font-sans text-sm text-muted-foreground">for one day{percent > 0 ? ` · ${percent}% off` : ""}</span>
         </p>
         {bundle.description && <p className="max-w-3xl text-base leading-7 text-muted-foreground">{bundle.description}</p>}
 
@@ -254,7 +289,16 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
           </CardHeader>
           <CardContent className="flex flex-col gap-6 p-0">
             <Button size="lg" onClick={handleAdd} disabled={lines.length === 0 || actions.saving}>
-              Add Full Bundle to Plan
+              Customize
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              onClick={handleSend}
+              disabled={lines.length === 0 || sending || anySwap}
+              title={anySwap ? "You have swapped items: use Customize to keep them" : undefined}
+            >
+              {sending ? "Sending…" : "Send for quotation"}
             </Button>
             <div className="flex flex-col gap-4 border-t border-border pt-5">
               <h3 className="text-sm font-medium text-foreground">Rental time-frame</h3>
@@ -272,8 +316,8 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
             {currentAccount && <PlanTargetFields target={target} className="flex flex-col gap-3" />}
           </CardContent>
           <CardFooter className="justify-between rounded-none border-t border-border bg-transparent p-0 pt-5">
-            <span className="text-sm text-muted-foreground">Bundle subtotal</span>
-            <span className="font-serif text-xl text-primary">{formatMoney(subtotalMoney)}</span>
+            <span className="text-sm text-muted-foreground">Bundle, one day{percent > 0 ? ` (${percent}% off)` : ""}</span>
+            <span className="font-serif text-xl text-primary">{formatMoney(percent > 0 ? discountedMoney : subtotalMoney)}</span>
           </CardFooter>
         </Card>
       </section>
@@ -313,11 +357,14 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
         className="fixed inset-x-0 bottom-16 z-30 flex items-center justify-between gap-4 border-t border-border bg-background/95 p-3.5 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.4)] supports-backdrop-filter:bg-background/85 supports-backdrop-filter:backdrop-blur-xl md:hidden"
       >
         <div className="flex flex-col gap-0.5">
-          <span className="text-[11px] text-muted-foreground">Bundle subtotal</span>
-          <span className="font-serif text-lg text-primary">{formatMoney(subtotalMoney)}</span>
+          <span className="text-[11px] text-muted-foreground">Bundle, one day{percent > 0 ? ` (${percent}% off)` : ""}</span>
+          <span className="font-serif text-lg text-primary">{formatMoney(percent > 0 ? discountedMoney : subtotalMoney)}</span>
         </div>
+        <Button size="lg" variant="outline" onClick={handleSend} disabled={lines.length === 0 || sending || anySwap}>
+          Send
+        </Button>
         <Button size="lg" className="flex-1" onClick={handleAdd} disabled={lines.length === 0 || actions.saving}>
-          Add Full Bundle to Plan
+          Customize
         </Button>
       </motion.div>
     </div>

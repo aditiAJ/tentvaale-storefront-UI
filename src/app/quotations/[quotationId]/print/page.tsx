@@ -1,5 +1,6 @@
 "use client";
 
+import { POLICY_LABEL, taxLines } from "@/features/quotations/tax";
 import { use, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Download } from "lucide-react";
@@ -133,10 +134,28 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
                   <td className="pt-1 text-right tabular-nums">{formatMoney(quotation.deliveryCharge)}</td>
                 </tr>
               )}
+              {(quotation.bundleDiscounts ?? []).map((bundle) => (
+                <tr key={bundle.name}>
+                  <td className="pt-1 text-xs text-[#555]" colSpan={4}>{bundle.name} ({bundle.percent}% off)</td>
+                  <td className="pt-1 text-right tabular-nums">−{formatMoney(bundle.amount)}</td>
+                </tr>
+              ))}
               {quotation.discountAmount && quotation.discountAmount.amount > 0 && (
                 <tr>
                   <td className="pt-1 text-xs text-[#555]" colSpan={4}>Discount</td>
                   <td className="pt-1 text-right tabular-nums">−{formatMoney(quotation.discountAmount)}</td>
+                </tr>
+              )}
+              {taxLines(quotation.tax).map((line) => (
+                <tr key={line.label}>
+                  <td className="pt-1 text-xs text-[#555]" colSpan={4}>{line.label}</td>
+                  <td className="pt-1 text-right tabular-nums">{formatMoney(line.value)}</td>
+                </tr>
+              ))}
+              {quotation.deliveryCharge && quotation.deliveryCharge.amount > 0 && (
+                <tr>
+                  <td className="pt-1 text-xs text-[#555]" colSpan={4}>Delivery (no GST)</td>
+                  <td className="pt-1 text-right tabular-nums">{formatMoney(quotation.deliveryCharge)}</td>
                 </tr>
               )}
               <tr className="border-t-2 border-[#b8862f]">
@@ -146,7 +165,10 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
             </tfoot>
           </table>
 
-          {quotation.securityDeposit && quotation.securityDeposit.amount > 0 && (
+          {quotation.depositWaiver?.waived && (
+            <p className="mt-4 text-xs text-[#555]">Security deposit: <span className="font-medium text-[#1a1a1a]">Waived</span>.</p>
+          )}
+          {quotation.securityDeposit && quotation.securityDeposit.amount > 0 && !quotation.depositWaiver?.waived && (
             <p className="mt-4 text-xs text-[#555]">
               Refundable security deposit: <span className="font-medium text-[#1a1a1a]">{formatMoney(quotation.securityDeposit)}</span>,
               collected with the order and returned after your items come back in good condition.
@@ -154,9 +176,13 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
           )}
 
           <footer className="mt-10 border-t border-[#eee] pt-4 text-[11px] leading-5 text-[#777]">
-            <p>Prices are per day. Taxes are not included in this quotation.</p>
+            <p>Prices are per day. GST is charged on the items after discounts; delivery and the security deposit carry no GST.</p>
             {quotation.validUntil && <p>This quotation is valid until {formatDay(quotation.validUntil)}.</p>}
-            <p className="mt-2">Full rental terms and policies are provided with the order confirmation.</p>
+            <p className="mt-2">
+              {(quotation.policies ?? []).length > 0
+                ? `Policies: ${(quotation.policies ?? []).map((p) => `${POLICY_LABEL[p.kind] ?? p.kind} v${p.version}`).join(", ")}, published on our website.`
+                : "Full rental terms and policies are provided with the order confirmation."}
+            </p>
           </footer>
         </div>
       </div>

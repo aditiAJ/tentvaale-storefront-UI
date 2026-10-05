@@ -143,6 +143,10 @@ export interface BundleCard {
   guestMax?: number;
   /** The sum of the items' daily rates for one day. Whether it scales with days is quotation's call. */
   fromPricePerEvent: Money;
+  /** Percent off the one-day sum, set by the vendor (0 when none). */
+  discountPercent?: number;
+  /** The one-day sum after the discount. */
+  discountedPrice?: Money;
   occasions: Occasion[];
 }
 
@@ -180,6 +184,8 @@ export interface BundleDetail {
   occasions: Occasion[];
   items: BundleItem[];
   fromPricePerEvent: Money;
+  discountPercent?: number;
+  discountedPrice?: Money;
 }
 
 export interface Page<T> {

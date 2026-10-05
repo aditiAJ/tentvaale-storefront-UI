@@ -1,5 +1,6 @@
 "use client";
 
+import { BundlePrice } from "@/components/bundle-price";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
@@ -285,7 +286,7 @@ export default function Home() {
                 eyebrow={b.occasions[0]?.name}
                 title={b.name}
                 description={b.tagline}
-                meta={<span className="font-serif text-lg text-primary">From {formatMoney(b.fromPricePerEvent)}</span>}
+                meta={<BundlePrice bundle={b} />}
                 metaEnd="per event"
                 imageHeight="h-44 md:h-52"
               />

@@ -55,6 +55,21 @@ export interface PlanItem {
   rentalEnd?: string;
   /** Absent only if the product no longer exists. */
   product?: PlanProductInfo;
+  /** Set for items added from a bundle. */
+  bundleGroupId?: string;
+  bundleName?: string;
+  bundleDiscountPercent?: number;
+}
+
+/** A bundle on the plan, priced from its items as they are now. */
+export interface PlanBundle {
+  groupId: string;
+  slug?: string;
+  name: string;
+  discountPercent: number;
+  itemsTotal: Money;
+  discountAmount: Money;
+  effectivePrice: Money;
 }
 
 export interface PlanSubEvent {
@@ -94,6 +109,7 @@ export interface Plan {
   subEvents: PlanSubEvent[];
   generalItems: PlanItem[];
   sharing: PlanSharing[];
+  bundles?: PlanBundle[];
 }
 
 // ---- requests --------------------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 "use client";
 
+import { BundlePrice } from "@/components/bundle-price";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { DUR, EASE, Reveal, SPRING, Stagger, StaggerItem } from "@/components/motion";
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { formatMoney } from "@/lib/money";
 import { useBundles } from "@/features/catalog/hooks";
 import type { BundleCard } from "@/features/catalog/types";
 
@@ -166,7 +166,7 @@ export default function BundlesPage() {
                     title={b.name}
                     description={b.tagline}
                     tags={guestsLabel(b) ? [guestsLabel(b)!] : undefined}
-                    meta={<span className="font-serif text-lg text-primary">From {formatMoney(b.fromPricePerEvent)}</span>}
+                    meta={<BundlePrice bundle={b} />}
                     metaEnd="per event"
                   />
                 </StaggerItem>

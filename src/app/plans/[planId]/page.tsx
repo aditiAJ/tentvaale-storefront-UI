@@ -175,7 +175,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   function subEventTotal(subEventId: string | null) {
     return plan!.items.filter((it) => it.subEventId === subEventId).reduce((sum, it) => sum + linePrice(it), 0);
   }
-  const planTotal = plan.items.reduce((sum, it) => sum + linePrice(it), 0);
+  const planGross = plan.items.reduce((sum, it) => sum + linePrice(it), 0);
+  // A bundle's percentage comes off what its items add up to now (the server prices the groups).
+  const bundleSaving = plan.bundles.reduce((sum, b) => sum + b.discountAmount.amount, 0);
+  const planTotal = planGross - bundleSaving;
 
   const startDate = plan.eventStartDate ?? plan.subEvents[0]?.eventDate;
   const planDateLabel = formatEventDateRange(startDate, plan.eventEndDate);
@@ -1359,6 +1362,21 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             <p className="mt-1 text-xs text-muted-foreground">
               {itemsCount} item{itemsCount === 1 ? "" : "s"} · final price confirmed in your quotation
             </p>
+            {plan.bundles.length > 0 && (
+              <ul className="mt-3 flex flex-col gap-2 border-t border-border pt-3 text-xs">
+                {plan.bundles.map((b) => (
+                  <li key={b.groupId} className="flex items-baseline justify-between gap-2">
+                    <span className="text-muted-foreground">
+                      {b.name} · {b.discountPercent}% off
+                    </span>
+                    <span className="text-foreground tabular-nums">
+                      <span className="mr-1.5 text-muted-foreground line-through">{formatRupees(b.itemsTotal.amount)}</span>
+                      {formatRupees(b.effectivePrice.amount)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
 
             {planTotal > 0 && (
               <ul className="mt-5 flex flex-col gap-3">

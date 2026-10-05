@@ -25,5 +25,9 @@ export interface QuotationRequest {
 export const submitPlanForQuotation = (planId: string) =>
   apiFetch<QuotationRequest>("storefront/ordering/quotation-requests", { method: "POST", body: { planId } });
 
+/** One bundle, sent straight for a quotation (days from the dates; one day when none). */
+export const sendBundleForQuotation = (body: { bundleSlug: string; rentalStart?: string; rentalEnd?: string }) =>
+  apiFetch<QuotationRequest>("storefront/ordering/bundle-quotations", { method: "POST", body });
+
 export const listQuotationRequests = (signal?: AbortSignal) =>
   apiFetch<QuotationRequest[]>("storefront/ordering/quotation-requests", { signal });

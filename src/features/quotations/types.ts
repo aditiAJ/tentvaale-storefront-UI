@@ -25,6 +25,37 @@ export interface QuotationLine {
   rentalDays: number;
   unitRatePerDay: Money;
   lineTotal: Money;
+  /** Set when the line came from a bundle. */
+  bundleName?: string;
+}
+
+/** One discount line per bundle: its percentage off what its items add up to. */
+/** GST on the items after discounts: CGST + SGST in the vendor's state, IGST elsewhere. Delivery and the deposit are not taxed. */
+export interface QuotationTax {
+  rate: number | null;
+  taxableAmount: Money;
+  cgst: Money;
+  sgst: Money;
+  igst: Money;
+  placeOfSupply?: string | null;
+  intraState: boolean;
+}
+
+export interface DepositWaiver {
+  waived: boolean;
+  amount: Money;
+}
+
+export interface PolicyRef {
+  kind: string;
+  version: number;
+}
+
+export interface BundleDiscount {
+  name: string;
+  percent: number;
+  itemsTotal: Money;
+  amount: Money;
 }
 
 export interface QuotationVersion {
@@ -37,6 +68,9 @@ export interface QuotationVersion {
   totalAmount: Money;
   securityDeposit: Money;
   lines: QuotationLine[];
+  bundleDiscounts?: BundleDiscount[];
+  tax?: QuotationTax;
+  depositWaiver?: DepositWaiver;
 }
 
 export interface CustomerQuotation {
@@ -57,6 +91,11 @@ export interface CustomerQuotation {
   orderId?: string;
   orderNumber?: string;
   versions: QuotationVersion[];
+  bundleDiscounts?: BundleDiscount[];
+  tax?: QuotationTax;
+  depositWaiver?: DepositWaiver;
+  /** The policy versions this quotation was sent with. */
+  policies?: PolicyRef[];
 }
 
 /** What the customer reads for each stage, and how loudly. */
