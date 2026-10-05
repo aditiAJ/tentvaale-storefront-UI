@@ -28,6 +28,7 @@ export interface BoardSubEvent {
   /** "" when no date has been given yet. */
   eventDate: string;
   venue?: string;
+  venueId?: string;
   setupDate?: string;
   teardownDate?: string;
   guestCount?: number;
@@ -38,8 +39,10 @@ export interface BoardSubEvent {
 
 export interface BoardItem {
   id: string;
-  /** null = the item belongs to the plan as a whole. */
+  /** The first function it serves; null = the item belongs to the plan as a whole. */
   subEventId: string | null;
+  /** Every function it serves (one line, however many). Empty = the plan as a whole. */
+  subEventIds: string[];
   /** "42" or "42-v7"; see itemKey. */
   productId: string;
   quantity: number;
@@ -57,6 +60,7 @@ export interface BoardPlan {
   /** Only a draft can be changed. */
   editable: boolean;
   venue?: string;
+  venueId?: string;
   eventStartDate?: string;
   eventEndDate?: string;
   guestCount?: number;
@@ -74,11 +78,17 @@ const RATE: Record<CatalogRateType, BoardRateType> = { QTY: "Qty", SQFT: "SqFt",
 /** "19:00:00" -> "19:00" */
 const hhmm = (time?: string) => (time ? time.slice(0, 5) : undefined);
 
-function boardItem(item: PlanItem, subEventId: string | null): BoardItem {
+/** Whether a line serves a function (null = the plan as a whole). One line can serve several. */
+export const serves = (item: BoardItem, subEventId: string | null) =>
+  subEventId === null ? item.subEventIds.length === 0 : item.subEventIds.includes(subEventId);
+
+function boardItem(item: PlanItem): BoardItem {
   const perUnit = !item.product || item.product.rateType === "QTY";
+  const subEventIds = item.subEventIds ?? [];
   return {
     id: item.id,
-    subEventId,
+    subEventId: subEventIds[0] ?? null,
+    subEventIds,
     productId: itemKey(item.productId, item.variantId),
     quantity: perUnit ? item.quantity : 1,
     dimensions: perUnit ? undefined : { length: item.quantity },
@@ -88,10 +98,10 @@ function boardItem(item: PlanItem, subEventId: string | null): BoardItem {
 }
 
 export function toBoard(plan: Plan): BoardPlan {
-  const items: BoardItem[] = [
-    ...plan.subEvents.flatMap((se) => se.items.map((it) => boardItem(it, se.id))),
-    ...plan.generalItems.map((it) => boardItem(it, null)),
-  ];
+  // An item on several functions arrives under each of them: it is one line, kept once.
+  const unique = new Map<string, PlanItem>();
+  for (const it of [...plan.subEvents.flatMap((se) => se.items), ...plan.generalItems]) unique.set(it.id, it);
+  const items: BoardItem[] = [...unique.values()].map(boardItem);
 
   const products = new Map<string, BoardProduct>();
   for (const item of [...plan.subEvents.flatMap((se) => se.items), ...plan.generalItems]) {
@@ -119,6 +129,7 @@ export function toBoard(plan: Plan): BoardPlan {
     status: plan.status,
     editable: plan.status === "DRAFT",
     venue: plan.venue,
+    venueId: plan.venueDetail?.id,
     eventStartDate: plan.eventDate,
     eventEndDate: plan.eventEndDate,
     guestCount: plan.guestCount,
@@ -128,6 +139,7 @@ export function toBoard(plan: Plan): BoardPlan {
       name: se.name,
       eventDate: se.scheduledOn ?? "",
       venue: se.venue,
+      venueId: se.venueDetail?.id,
       setupDate: se.setupOn,
       teardownDate: se.teardownOn,
       guestCount: se.guestCount,

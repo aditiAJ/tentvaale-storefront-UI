@@ -44,6 +44,8 @@ export interface PlanItem {
   id: string;
   /** Absent: the item belongs to the plan as a whole, not to one function. */
   subEventId?: string;
+  /** Every function this one line serves (a tent on Haldi and Sangeet is one line). Empty: the whole plan. */
+  subEventIds?: string[];
   productId: number;
   variantId?: number;
   /** Includes the variant, "Banquet Chair (Velvet)". */
@@ -84,6 +86,8 @@ export interface PlanSubEvent {
   startTime?: string;
   endTime?: string;
   items: PlanItem[];
+  /** The saved venue this function chose; absent means the plan's venue. */
+  venueDetail?: Venue;
 }
 
 export interface PlanSharing {
@@ -110,6 +114,18 @@ export interface Plan {
   generalItems: PlanItem[];
   sharing: PlanSharing[];
   bundles?: PlanBundle[];
+  venueDetail?: Venue;
+}
+
+/** A saved venue: where an event is, with its map location when picked on a map. */
+export interface Venue {
+  id: string;
+  label: string;
+  addressText: string;
+  latitude?: number;
+  longitude?: number;
+  placeId?: string;
+  accessNotes?: string;
 }
 
 // ---- requests --------------------------------------------------------------------------------------
@@ -121,6 +137,8 @@ export interface PlanDetailsInput {
   eventEndDate?: string;
   guestCount?: number;
   generalLabel?: string;
+  /** A saved venue; null/absent clears it. */
+  venueId?: string | null;
 }
 
 export interface SubEventInput {
@@ -132,23 +150,30 @@ export interface SubEventInput {
   guestCount?: number;
   startTime?: string;
   endTime?: string;
+  venueId?: string | null;
 }
 
 export interface AddItemInput {
   /** Omit for the plan as a whole. */
   subEventId?: string | null;
+  /** One item on several functions; wins over subEventId. */
+  subEventIds?: string[];
   productId: number;
   variantId?: number | null;
   quantity: number;
   rentalStart?: string;
   rentalEnd?: string;
+  /** The customer's own number of days; without dates or this, days come from the functions' dates. */
+  rentalDays?: number;
 }
 
 export interface UpdateItemInput {
-  subEventId: string | null;
+  subEventId?: string | null;
+  subEventIds?: string[];
   quantity: number;
   rentalStart?: string;
   rentalEnd?: string;
+  rentalDays?: number;
 }
 
 export interface BundleSwapInput {

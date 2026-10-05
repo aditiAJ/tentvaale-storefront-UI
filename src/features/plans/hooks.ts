@@ -139,6 +139,8 @@ export function usePlanActions(planId: string) {
             eventEndDate: plan.eventEndDate,
             guestCount: plan.guestCount,
             generalLabel: label,
+            // Sent back, or the saved venue would be cleared.
+            venueId: plan.venueDetail?.id ?? null,
           }),
         );
       },
@@ -155,7 +157,21 @@ export function usePlanActions(planId: string) {
         const item = findItem(current(), itemId);
         if (!item) return Promise.resolve(undefined);
         return run(() =>
-          apiUpdateItem(planId, itemId, { subEventId, quantity: item.quantity, rentalStart: item.rentalStart, rentalEnd: item.rentalEnd }),
+          apiUpdateItem(planId, itemId, {
+            subEventIds: subEventId ? [subEventId] : [],
+            quantity: item.quantity,
+            rentalStart: item.rentalStart,
+            rentalEnd: item.rentalEnd,
+          }),
+        );
+      },
+
+      /** Which functions one line serves (empty = the plan as a whole). Days follow the functions' dates. */
+      setFunctions: (itemId: string, subEventIds: string[]) => {
+        const item = findItem(current(), itemId);
+        if (!item) return Promise.resolve(undefined);
+        return run(() =>
+          apiUpdateItem(planId, itemId, { subEventIds, quantity: item.quantity, rentalStart: item.rentalStart, rentalEnd: item.rentalEnd }),
         );
       },
 
@@ -164,7 +180,7 @@ export function usePlanActions(planId: string) {
         const item = findItem(current(), itemId);
         if (!item) return Promise.resolve(undefined);
         return run(
-          () => apiUpdateItem(planId, itemId, { subEventId: item.subEventId ?? null, quantity, rentalStart: item.rentalStart, rentalEnd: item.rentalEnd }),
+          () => apiUpdateItem(planId, itemId, { subEventIds: item.subEventIds, quantity, rentalStart: item.rentalStart, rentalEnd: item.rentalEnd }),
           (plan) => withItem(plan, itemId, (it) => ({ ...it, quantity })),
         );
       },

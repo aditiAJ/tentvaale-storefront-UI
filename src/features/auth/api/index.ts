@@ -19,6 +19,11 @@ export function login(payload: LoginPayload): Promise<void> {
   return apiFetch<void>("storefront/auth/login", { method: "POST", body: payload });
 }
 
+/** "Continue with Google": the ID token Google gave the browser. Signs in (or creates the account) and sets the same cookie. */
+export function loginWithGoogle(idToken: string): Promise<void> {
+  return apiFetch<void>("storefront/auth/google", { method: "POST", body: { idToken } });
+}
+
 /** Forgets the session cookie. There is nothing to call on the backend. */
 export function logout(): Promise<void> {
   return apiFetch<void>("storefront/auth/logout", { method: "POST" });

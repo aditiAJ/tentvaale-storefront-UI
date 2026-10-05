@@ -1,5 +1,6 @@
 "use client";
 
+import { VenueSelect } from "@/features/venues";
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -48,7 +49,7 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api-client";
 import { useRequireAccount } from "@/features/auth";
 import { ItemPicker, type PickedLine } from "@/features/plans/components/ItemPicker";
-import { PLAN_STATUS_LABEL, planGroupLabel, type BoardItem, type BoardProduct, type BoardSubEvent } from "@/features/plans/board";
+import { PLAN_STATUS_LABEL, planGroupLabel, serves, type BoardItem, type BoardProduct, type BoardSubEvent } from "@/features/plans/board";
 import { usePlanActions, useBoard } from "@/features/plans/hooks";
 import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/features/plans/inventory-sharing";
 import { usePlanNudges } from "@/features/plans/nudges";
@@ -70,7 +71,7 @@ const STATUS_STYLE: Record<PlanStatus, string> = {
   ORDERED: "bg-primary text-primary-foreground",
 };
 
-const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
+const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", venueId: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
 
 // "Add items" outside the setup suggestions opens the same picker on the full catalog.
 const BROWSE_PICKER: (typeof STARTER_SUGGESTIONS)[number] = { key: "browse", label: "product", categories: [] };
@@ -108,7 +109,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // null = the dialog is adding a new sub-event; an id = editing that one.
   const [editingSubEventId, setEditingSubEventId] = useState<string | null>(null);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
-  const [planForm, setPlanForm] = useState<{ name: string; venue: string; eventStartDate: string; eventEndDate: string; guestCount?: number }>({
+  const [planForm, setPlanForm] = useState<{ name: string; venue: string; venueId?: string; eventStartDate: string; eventEndDate: string; guestCount?: number }>({
     name: "",
     venue: "",
     eventStartDate: "",
@@ -148,8 +149,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // no functions), otherwise the first function. A removed function falls back the same way.
   const chosenStillExists = chosenTab === null || plan.subEvents.some((se) => se.id === chosenTab);
   const activeTab: string | null =
-    chosenTab !== undefined && chosenStillExists ? chosenTab : plan.subEvents.length > 0 && !plan.items.some((it) => it.subEventId === null) ? plan.subEvents[0].id : null;
-  const activeItems = plan.items.filter((it) => it.subEventId === activeTab);
+    chosenTab !== undefined && chosenStillExists ? chosenTab : plan.subEvents.length > 0 && !plan.items.some((it) => it.subEventIds.length === 0) ? plan.subEvents[0].id : null;
+  const activeItems = plan.items.filter((it) => serves(it, activeTab));
   const activeSubEvent = activeTab ? plan.subEvents.find((se) => se.id === activeTab) : undefined;
   const baseName = planGroupLabel(plan);
   const activeLabel = activeSubEvent?.name ?? baseName;
@@ -173,7 +174,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     return product ? product.basePrice * lineQty(item) : 0;
   }
   function subEventTotal(subEventId: string | null) {
-    return plan!.items.filter((it) => it.subEventId === subEventId).reduce((sum, it) => sum + linePrice(it), 0);
+    return plan!.items.filter((it) => serves(it, subEventId)).reduce((sum, it) => sum + linePrice(it), 0);
   }
   const planGross = plan.items.reduce((sum, it) => sum + linePrice(it), 0);
   // A bundle's percentage comes off what its items add up to now (the server prices the groups).
@@ -209,6 +210,9 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       (t) => t.id !== item.subEventId,
     );
     const name = productById.get(item.productId)?.name ?? "item";
+    // One line can serve several functions (a tent on Haldi and Sangeet is charged once, for the days it is needed).
+    const alsoUse = plan!.subEvents.filter((se) => !item.subEventIds.includes(se.id));
+    const stopUsing = item.subEventIds.length > 1 ? plan!.subEvents.filter((se) => item.subEventIds.includes(se.id)) : [];
     return (
       <DropdownMenu>
         <DropdownMenuTrigger
@@ -219,6 +223,34 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           }
         />
         <DropdownMenuContent align="end" className="w-52">
+          {(alsoUse.length > 0 || stopUsing.length > 0) && (
+            <>
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Used in</DropdownMenuLabel>
+                {alsoUse.map((se) => (
+                  <DropdownMenuItem
+                    key={`add-${se.id}`}
+                    onClick={async () => {
+                      if (await actions.setFunctions(item.id, [...item.subEventIds, se.id])) toast.success(`${name} also used in ${se.name}`);
+                    }}
+                  >
+                    <Plus className="size-4" /> Also use in {se.name}
+                  </DropdownMenuItem>
+                ))}
+                {stopUsing.map((se) => (
+                  <DropdownMenuItem
+                    key={`stop-${se.id}`}
+                    onClick={async () => {
+                      if (await actions.setFunctions(item.id, item.subEventIds.filter((id) => id !== se.id))) toast.success(`${name} no longer used in ${se.name}`);
+                    }}
+                  >
+                    <X className="size-4" /> Stop using in {se.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
+          )}
           {targets.length > 0 && (
             <>
               <DropdownMenuGroup>
@@ -275,7 +307,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       const key = se.eventDate || "unscheduled";
       byDate.set(key, [...(byDate.get(key) ?? []), se]);
     }
-    const generalItems = plan!.items.filter((it) => it.subEventId === null);
+    const generalItems = plan!.items.filter((it) => serves(it, null));
     if (generalItems.length > 0) byDate.set("general", []);
 
     const dates = [...byDate.keys()].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
@@ -345,7 +377,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 renderDayCard(
                   se.name,
                   se,
-                  plan!.items.filter((it) => it.subEventId === se.id),
+                  plan!.items.filter((it) => serves(it, se.id)),
                   subEventTotal(se.id),
                 ),
               )}
@@ -860,6 +892,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     if (!f.name.trim()) return;
     const details = {
       venue: f.venue.trim() || undefined,
+      venueId: f.venueId || null,
       setupDate: f.setupDate || undefined,
       teardownDate: f.teardownDate || undefined,
       guestCount: Number(f.guestCount) > 0 ? Number(f.guestCount) : undefined,
@@ -870,6 +903,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       name: f.name.trim(),
       scheduledOn: f.eventDate || undefined,
       venue: details.venue,
+      venueId: details.venueId,
       setupOn: details.setupDate,
       teardownOn: details.teardownDate,
       guestCount: details.guestCount,
@@ -891,6 +925,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     setPlanForm({
       name: plan!.name,
       venue: plan!.venue ?? "",
+      venueId: plan!.venueId ?? "",
       eventStartDate: plan!.eventStartDate ?? "",
       eventEndDate: plan!.eventEndDate ?? "",
       guestCount: plan!.guestCount,
@@ -903,6 +938,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     const saved = await actions.updateDetails({
       name: planForm.name.trim(),
       venue: planForm.venue.trim() || undefined,
+      venueId: planForm.venueId || null,
       eventDate: planForm.eventStartDate || undefined,
       eventEndDate: planForm.eventEndDate || undefined,
       guestCount: planForm.guestCount,
@@ -927,6 +963,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       name: se.name,
       eventDate: se.eventDate,
       venue: se.venue ?? "",
+      venueId: se.venueId ?? "",
       setupDate: se.setupDate ?? "",
       teardownDate: se.teardownDate ?? "",
       guestCount: se.guestCount ? String(se.guestCount) : "",
@@ -942,7 +979,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   const functionsCount = plan.subEvents.length;
   const itemsCount = plan.items.length;
   const pendingSharing = productUsage.filter((u) => needsSharingDecision(u) && !plan!.itemSharing?.[u.productId]);
-  const emptySubEvents = plan.subEvents.filter((se) => !plan!.items.some((it) => it.subEventId === se.id));
+  const emptySubEvents = plan.subEvents.filter((se) => !plan!.items.some((it) => serves(it, se.id)));
   const steps = [
     { label: "Event details", hint: "Dates, venue & guests", done: Boolean(plan.venue && startDate && plan.guestCount), onClick: openEditPlan },
     { label: "Add functions", hint: "Haldi, Sangeet, Wedding…", done: functionsCount > 0, onClick: openAddSubEvent },
@@ -1120,7 +1157,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               <div className="flex items-center gap-2 overflow-x-auto pb-1">
                 {functionCards.map((f) => {
                   const active = activeTab === f.id;
-                  const count = plan.items.filter((it) => it.subEventId === f.id).length;
+                  const count = plan.items.filter((it) => serves(it, f.id)).length;
                   return (
                     <button
                       key={f.id ?? "general"}
@@ -1426,6 +1463,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="plan-edit-venue">Venue</Label>
+                    <VenueSelect
+                      value={planForm.venueId}
+                      onChange={(venueId, text) => setPlanForm({ ...planForm, venueId, venue: venueId ? text : planForm.venue })}
+                    />
                     <Input id="plan-edit-venue" placeholder="Taj Palace, Delhi" value={planForm.venue} onChange={(e) => setPlanForm({ ...planForm, venue: e.target.value })} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1559,6 +1600,11 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
               <div className="space-y-2">
                 <Label htmlFor="se-venue">Venue</Label>
+                <VenueSelect
+                  value={subEventForm.venueId}
+                  noneLabel="Same as the event"
+                  onChange={(venueId, text) => setSubEventForm({ ...subEventForm, venueId, venue: venueId ? text : subEventForm.venue })}
+                />
                 <Input
                   id="se-venue"
                   placeholder="Garden Lawn, Taj Palace"

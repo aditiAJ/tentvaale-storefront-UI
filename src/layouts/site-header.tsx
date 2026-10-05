@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import { useSession } from "@/features/auth/session";
+import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { useCategories } from "@/features/catalog/hooks";
 
 
@@ -83,6 +84,7 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
         <Heart className="size-5" />
         <CountBadge count={wishlist.length} />
       </Link>
+      <NotificationBell onNavigate={onNavigate} />
       <Link
         href="/account"
         onClick={onNavigate}

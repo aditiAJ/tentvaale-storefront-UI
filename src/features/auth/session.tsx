@@ -9,6 +9,7 @@ import {
   authKeys,
   getCurrentAccount,
   login as apiLogin,
+  loginWithGoogle as apiLoginWithGoogle,
   logout as apiLogout,
   signup as apiSignup,
   updateAccount as apiUpdateAccount,
@@ -35,6 +36,8 @@ interface SessionValue {
    */
   signedOutByUser: boolean;
   login: (payload: LoginPayload) => Promise<StorefrontAccount>;
+  /** Signs in with a Google ID token (creating the account the first time). */
+  loginWithGoogle: (idToken: string) => Promise<StorefrontAccount>;
   /** Creates the account, then signs it in. */
   signup: (payload: SignupPayload) => Promise<StorefrontAccount>;
   logout: () => Promise<void>;
@@ -114,6 +117,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [refresh],
   );
 
+  const loginWithGoogle = useCallback(
+    async (idToken: string) => {
+      await apiLoginWithGoogle(idToken);
+      setSignedOutAt(null);
+      return refresh();
+    },
+    [refresh],
+  );
+
   const signup = useCallback(
     async (payload: SignupPayload) => {
       await apiSignup(payload);
@@ -144,8 +156,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo<SessionValue>(
-    () => ({ status, account, signedOutByUser, login, signup, logout, updateProfile }),
-    [status, account, signedOutByUser, login, signup, logout, updateProfile],
+    () => ({ status, account, signedOutByUser, login, loginWithGoogle, signup, logout, updateProfile }),
+    [status, account, signedOutByUser, login, loginWithGoogle, signup, logout, updateProfile],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

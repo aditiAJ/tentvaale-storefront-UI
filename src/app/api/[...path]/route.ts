@@ -127,7 +127,7 @@ async function handle(request: NextRequest, { params }: Context): Promise<NextRe
   const raw = await upstream.arrayBuffer();
 
   // Signing in: keep the token in the cookie and hand the page only a confirmation.
-  if (joined === "storefront/auth/login" && method === "POST" && upstream.ok) {
+  if ((joined === "storefront/auth/login" || joined === "storefront/auth/google") && method === "POST" && upstream.ok) {
     let accessToken: string | undefined;
     try {
       accessToken = (JSON.parse(new TextDecoder().decode(raw)) as { accessToken?: string }).accessToken;

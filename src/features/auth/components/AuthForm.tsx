@@ -1,5 +1,6 @@
 "use client";
 
+import { GOOGLE_CLIENT_ID, GoogleButton } from "@/features/auth/components/GoogleButton";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -27,7 +28,7 @@ function safeNext(value: string | null): string {
 // field set (no account-type toggle, adds "Forgot password?").
 export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   const router = useRouter();
-  const { signup, login } = useSession();
+  const { signup, login, loginWithGoogle } = useSession();
   const searchParams = useSearchParams();
   const reduce = useReducedMotion();
   const [tab, setTab] = useState<"signup" | "login">(initialTab);
@@ -287,9 +288,18 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         <div className="h-px flex-1 bg-border" />
       </div>
 
+      {GOOGLE_CLIENT_ID ? (
+        <GoogleButton
+          onToken={async (idToken) => {
+            await loginWithGoogle(idToken);
+            router.push(safeNext(searchParams.get("next")));
+          }}
+        />
+      ) : null}
+
       <div className="flex w-full flex-col gap-3 md:flex-row">
         {[
-          { label: "Google", glyph: "G" },
+          ...(GOOGLE_CLIENT_ID ? [] : [{ label: "Google", glyph: "G" }]),
           { label: "Facebook", glyph: "f" },
         ].map((provider) => (
           <Button
