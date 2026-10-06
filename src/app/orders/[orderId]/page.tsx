@@ -8,7 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireAccount } from "@/features/auth";
-import { DEPOSIT_COPY, STATUS_COPY, useOrder, type Order } from "@/features/orders";
+import {
+  DEPOSIT_COPY,
+  DOCUMENT_LABEL,
+  STATUS_COPY,
+  useOrder,
+  useOrderBilling,
+  useOrderDocuments,
+  type Order,
+} from "@/features/orders";
 import { formatMoney } from "@/lib/money";
 import { ApiError } from "@/services/api-client";
 
@@ -100,7 +108,7 @@ function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean })
             <Row label="Order total" value={formatMoney(order.totalAmount)} strong />
             <Row label="Balance owed" value={formatMoney(order.balanceOwed)} />
             <p className="text-xs leading-5 text-muted-foreground">
-              Balance is the total less any credit we have given you. Payments are not recorded online yet.
+              Balance is the total less any credit we have given you and the payments we have received and confirmed.
             </p>
             <div className="mt-2 flex flex-col gap-2 border-t border-border pt-4 text-sm">
               <Link className="text-primary hover:underline" href={`/quotations/${order.requestId}`}>
@@ -111,9 +119,58 @@ function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean })
               </Link>
             </div>
           </div>
+          <PaymentsPanel orderId={order.orderId} />
           {order.deposit && <DepositPanel deposit={order.deposit} />}
         </aside>
       </div>
+    </div>
+  );
+}
+
+/** Payments we have received and confirmed, the agreed instalments, and the documents we have issued. */
+function PaymentsPanel({ orderId }: { orderId: string }) {
+  const billing = useOrderBilling(orderId);
+  const documents = useOrderDocuments(orderId);
+  const payments = billing.data?.payments ?? [];
+  const schedule = billing.data?.schedule ?? [];
+  const docs = documents.data ?? [];
+  if (payments.length === 0 && schedule.length === 0 && docs.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-e2">
+      <h2 className="font-serif text-xl text-foreground">Payments</h2>
+      {payments.map((p) => (
+        <div key={p.id} className="flex items-baseline justify-between gap-3 text-sm">
+          <span className="text-muted-foreground">
+            {formatDay(p.paidOn)} · {p.purpose === "DEPOSIT" ? "Deposit" : "Payment"}
+          </span>
+          <span className="text-foreground tabular-nums">{formatMoney(p.amount)}</span>
+        </div>
+      ))}
+      {schedule.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
+          <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Agreed instalments</span>
+          {schedule.map((line) => (
+            <div key={line.id} className="flex items-baseline justify-between gap-3">
+              <span className="text-muted-foreground">
+                {line.label} · due {formatDay(line.dueOn)}
+              </span>
+              <span className="text-foreground tabular-nums">
+                {formatMoney(line.amount)} {line.paid ? "· paid" : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+      {docs.length > 0 && (
+        <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
+          <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Invoices and receipts</span>
+          {docs.map((d) => (
+            <Link key={d.id} className="text-primary hover:underline" href={`/orders/${orderId}/documents/${d.id}`}>
+              {DOCUMENT_LABEL[d.kind]} {d.number}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
