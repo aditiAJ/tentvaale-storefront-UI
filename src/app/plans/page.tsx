@@ -43,9 +43,12 @@ function PlanCard({ plan }: { plan: PlanSummary }) {
             <h2 className="font-serif text-xl leading-snug text-card-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
               {plan.name}
             </h2>
-            <Badge variant={STATUS_VARIANT[plan.status]} className="shrink-0">
-              {PLAN_STATUS_LABEL[plan.status]}
-            </Badge>
+            <span className="flex shrink-0 flex-col items-end gap-1">
+              <Badge variant={STATUS_VARIANT[plan.status]}>{PLAN_STATUS_LABEL[plan.status]}</Badge>
+              {plan.myRole && plan.myRole !== "OWNER" ? (
+                <Badge variant="outline">Shared with you · {plan.myRole === "EDITOR" ? "editor" : "viewer"}</Badge>
+              ) : null}
+            </span>
           </div>
           <div className="flex flex-col gap-1.5 text-sm text-muted-foreground">
             <div className="flex items-center justify-between gap-2">

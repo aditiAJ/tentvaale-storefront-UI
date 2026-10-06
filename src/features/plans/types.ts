@@ -27,6 +27,8 @@ export interface PlanSummary {
   subEventCount: number;
   itemCount: number;
   createdAt: string;
+  /** What this account may do on the plan; absent from older responses (treat as the owner). */
+  myRole?: PlanRole;
 }
 
 export interface PlanProductInfo {
@@ -115,6 +117,30 @@ export interface Plan {
   sharing: PlanSharing[];
   bundles?: PlanBundle[];
   venueDetail?: Venue;
+  /** What the signed-in account may do: the owner everything, an editor changes it, a viewer only looks. */
+  myRole?: PlanRole;
+  /** Who is on the plan. Invitations still waiting are listed to the owner only. */
+  members?: PlanMember[];
+}
+
+export type PlanRole = "OWNER" | "EDITOR" | "VIEWER";
+
+export interface PlanMember {
+  id: string;
+  email: string;
+  role: PlanRole;
+  /** False until the invited person has signed in with that address and accepted. */
+  accepted: boolean;
+}
+
+/** What an invitation is for, as the person it was sent to sees it. */
+export interface PlanInvite {
+  planId: string;
+  planName: string;
+  invitedBy?: string;
+  role: PlanRole;
+  email: string;
+  accepted: boolean;
 }
 
 /** A saved venue: where an event is, with its map location when picked on a map. */

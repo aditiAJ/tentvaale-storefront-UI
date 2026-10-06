@@ -143,7 +143,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   }
 
   // A plan sent for a quotation is the vendor's to work from: it can be read, not changed.
-  const canSubmit = plan.editable;
+  const canSubmit = plan.editable && plan.role === "OWNER";
 
   // Before anything is picked: open "Your event" if it has items (or there are
   // no functions), otherwise the first function. A removed function falls back the same way.
@@ -1061,6 +1061,9 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openEditPlan} disabled={!plan.editable}>
               <Pencil className="size-4" /> Edit
             </Button>
+            <Link href={`/plans/${plan.id}/share`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-muted">
+              <Users className="size-4" /> {plan.role === "OWNER" ? "Share" : "People"}
+            </Link>
           </div>
         </div>
 
@@ -1091,7 +1094,13 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         </ol>
       </section>
 
-      {!plan.editable && (
+      {plan.status === "DRAFT" && plan.role === "VIEWER" && (
+        <section className="mt-4 rounded-2xl border border-border bg-muted/40 p-4 text-sm text-foreground">
+          You were invited to look at this plan. You can view it but not change it.
+        </section>
+      )}
+
+      {plan.status !== "DRAFT" && (
         <section className="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-4 text-sm text-foreground">
           This plan has been sent for a quotation, so it can be read but no longer changed. Our team will come back to you with the quotation.
           <PlanQuotationLink planId={plan.id} />

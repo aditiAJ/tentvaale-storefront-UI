@@ -4,6 +4,8 @@ import type {
   AddItemInput,
   Plan,
   PlanDetailsInput,
+  PlanInvite,
+  PlanRole,
   PlanSummary,
   SharingDecision,
   SubEventInput,
@@ -56,6 +58,23 @@ export const removeItem = (planId: string, itemId: string) =>
 /** The backend expands the bundle into its items, by the bundle's own rule, with the swaps allowed. */
 export const addBundle = (planId: string, input: AddBundleInput) =>
   apiFetch<Plan>(`${BASE}/${planId}/bundles`, { method: "POST", ...json(input) });
+
+/** Owner only: invite someone by email. They join once they sign in with that address and accept. */
+export const inviteMember = (planId: string, email: string, role: Exclude<PlanRole, "OWNER">) =>
+  apiFetch<Plan>(`${BASE}/${planId}/members`, { method: "POST", ...json({ email, role }) });
+
+export const changeMemberRole = (planId: string, memberId: string, role: Exclude<PlanRole, "OWNER">) =>
+  apiFetch<Plan>(`${BASE}/${planId}/members/${memberId}`, { method: "PUT", ...json({ role }) });
+
+/** The owner removes anyone; a member removes themselves to leave. Leaving answers with no body. */
+export const removeMember = (planId: string, memberId: string) =>
+  apiFetch<Plan | undefined>(`${BASE}/${planId}/members/${memberId}`, { method: "DELETE" });
+
+export const getInvite = (token: string, signal?: AbortSignal) =>
+  apiFetch<PlanInvite>(`${BASE}/invites/${encodeURIComponent(token)}`, { signal });
+
+export const acceptInvite = (token: string) =>
+  apiFetch<Plan>(`${BASE}/invites/${encodeURIComponent(token)}/accept`, { method: "POST" });
 
 /** `decision` null clears the customer's call for that product. */
 export const decideSharing = (planId: string, productId: number, variantId: number | null, decision: SharingDecision | null) =>

@@ -57,8 +57,10 @@ export interface BoardPlan {
   id: string;
   name: string;
   status: PlanStatus;
-  /** Only a draft can be changed. */
+  /** Only a draft can be changed, and not by someone who was invited to look. */
   editable: boolean;
+  /** What the signed-in account may do on the plan. */
+  role: "OWNER" | "EDITOR" | "VIEWER";
   venue?: string;
   venueId?: string;
   eventStartDate?: string;
@@ -127,7 +129,8 @@ export function toBoard(plan: Plan): BoardPlan {
     id: plan.id,
     name: plan.name,
     status: plan.status,
-    editable: plan.status === "DRAFT",
+    editable: plan.status === "DRAFT" && plan.myRole !== "VIEWER",
+    role: plan.myRole ?? "OWNER",
     venue: plan.venue,
     venueId: plan.venueDetail?.id,
     eventStartDate: plan.eventDate,
