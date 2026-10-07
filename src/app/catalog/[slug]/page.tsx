@@ -49,7 +49,7 @@ function sizeOf(p: ProductDetail): string | undefined {
   const d = p.dimensions;
   if (!d) return undefined;
   const parts = [d.length, d.width, d.height].filter((n): n is number => typeof n === "number");
-  return parts.length > 0 ? `${parts.join(" × ")}${d.unit ? ` ${d.unit}` : ""}` : undefined;
+  return parts.length > 0 ? `${parts.join(" × ")}${d.unit ? ` ${d.unit.toLowerCase()}` : ""}` : undefined;
 }
 
 function ProductSkeleton() {

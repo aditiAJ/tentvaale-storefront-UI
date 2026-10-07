@@ -26,7 +26,7 @@ function sizeOf(detail: ProductDetail): string | undefined {
   const d = detail.dimensions;
   if (!d) return undefined;
   const parts = [d.length, d.width, d.height].filter((n): n is number => typeof n === "number");
-  return parts.length > 0 ? `${parts.join(" × ")}${d.unit ? ` ${d.unit}` : ""}` : undefined;
+  return parts.length > 0 ? `${parts.join(" × ")}${d.unit ? ` ${d.unit.toLowerCase()}` : ""}` : undefined;
 }
 
 /** Remembers a card's product (for wishlist and quick add) and returns its mock-store id. */
