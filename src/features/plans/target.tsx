@@ -47,14 +47,40 @@ export function usePlanTarget() {
 
 export type PlanTarget = ReturnType<typeof usePlanTarget>;
 
-/** The two selects. Shows a prompt to create a plan when the customer has no draft. */
-export function PlanTargetFields({ target, className }: { target: PlanTarget; className?: string }) {
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+/** The two selects. Shows a prompt or button to create a plan when the customer has no draft. */
+export function PlanTargetFields({
+  target,
+  className,
+  onCreatePlan,
+}: {
+  target: PlanTarget;
+  className?: string;
+  onCreatePlan?: () => void;
+}) {
   if (target.loading) return <p className="text-sm text-muted-foreground">Loading your plans…</p>;
   if (target.drafts.length === 0) {
     return (
-      <p className={className ?? "text-sm text-muted-foreground"}>
-        You don&apos;t have a draft plan yet — <Link href="/plans" className="text-primary underline">create one</Link> to add items.
-      </p>
+      <div className={className ?? "flex flex-col items-center gap-2 py-2 text-center"}>
+        <p className="text-xs text-muted-foreground">You don&apos;t have a draft plan yet.</p>
+        {onCreatePlan ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onCreatePlan}
+            className="gap-1.5 text-xs text-primary"
+          >
+            <Plus className="size-3.5" /> Create a draft plan
+          </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            <Link href="/plans" className="text-primary underline">create one</Link> to add items.
+          </p>
+        )}
+      </div>
     );
   }
   const planName = target.drafts.find((p) => p.id === target.planId)?.name;
@@ -63,7 +89,16 @@ export function PlanTargetFields({ target, className }: { target: PlanTarget; cl
     <div className={className ?? "grid grid-cols-2 gap-3"}>
       <div className="flex flex-col gap-1.5">
         <Label>Plan</Label>
-        <Select value={target.planId} onValueChange={(v) => v && target.setPlanId(v)}>
+        <Select
+          value={target.planId}
+          onValueChange={(v) => {
+            if (v === "__new") {
+              onCreatePlan?.();
+            } else if (v) {
+              target.setPlanId(v);
+            }
+          }}
+        >
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select a Plan">{planName}</SelectValue>
           </SelectTrigger>
@@ -73,6 +108,11 @@ export function PlanTargetFields({ target, className }: { target: PlanTarget; cl
                 {p.name}
               </SelectItem>
             ))}
+            {onCreatePlan && (
+              <SelectItem value="__new" className="text-primary font-medium">
+                + Create new plan…
+              </SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>

@@ -2,24 +2,17 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 import { CalendarDays, MapPin, Plus, Users } from "lucide-react";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { DateWheelPicker } from "@/components/date-wheel-picker";
-import { NumberStepper } from "@/components/number-stepper";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
-import { ApiError } from "@/services/api-client";
 import { useRequireAccount } from "@/features/auth";
 import { PLAN_STATUS_LABEL } from "@/features/plans/board";
-import { useCreatePlan, usePlans } from "@/features/plans/hooks";
+import { usePlans } from "@/features/plans/hooks";
+import { CreatePlanDialog } from "@/features/plans/components/CreatePlanDialog";
 import type { PlanStatus, PlanSummary } from "@/features/plans/types";
 import { useMockStore } from "@/mock-data/store";
 import { formatEventDateRange } from "@/mock-data/seed";
@@ -84,12 +77,9 @@ function PlanCard({ plan }: { plan: PlanSummary }) {
 
 export default function PlansPage() {
   const account = useRequireAccount();
-  const router = useRouter();
   const { wishlist } = useMockStore();
   const plansQuery = usePlans();
-  const createPlan = useCreatePlan();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", venue: "", eventStartDate: "", eventEndDate: "", guestCount: "" });
   // Filters by what the customer reads (two backend statuses share "Quotation requested").
   const [statusFilter, setStatusFilter] = useState<"all" | string>("all");
   const [sort, setSort] = useState<"event-date" | "name" | "status" | "newest">("event-date");
@@ -107,82 +97,19 @@ export default function PlansPage() {
 
   if (!account) return null;
 
-  // Every field is required: a plan without a venue, dates and a head count can't be quoted, so the
-  // form blocks rather than creating a half-plan.
-  const formComplete =
-    form.name.trim() !== "" && form.venue.trim() !== "" && form.eventStartDate !== "" && form.eventEndDate !== "" && Number(form.guestCount) > 0;
-  const datesInvalid = form.eventStartDate !== "" && form.eventEndDate !== "" && form.eventEndDate < form.eventStartDate;
-
-  async function handleCreate() {
-    if (!formComplete || datesInvalid) return;
-    try {
-      const plan = await createPlan.mutateAsync({
-        name: form.name.trim(),
-        venue: form.venue.trim(),
-        eventDate: form.eventStartDate,
-        eventEndDate: form.eventEndDate,
-        guestCount: Number(form.guestCount),
-      });
-      setForm({ name: "", venue: "", eventStartDate: "", eventEndDate: "", guestCount: "" });
-      setDialogOpen(false);
-      toast.success(`Created "${plan.name}"`);
-      router.push(`/plans/${plan.id}`);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "Couldn't create the plan. Please try again.");
-    }
-  }
-
   const NewPlanDialog = (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogTrigger
-        render={
-          <Button size="lg" className="gap-1.5">
-            <Plus className="size-4" /> New Plan
-          </Button>
-        }
+    <>
+      <Button size="lg" className="gap-1.5" onClick={() => setDialogOpen(true)}>
+        <Plus className="size-4" /> New Plan
+      </Button>
+      <CreatePlanDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        title="New Plan"
+        description="Set up your event plan. You can edit any details later."
+        submitLabel="Create Plan"
       />
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>New plan</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="plan-name">Event name *</Label>
-            <Input id="plan-name" placeholder="Priya's Wedding" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="plan-venue">Venue *</Label>
-            <Input id="plan-venue" placeholder="Taj Palace, Delhi" value={form.venue} onChange={(e) => setForm({ ...form, venue: e.target.value })} />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="plan-start">Start date *</Label>
-              <DateWheelPicker id="plan-start" value={form.eventStartDate} onChange={(v) => setForm({ ...form, eventStartDate: v })} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="plan-end">End date *</Label>
-              <DateWheelPicker id="plan-end" min={form.eventStartDate || undefined} value={form.eventEndDate} onChange={(v) => setForm({ ...form, eventEndDate: v })} />
-            </div>
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="plan-guests">Guest count *</Label>
-            <NumberStepper
-              id="plan-guests"
-              optional
-              placeholder="250"
-              value={form.guestCount === "" ? undefined : Number(form.guestCount)}
-              onChange={(v) => setForm({ ...form, guestCount: v === undefined ? "" : String(v) })}
-            />
-          </div>
-          {datesInvalid && <p className="text-xs text-destructive">End date cannot be before the start date.</p>}
-        </div>
-        <DialogFooter>
-          <Button onClick={handleCreate} disabled={!formComplete || datesInvalid || createPlan.isPending}>
-            {createPlan.isPending ? "Creating…" : "Create"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </>
   );
 
   if (plansQuery.isPending) {

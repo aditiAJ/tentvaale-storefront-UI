@@ -35,6 +35,8 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -54,6 +56,18 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         setError("Please tell us your name.");
         return;
       }
+      if (!phone.trim()) {
+        setError("Please enter your phone number.");
+        return;
+      }
+      if (!city.trim()) {
+        setError("Please enter your city.");
+        return;
+      }
+      if (!state.trim()) {
+        setError("Please choose or enter your state.");
+        return;
+      }
       if (password.length < 8) {
         setError("Choose a password of at least 8 characters.");
         return;
@@ -66,7 +80,9 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
           fullName: fullName.trim(),
           email: cleanEmail,
           password,
-          phone: phone.trim() || undefined,
+          phone: phone.trim(),
+          city: city.trim(),
+          state: state.trim(),
           accountType: accountType === "EventPlanner" ? "EVENT_PLANNER" : "CUSTOMER",
         });
         toast.success("Account created — your Plan Event is ready.");
@@ -179,20 +195,93 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
           />
         </div>
         {tab === "signup" && (
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="auth-phone" className="text-xs text-muted-foreground">
-              Phone (optional)
-            </Label>
-            <Input
-              id="auth-phone"
-              type="tel"
-              autoComplete="tel"
-              placeholder="+91 …"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="h-12 bg-card"
-            />
-          </div>
+          <>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="auth-phone" className="text-xs text-muted-foreground">
+                Phone number <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="auth-phone"
+                type="tel"
+                autoComplete="tel"
+                placeholder="+91 98765 43210"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="h-12 bg-card"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="auth-city" className="text-xs text-muted-foreground">
+                  City <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="auth-city"
+                  type="text"
+                  autoComplete="address-level2"
+                  placeholder="e.g. Ahmedabad"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="h-12 bg-card"
+                  required
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="auth-state" className="text-xs text-muted-foreground">
+                  State <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="auth-state"
+                  type="text"
+                  list="indian-states"
+                  autoComplete="address-level1"
+                  placeholder="e.g. Gujarat"
+                  value={state}
+                  onChange={(e) => setState(e.target.value)}
+                  className="h-12 bg-card"
+                  required
+                />
+                <datalist id="indian-states">
+                  {[
+                    "Andhra Pradesh",
+                    "Arunachal Pradesh",
+                    "Assam",
+                    "Bihar",
+                    "Chhattisgarh",
+                    "Goa",
+                    "Gujarat",
+                    "Haryana",
+                    "Himachal Pradesh",
+                    "Jharkhand",
+                    "Karnataka",
+                    "Kerala",
+                    "Madhya Pradesh",
+                    "Maharashtra",
+                    "Manipur",
+                    "Meghalaya",
+                    "Mizoram",
+                    "Nagaland",
+                    "Odisha",
+                    "Punjab",
+                    "Rajasthan",
+                    "Sikkim",
+                    "Tamil Nadu",
+                    "Telangana",
+                    "Tripura",
+                    "Uttar Pradesh",
+                    "Uttarakhand",
+                    "West Bengal",
+                    "Delhi",
+                    "Jammu and Kashmir",
+                    "Ladakh",
+                  ].map((s) => (
+                    <option key={s} value={s} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+          </>
         )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="auth-password" className="text-xs text-muted-foreground">

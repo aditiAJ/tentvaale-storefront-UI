@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Plus } from "lucide-react";
 import { DUR, EASE, Reveal } from "@/components/motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,8 @@ import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
 import { addItem } from "@/features/plans/api";
-import { useCreatePlan, usePlans } from "@/features/plans/hooks";
+import { usePlans } from "@/features/plans/hooks";
+import { CreatePlanDialog } from "@/features/plans/components/CreatePlanDialog";
 import { parseItemKey } from "@/features/plans/keys";
 import { ApiError } from "@/services/api-client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,11 +33,10 @@ export default function WishlistPage() {
   const { products, wishlist, toggleWishlist } = useMockStore();
   const queryClient = useQueryClient();
   const plansQuery = usePlans();
-  const createPlan = useCreatePlan();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
-  const [newPlanName, setNewPlanName] = useState("");
+  const [createPlanOpen, setCreatePlanOpen] = useState(false);
 
   if (!account) return null;
 
@@ -77,17 +77,6 @@ export default function WishlistPage() {
     setMoveDialogOpen(false);
     if (moved > 0) toast.success(`Moved ${moved} item${moved === 1 ? "" : "s"} to plan.`);
     if (refused.length > 0) toast.error(refused.join("; "));
-  }
-
-  async function createPlanFromSelected() {
-    if (!newPlanName.trim()) return;
-    try {
-      const plan = await createPlan.mutateAsync({ name: newPlanName.trim() });
-      setNewPlanName("");
-      await moveToPlan(plan.id);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "Couldn't create the plan.");
-    }
   }
 
   if (items.length === 0) {
@@ -154,15 +143,31 @@ export default function WishlistPage() {
                 ))}
                 {myPlans.length === 0 && <p className="text-sm text-muted-foreground">No draft plans yet — create one below.</p>}
               </div>
-              <div className="flex items-end gap-2 border-t border-border pt-4">
-                <div className="flex-1 space-y-2">
-                  <Label htmlFor="new-plan">New plan name</Label>
-                  <Input id="new-plan" value={newPlanName} onChange={(e) => setNewPlanName(e.target.value)} placeholder="Priya's Wedding" />
-                </div>
-                <Button onClick={createPlanFromSelected}>Create &amp; move</Button>
+              <div className="flex flex-col gap-2 border-t border-border pt-4">
+                <Button
+                  variant="outline"
+                  className="w-full gap-1.5"
+                  onClick={() => {
+                    setMoveDialogOpen(false);
+                    setCreatePlanOpen(true);
+                  }}
+                >
+                  <Plus className="size-4" /> Create a new plan &amp; move
+                </Button>
               </div>
             </DialogContent>
           </Dialog>
+
+          <CreatePlanDialog
+            open={createPlanOpen}
+            onOpenChange={setCreatePlanOpen}
+            title="Create Plan & Move Items"
+            submitLabel="Create & Move Items"
+            onCreated={async (newPlan) => {
+              await moveToPlan(newPlan.id);
+            }}
+          />
+
           <Button
             variant="destructive"
             onClick={() => {

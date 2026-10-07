@@ -24,7 +24,9 @@ import { quantityLabel, rateUnitLabel } from "@/features/catalog/format";
 import { ProductRail } from "@/features/catalog/components/ProductRail";
 import { planProductId, registerDetail } from "@/features/catalog/plan-bridge";
 import { usePlanActions } from "@/features/plans/hooks";
+import { addItem as apiAddItem } from "@/features/plans/api";
 import { PlanTargetFields, usePlanTarget } from "@/features/plans/target";
+import { CreatePlanDialog } from "@/features/plans/components/CreatePlanDialog";
 import type { ProductCard, ProductDetail } from "@/features/catalog/types";
 
 // Flowstep screens 9 (desktop) / 10 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
@@ -86,6 +88,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const [variantId, setVariantId] = useState<number | undefined>(undefined);
   const [addedTo, setAddedTo] = useState<{ planId: string; planName: string; quantity: number } | null>(null);
   const [activeImage, setActiveImage] = useState(0);
+  const [showCreatePlan, setShowCreatePlan] = useState(false);
 
   if (query.isPending) return <ProductSkeleton />;
 
@@ -127,7 +130,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       return;
     }
     if (!target.planId) {
-      toast.error("Create a plan first, then add this to it.");
+      setShowCreatePlan(true);
       return;
     }
     if (!product) return;
@@ -292,9 +295,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
           {currentAccount ? (
             <>
-              <PlanTargetFields target={target} className="grid grid-cols-2 gap-3" />
-              <Button size="lg" className="w-full" onClick={handleAdd} disabled={!target.planId || actions.saving}>
-                Add to Plan
+              <PlanTargetFields target={target} className="grid grid-cols-2 gap-3" onCreatePlan={() => setShowCreatePlan(true)} />
+              <Button size="lg" className="w-full" onClick={handleAdd} disabled={actions.saving}>
+                {target.planId ? "Add to Plan" : "Create Plan & Add"}
               </Button>
             </>
           ) : (
@@ -324,10 +327,31 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
             {target.plan ? <>Adding to <span className="text-foreground">{target.plan.name}</span></> : "Create a plan to add this"}
           </span>
-          <Button size="lg" onClick={handleAdd} disabled={!target.planId || actions.saving}>
-            Add to Plan
+          <Button size="lg" onClick={handleAdd} disabled={actions.saving}>
+            {target.planId ? "Add to Plan" : "Create Plan & Add"}
           </Button>
         </motion.div>
+      )}
+
+      {product && (
+        <CreatePlanDialog
+          open={showCreatePlan}
+          onOpenChange={setShowCreatePlan}
+          initialName={product.occasions[0] ? `My ${product.occasions[0].name}` : `${product.name} Celebration`}
+          initialEventType={product.occasions[0]?.name ?? "Wedding"}
+          title="Create Plan & Add Item"
+          submitLabel="Create Plan & Add"
+          onCreated={async (newPlan) => {
+            const amount = needsDimensions ? length : quantity;
+            await apiAddItem(newPlan.id, {
+              productId: product.id,
+              variantId: variant?.id ?? null,
+              quantity: amount,
+            });
+            setAddedTo({ planId: newPlan.id, planName: newPlan.name, quantity: amount });
+            toast.success(`Created "${newPlan.name}" and added ${product.name}!`);
+          }}
+        />
       )}
 
       <Dialog open={!!addedTo} onOpenChange={(open) => !open && setAddedTo(null)}>

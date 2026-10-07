@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useMemo } from "react";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
@@ -15,11 +15,14 @@ import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
 import { useCategories, useCollection, useCollections } from "@/features/catalog/hooks";
 import { planProductId, registerCard } from "@/features/catalog/plan-bridge";
+import { QuickAddDialog } from "@/features/catalog/components/QuickAddDialog";
+import type { ProductCard } from "@/features/catalog/types";
 
 // Flowstep screens 13 (desktop) / 14 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 export default function CollectionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const { currentAccount, wishlist, toggleWishlist } = useMockStore();
+  const [quickAddCard, setQuickAddCard] = useState<ProductCard | null>(null);
   const reduce = useReducedMotion();
   const query = useCollection(slug);
   const all = useCollections();
@@ -151,7 +154,9 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                       <p className="font-serif text-lg text-primary">
                         {formatMoney(p.dailyRate)} <span className="font-sans text-xs text-muted-foreground">/ day</span>
                       </p>
-                      <Button variant="outline" className="mt-auto w-full" nativeButton={false} render={<Link href={`/catalog/${p.slug}`}>Add to Plan</Link>} />
+                      <Button variant="outline" className="mt-auto w-full" onClick={() => setQuickAddCard(p)}>
+                        Add to Plan
+                      </Button>
                     </div>
                   </div>
                 </StaggerItem>
@@ -173,6 +178,8 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
           </Stagger>
         </section>
       )}
+
+      <QuickAddDialog card={quickAddCard} onClose={() => setQuickAddCard(null)} />
     </div>
   );
 }

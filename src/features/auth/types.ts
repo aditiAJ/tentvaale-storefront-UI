@@ -9,8 +9,9 @@ export interface StorefrontAccount {
   id: string;
   email: string;
   fullName: string;
-  /** Absent when the customer gave none. */
   phone?: string;
+  city?: string;
+  state?: string;
   accountType: StorefrontAccountType;
 }
 
@@ -18,8 +19,9 @@ export interface SignupPayload {
   fullName: string;
   email: string;
   password: string;
-  /** Optional; 6 to 20 characters of digits, +, spaces, dashes and brackets. */
-  phone?: string;
+  phone: string;
+  city: string;
+  state: string;
   accountType: StorefrontAccountType;
 }
 

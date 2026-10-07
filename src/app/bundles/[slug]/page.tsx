@@ -5,12 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronRight } from "lucide-react";
+import { CalendarDays, Check, ChevronRight } from "lucide-react";
 import { Reveal, Stagger, StaggerItem, SPRING } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductThumb } from "@/components/product-thumb";
@@ -20,8 +19,10 @@ import { useMockStore } from "@/mock-data/store";
 import { useBundle, useBundles } from "@/features/catalog/hooks";
 import type { BundleDetail } from "@/features/catalog/types";
 import { usePlanActions } from "@/features/plans/hooks";
-import { sendBundleForQuotation } from "@/features/plans/quotation-request";
+import { addBundle as apiAddBundle } from "@/features/plans/api";
 import { PlanTargetFields, usePlanTarget } from "@/features/plans/target";
+import { CreatePlanDialog } from "@/features/plans/components/CreatePlanDialog";
+import { formatEventDate, formatEventDateRange } from "@/mock-data/seed";
 import type { Money } from "@/lib/money";
 
 /** One line of the bundle as the shopper has set it up: each item, or the alternative swapped in. */
@@ -88,8 +89,6 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
   const target = usePlanTarget();
   const actions = usePlanActions(target.planId);
 
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   // item index -> index into that item's swap options (undefined = the bundle's own pick).
   const [swaps, setSwaps] = useState<Record<number, number | undefined>>({});
 
@@ -118,53 +117,60 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
   const percent = bundle.discountPercent ?? 0;
   // The same percentage applies to what the shopper has set up (swaps change the sum, not the percentage).
   const discountedMoney = { ...bundle.fromPricePerEvent, amount: Math.round(subtotal * (100 - percent)) / 100 };
-  const anySwap = Object.values(swaps).some((v) => v !== undefined);
-  const [sending, setSending] = useState(false);
+  // What the "create a plan" popup was opened for: to keep customizing, or to send for a quotation.
+  const [createFor, setCreateFor] = useState<"customize" | "send" | null>(null);
 
-  async function handleSend() {
-    if (!currentAccount) {
-      router.push("/signup");
-      return;
-    }
-    setSending(true);
-    try {
-      const request = await sendBundleForQuotation({
-        bundleSlug: bundle.slug,
-        rentalStart: startDate || undefined,
-        rentalEnd: endDate || undefined,
-      });
-      toast.success(`${bundle.name} sent for a quotation`);
-      router.push(`/quotations/${request.id}`);
-    } catch (error) {
-      toast.error(error instanceof ApiError ? error.message : "We couldn't send that just now. Please try again.");
-    } finally {
-      setSending(false);
-    }
-  }
+  /**
+   * The rental window comes from the plan, never from a free calendar: a bundle placed on a function
+   * is charged for that function's date (the backend works the days out), and one placed on the whole
+   * event for the event's own dates.
+   */
+  const chosenFunction = target.subEventId ? target.subEvents.find((s) => s.id === target.subEventId) : undefined;
+  const rentalStart = target.subEventId ? undefined : target.plan?.eventDate;
+  const rentalEnd = target.subEventId ? undefined : target.plan?.eventEndDate;
+  const rentalNote = !target.plan
+    ? null
+    : chosenFunction
+      ? chosenFunction.scheduledOn
+        ? { ok: true, text: `Rented for ${chosenFunction.name}: ${formatEventDate(chosenFunction.scheduledOn)}.` }
+        : { ok: false, text: `${chosenFunction.name} has no date yet. Add one on your plan so the right days are priced.` }
+      : target.plan.eventDate
+        ? { ok: true, text: `Rented for your event: ${formatEventDateRange(target.plan.eventDate, target.plan.eventEndDate)}.` }
+        : { ok: false, text: "Your plan has no event dates yet. Add them on the plan page so the right days are priced." };
+  const chosenSwaps = bundle.items.flatMap((item, i) => {
+    const option = swaps[i] === undefined ? undefined : item.swapOptions[swaps[i]!];
+    return option ? [{ productId: item.productId, variantId: item.variantId, toProductId: option.productId, toVariantId: option.variantId }] : [];
+  });
 
-  async function handleAdd() {
+  /**
+   * Puts the bundle into the shopper's plan (their swaps included), then either shows them the plan
+   * or the page where the plan is reviewed and sent. A bundle is never sent without being in a plan
+   * first, so what goes to the vendor is what they can see and change.
+   */
+  async function handleAdd(then: "customize" | "send") {
     if (!currentAccount) {
       router.push("/signup");
       return;
     }
     if (!target.planId) {
-      toast.error("Create a plan first, then add this bundle to it.");
+      setCreateFor(then);
       return;
     }
-    // The backend expands the bundle into its items; only the swaps the shopper chose are sent.
     const saved = await actions.addBundle({
       bundleSlug: bundle.slug,
       subEventId: target.subEventId,
-      rentalStart: startDate || undefined,
-      rentalEnd: endDate || undefined,
-      swaps: bundle.items.flatMap((item, i) => {
-        const option = swaps[i] === undefined ? undefined : item.swapOptions[swaps[i]!];
-        return option ? [{ productId: item.productId, variantId: item.variantId, toProductId: option.productId, toVariantId: option.variantId }] : [];
-      }),
+      rentalStart,
+      rentalEnd,
+      swaps: chosenSwaps,
     });
     if (!saved) return;
-    toast.success(`${bundle.name} added — ${lines.length} items in your plan.`);
-    router.push(`/plans/${target.planId}`);
+    if (then === "send") {
+      toast.success(`${bundle.name} added to ${saved.name}. Check it, then send it for a quotation.`);
+      router.push(`/plans/${target.planId}/submit`);
+    } else {
+      toast.success(`${bundle.name} added: ${lines.length} items in your plan.`);
+      router.push(`/plans/${target.planId}`);
+    }
   }
 
   const guests = bundle.guestMin && bundle.guestMax ? `${bundle.guestMin}–${bundle.guestMax}` : bundle.guestMax ? `Up to ${bundle.guestMax}` : bundle.guestMin ? `${bundle.guestMin}+` : "Any";
@@ -256,13 +262,13 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
                       </p>
                       {line.swappable && (
                         <div className="pt-1.5">
-                          <Label className="sr-only">Swap {bundle.items[i].name}</Label>
+                          <Label className="sr-only">Choose variant for {bundle.items[i].name}</Label>
                           <Select
                             value={swaps[i] === undefined ? "__own" : String(swaps[i])}
                             onValueChange={(v) => setSwaps((s) => ({ ...s, [i]: v === "__own" ? undefined : Number(v) }))}
                           >
                             <SelectTrigger className="h-8 w-full max-w-xs text-xs">
-                              <SelectValue>{line.swapped ? "Swapped" : "Swap for…"}</SelectValue>
+                              <SelectValue>{line.swapped ? "Swapped" : "Choose variant…"}</SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="__own">{bundle.items[i].name} (included)</SelectItem>
@@ -288,32 +294,22 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
             <CardTitle className="font-serif text-2xl text-foreground">Plan this bundle</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-6 p-0">
-            <Button size="lg" onClick={handleAdd} disabled={lines.length === 0 || actions.saving}>
+            <Button size="lg" onClick={() => handleAdd("customize")} disabled={lines.length === 0 || actions.saving}>
               Customize
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={handleSend}
-              disabled={lines.length === 0 || sending || anySwap}
-              title={anySwap ? "You have swapped items: use Customize to keep them" : undefined}
-            >
-              {sending ? "Sending…" : "Send for quotation"}
+            <Button size="lg" variant="outline" onClick={() => handleAdd("send")} disabled={lines.length === 0 || actions.saving}>
+              {actions.saving ? "Adding…" : "Send for quotation"}
             </Button>
-            <div className="flex flex-col gap-4 border-t border-border pt-5">
-              <h3 className="text-sm font-medium text-foreground">Rental time-frame</h3>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">Start date</Label>
-                  <DateWheelPicker value={startDate} onChange={setStartDate} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label className="text-sm text-muted-foreground">End date</Label>
-                  <DateWheelPicker value={endDate} min={startDate || undefined} onChange={setEndDate} />
-                </div>
-              </div>
+            <div className="flex flex-col gap-3 border-t border-border pt-5">
+              <h3 className="text-sm font-medium text-foreground">Which plan, and when</h3>
+              {currentAccount && <PlanTargetFields target={target} className="flex flex-col gap-3" onCreatePlan={() => setCreateFor("customize")} />}
+              {rentalNote && (
+                <p className={`flex items-start gap-2 text-xs leading-5 ${rentalNote.ok ? "text-muted-foreground" : "text-amber-600 dark:text-amber-400"}`}>
+                  <CalendarDays className="mt-0.5 size-3.5 shrink-0" />
+                  {rentalNote.text}
+                </p>
+              )}
             </div>
-            {currentAccount && <PlanTargetFields target={target} className="flex flex-col gap-3" />}
           </CardContent>
           <CardFooter className="justify-between rounded-none border-t border-border bg-transparent p-0 pt-5">
             <span className="text-sm text-muted-foreground">Bundle, one day{percent > 0 ? ` (${percent}% off)` : ""}</span>
@@ -360,13 +356,36 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
           <span className="text-[11px] text-muted-foreground">Bundle, one day{percent > 0 ? ` (${percent}% off)` : ""}</span>
           <span className="font-serif text-lg text-primary">{formatMoney(percent > 0 ? discountedMoney : subtotalMoney)}</span>
         </div>
-        <Button size="lg" variant="outline" onClick={handleSend} disabled={lines.length === 0 || sending || anySwap}>
+        <Button size="lg" variant="outline" onClick={() => handleAdd("send")} disabled={lines.length === 0 || actions.saving}>
           Send
         </Button>
-        <Button size="lg" className="flex-1" onClick={handleAdd} disabled={lines.length === 0 || actions.saving}>
+        <Button size="lg" className="flex-1" onClick={() => handleAdd("customize")} disabled={lines.length === 0 || actions.saving}>
           Customize
         </Button>
       </motion.div>
+
+      <CreatePlanDialog
+        open={createFor !== null}
+        onOpenChange={(open) => !open && setCreateFor(null)}
+        initialName={`${bundle.name} Event`}
+        initialEventType={bundle.occasions[0]?.name ?? "Wedding"}
+        initialGuestCount={bundle.guestMin ?? 100}
+        title={`Create a plan for ${bundle.name}`}
+        submitLabel={createFor === "send" ? "Create plan & review" : "Create plan & add bundle"}
+        onCreated={async (newPlan) => {
+          const then = createFor ?? "customize";
+          // A new plan has no functions yet, so the bundle goes on the whole event (the event's own dates).
+          await apiAddBundle(newPlan.id, {
+            bundleSlug: bundle.slug,
+            subEventId: null,
+            rentalStart: newPlan.eventDate,
+            rentalEnd: newPlan.eventEndDate,
+            swaps: chosenSwaps,
+          });
+          toast.success(`Created "${newPlan.name}" and added ${bundle.name}.`);
+          router.push(then === "send" ? `/plans/${newPlan.id}/submit` : `/plans/${newPlan.id}`);
+        }}
+      />
     </div>
   );
 }
