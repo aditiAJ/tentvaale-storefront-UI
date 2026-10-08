@@ -15,11 +15,13 @@ import {
   getPlan,
   listPlans,
   planKeys,
+  removeCoverImage as apiRemoveCoverImage,
   removeItem as apiRemoveItem,
   removeSubEvent as apiRemoveSubEvent,
   updateItem as apiUpdateItem,
   updatePlan as apiUpdatePlan,
   updateSubEvent as apiUpdateSubEvent,
+  uploadCoverImage as apiUploadCoverImage,
 } from "./api";
 import { toBoard, type BoardPlan } from "./board";
 import { parseItemKey } from "./keys";
@@ -126,6 +128,11 @@ export function usePlanActions(planId: string) {
       saving: pending > 0,
 
       updateDetails: (input: PlanDetailsInput) => run(() => apiUpdatePlan(planId, input)),
+
+      /** Puts a picture of the event on the plan (replacing any). A refusal is shown as a message. */
+      setCoverImage: (file: File) => run(() => apiUploadCoverImage(planId, file)),
+
+      removeCoverImage: () => run(() => apiRemoveCoverImage(planId)),
 
       /** The label for the items on no function ("Main function" when empty). Keeps the other details. */
       renameGeneral: (label: string) => {

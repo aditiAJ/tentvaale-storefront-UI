@@ -58,16 +58,18 @@ export async function apiFetch<T>(
   path: string,
   { method = "GET", body, signal }: RequestOptions = {},
 ): Promise<T> {
+  // A file (FormData) is sent as it is: the browser writes its own multipart Content-Type, with the boundary.
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
   const res = await fetch(`${API_BASE_PATH}/${path.replace(/^\/?(api\/)?/, "")}`, {
     method,
     // The gateway refuses writes without this header: a cross-site form or image cannot add one, so
     // it is what stops another site making the browser act on the customer's behalf.
     headers: {
       "X-Tentvaale-Client": "web",
-      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(body !== undefined && !isForm ? { "Content-Type": "application/json" } : {}),
     },
     credentials: "same-origin",
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
     signal,
   });
 

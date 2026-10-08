@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   MoveRight,
   Heart,
+  ImagePlus,
   Package,
   PackageOpen,
   Split,
@@ -51,6 +52,7 @@ import { useRequireAccount } from "@/features/auth";
 import { ItemPicker, type PickedLine } from "@/features/plans/components/ItemPicker";
 import { PLAN_STATUS_LABEL, functionComplete, planGroupLabel, quoteBlocker, serves, type BoardItem, type BoardProduct, type BoardSubEvent } from "@/features/plans/board";
 import { usePlanActions, useBoard } from "@/features/plans/hooks";
+import { NO_COVER_CHANGE, PlanCoverField, type CoverChange } from "@/features/plans/components/PlanCoverField";
 import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/features/plans/inventory-sharing";
 import { usePlanNudges } from "@/features/plans/nudges";
 import type { PlanStatus } from "@/features/plans/types";
@@ -115,6 +117,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     eventStartDate: "",
     eventEndDate: "",
   });
+  // What the customer did to the event picture in the open Edit dialog; applied when they press Save.
+  const [coverChange, setCoverChange] = useState<CoverChange>(NO_COVER_CHANGE);
   const [view, setView] = useState<"sub-events" | "dates" | "timeline" | "inventory" | "sharing">("sub-events");
   const [activeDate, setActiveDate] = useState<string | null>(null);
   // Which starter suggestion opened the product picker — null = picker closed.
@@ -936,6 +940,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   }
 
   function openEditPlan() {
+    setCoverChange(NO_COVER_CHANGE);
     setPlanForm({
       name: plan!.name,
       venue: plan!.venue ?? "",
@@ -959,10 +964,15 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       // The details form does not touch this, so it must be sent back or it would be cleared.
       generalLabel: plan!.generalLabel,
     });
-    if (saved) {
-      setPlanDialogOpen(false);
-      toast.success("Event details updated");
+    if (!saved) return;
+    // The picture goes after the details, so a refused photo never costs them the details they changed.
+    if (coverChange.file) {
+      if (!(await actions.setCoverImage(coverChange.file))) return;
+    } else if (coverChange.removed) {
+      if (!(await actions.removeCoverImage())) return;
     }
+    setPlanDialogOpen(false);
+    toast.success("Event details updated");
   }
 
   function openAddSubEvent() {
@@ -1078,6 +1088,22 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
       {/* ================= HERO ================= */}
       <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
+        {plan.coverImageUrl && (
+          <div className="relative h-44 w-full bg-muted md:h-64">
+            {/* A plain <img>: the picture is a storage address, which next/image has nothing to optimise. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={plan.coverImageUrl} alt={`${plan.name}`} className="size-full object-cover" />
+            {plan.editable && (
+              <button
+                type="button"
+                onClick={openEditPlan}
+                className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
+              >
+                <ImagePlus className="size-3.5" /> Change photo
+              </button>
+            )}
+          </div>
+        )}
         <div className="flex flex-col gap-5 p-5 md:flex-row md:items-start md:justify-between md:p-7">
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -1088,6 +1114,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               <MetaChip icon={CalendarDays} value={startDate ? planDateLabel : undefined} empty="Add dates" onClick={openEditPlan} />
               <MetaChip icon={MapPin} value={plan.venue} empty="Add venue" onClick={openEditPlan} />
               <MetaChip icon={Users} value={plan.guestCount ? `${plan.guestCount} guests` : undefined} empty="Add guest count" onClick={openEditPlan} />
+              {plan.editable && !plan.coverImageUrl && <MetaChip icon={ImagePlus} empty="Add photo" onClick={openEditPlan} />}
               <MetaChip icon={LayoutList} value={`${functionsCount} function${functionsCount === 1 ? "" : "s"} · ${itemsCount} item${itemsCount === 1 ? "" : "s"}`} />
             </div>
           </div>
@@ -1541,6 +1568,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       onChange={(v) => setPlanForm({ ...planForm, guestCount: v })}
                     />
                   </div>
+                  <PlanCoverField currentUrl={plan.coverImageUrl} change={coverChange} onChange={setCoverChange} disabled={actions.saving} />
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>

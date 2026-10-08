@@ -31,6 +31,13 @@ function PlanCard({ plan }: { plan: PlanSummary }) {
   return (
     <Link href={`/plans/${plan.id}`} className="group flex h-full">
       <Card interactive className="w-full gap-4 overflow-hidden border-border bg-card p-0">
+        {plan.coverImageUrl && (
+          <div className="h-36 w-full overflow-hidden bg-muted">
+            {/* A plain <img>: the picture is a storage address, which next/image has nothing to optimise. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={plan.coverImageUrl} alt="" className="size-full object-cover transition-transform duration-500 ease-out-quint group-hover:scale-[1.04]" />
+          </div>
+        )}
         <CardContent className="flex flex-col gap-4 p-5">
           <div className="flex items-start justify-between gap-2">
             <h2 className="font-serif text-xl leading-snug text-card-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
