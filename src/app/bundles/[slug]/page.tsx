@@ -368,8 +368,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
         open={createFor !== null}
         onOpenChange={(open) => !open && setCreateFor(null)}
         initialName={`${bundle.name} Event`}
-        initialEventType={bundle.occasions[0]?.name ?? "Wedding"}
-        initialGuestCount={bundle.guestMin ?? 100}
+        nameOnly
         title={`Create a plan for ${bundle.name}`}
         submitLabel={createFor === "send" ? "Create plan & review" : "Create plan & add bundle"}
         onCreated={async (newPlan) => {

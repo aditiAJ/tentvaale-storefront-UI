@@ -67,6 +67,8 @@ export interface BoardPlan {
   eventEndDate?: string;
   guestCount?: number;
   generalLabel?: string;
+  /** The customer's picture of the event, when they added one. */
+  coverImageUrl?: string;
   subEvents: BoardSubEvent[];
   items: BoardItem[];
   itemSharing: Record<string, BoardDecision>;
@@ -137,6 +139,7 @@ export function toBoard(plan: Plan): BoardPlan {
     eventEndDate: plan.eventEndDate,
     guestCount: plan.guestCount,
     generalLabel: plan.generalLabel,
+    coverImageUrl: plan.coverImageUrl,
     subEvents: plan.subEvents.map((se) => ({
       id: se.id,
       name: se.name,

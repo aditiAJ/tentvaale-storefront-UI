@@ -59,6 +59,12 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
   const total = plan.items.reduce((sum, it) => sum + lineTotal(it), 0);
   const unavailable = plan.products.filter((p) => !p.available);
   const firstDate = plan.eventStartDate ?? plan.subEvents.find((se) => se.eventDate)?.eventDate;
+  // The vendor cannot quote an event it cannot place: a plan made from just a name (the quick
+  // "create a plan" popup) must be given a venue and dates before it can be sent.
+  const missingDetails = [
+    !plan.venue?.trim() && !plan.venueId ? "the venue" : null,
+    !plan.eventStartDate ? "the event dates" : null,
+  ].filter((m): m is string => m !== null);
 
   function toggleExpanded(key: string | null) {
     setExpanded((s) => {
@@ -141,6 +147,13 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
         </section>
       )}
 
+      {missingDetails.length > 0 && plan.editable && (
+        <section role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 p-4 text-sm text-foreground">
+          <span>Add {missingDetails.join(" and ")} to your plan before submitting, so our team knows where and when to deliver.</span>
+          <Button variant="outline" size="sm" nativeButton={false} render={<Link href={`/plans/${planId}`}>Add details</Link>} />
+        </section>
+      )}
+
       {unavailable.length > 0 && (
         <section role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-foreground">
           {unavailable.map((p) => p.name).join(", ")} {unavailable.length === 1 ? "is" : "are"} no longer available. Remove {unavailable.length === 1 ? "it" : "them"} from the plan before submitting.
@@ -200,7 +213,7 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
 
       <footer className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
         <Button variant="outline" className="rounded-lg border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}`}>Back</Link>} />
-        <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || plan.items.length === 0 || unavailable.length > 0}>
+        <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || plan.items.length === 0 || unavailable.length > 0 || missingDetails.length > 0}>
           {submitting ? "Sending…" : "Confirm & Submit"}
         </Button>
       </footer>

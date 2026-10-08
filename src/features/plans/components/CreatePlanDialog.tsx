@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
 import { ApiError } from "@/services/api-client";
-import { planKeys } from "../api";
+import { planKeys, uploadCoverImage } from "../api";
+import { NO_COVER_CHANGE, PlanCoverField, type CoverChange } from "./PlanCoverField";
 import { useCreatePlan } from "../hooks";
 import type { Plan } from "../types";
 
@@ -58,6 +59,11 @@ export interface CreatePlanDialogProps {
   title?: string;
   description?: string;
   submitLabel?: string;
+  /**
+   * Ask for the plan's name only. The venue, dates and guest count are left empty (never invented)
+   * for the customer to fill in on the plan page, whose checklist prompts for them.
+   */
+  nameOnly?: boolean;
   onCreated?: (plan: Plan) => Promise<void> | void;
 }
 
@@ -73,6 +79,7 @@ export function CreatePlanDialog({
   title = "Create a New Plan",
   description = "Set up your event plan. You can edit any details later.",
   submitLabel = "Create & Add to Plan",
+  nameOnly = false,
   onCreated,
 }: CreatePlanDialogProps) {
   const router = useRouter();
@@ -87,6 +94,14 @@ export function CreatePlanDialog({
   const [endDate, setEndDate] = useState(initialEndDate ?? defaults.endDate);
   const [guestCount, setGuestCount] = useState<number | undefined>(initialGuestCount ?? defaults.guestCount);
   const [submitting, setSubmitting] = useState(false);
+  // The photo chosen for the new plan, kept until the plan exists to put it on.
+  const [cover, setCover] = useState<CoverChange>(NO_COVER_CHANGE);
+
+  /** Closes the form and forgets the chosen photo (a cancelled form must not leave it behind). */
+  function requestClose() {
+    setCover(NO_COVER_CHANGE);
+    onOpenChange(false);
+  }
 
   // Re-seed defaults whenever the dialog opens or initial props change
   useEffect(() => {
@@ -109,20 +124,32 @@ export function CreatePlanDialog({
     }
   }
 
-  const isValid = name.trim() !== "" && venue.trim() !== "" && startDate !== "" && endDate !== "" && (guestCount ?? 0) > 0;
+  const isValid = nameOnly
+    ? name.trim() !== ""
+    : name.trim() !== "" && venue.trim() !== "" && startDate !== "" && endDate !== "" && (guestCount ?? 0) > 0;
   const datesInvalid = startDate !== "" && endDate !== "" && endDate < startDate;
 
   async function handleCreate() {
     if (!isValid || datesInvalid || submitting) return;
     setSubmitting(true);
     try {
-      const plan = await createPlan.mutateAsync({
-        name: name.trim(),
-        venue: venue.trim(),
-        eventDate: startDate,
-        eventEndDate: endDate,
-        guestCount: Number(guestCount),
-      });
+      const plan = await createPlan.mutateAsync(
+        nameOnly
+          ? { name: name.trim() }
+          : { name: name.trim(), venue: venue.trim(), eventDate: startDate, eventEndDate: endDate, guestCount: Number(guestCount) },
+      );
+
+      if (cover.file) {
+        try {
+          const withPhoto = await uploadCoverImage(plan.id, cover.file);
+          queryClient.setQueryData(planKeys.detail(plan.id), withPhoto);
+        } catch (photoError) {
+          // The plan exists; only the picture was refused. Say why, and let them add it from the plan page.
+          toast.error(
+            `Your plan was created, but the photo wasn't added: ${photoError instanceof ApiError ? photoError.message : "please try again from the plan page."}`,
+          );
+        }
+      }
 
       // Invalidate plan lists immediately
       void queryClient.invalidateQueries({ queryKey: planKeys.all });
@@ -133,6 +160,7 @@ export function CreatePlanDialog({
         toast.success(`Created "${plan.name}"`);
         router.push(`/plans/${plan.id}`);
       }
+      setCover(NO_COVER_CHANGE);
       onOpenChange(false);
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Couldn't create the plan. Please try again.");
@@ -142,7 +170,7 @@ export function CreatePlanDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !submitting && onOpenChange(v)}>
+    <Dialog open={open} onOpenChange={(v) => !submitting && (v ? onOpenChange(true) : requestClose())}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -150,6 +178,7 @@ export function CreatePlanDialog({
         </DialogHeader>
 
         <div className="space-y-4 pt-1">
+          {!nameOnly && (
           <div className="space-y-1.5">
             <Label htmlFor="plan-event-type">Event type</Label>
             <Select value={eventType} onValueChange={(v) => v && handleEventTypeChange(v)}>
@@ -165,6 +194,7 @@ export function CreatePlanDialog({
               </SelectContent>
             </Select>
           </div>
+          )}
 
           <div className="space-y-1.5">
             <Label htmlFor="plan-name">Event name *</Label>
@@ -174,8 +204,13 @@ export function CreatePlanDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
+            {nameOnly && (
+              <p className="text-xs text-muted-foreground">You can add the venue, dates and guest count on your plan page.</p>
+            )}
           </div>
 
+          {!nameOnly && (
+          <>
           <div className="space-y-1.5">
             <Label htmlFor="plan-venue">Venue *</Label>
             <Input
@@ -219,16 +254,20 @@ export function CreatePlanDialog({
               onChange={(v) => setGuestCount(v)}
             />
           </div>
+          </>
+          )}
+
+          <PlanCoverField change={cover} onChange={setCover} disabled={submitting} />
 
           {datesInvalid && <p className="text-xs text-destructive">End date cannot be before the start date.</p>}
         </div>
 
         <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+          <Button variant="outline" onClick={requestClose} disabled={submitting}>
             Cancel
           </Button>
           <Button onClick={handleCreate} disabled={!isValid || datesInvalid || submitting}>
-            {submitting ? "Creating…" : submitLabel}
+            {submitting ? (cover.file ? "Creating and uploading…" : "Creating…") : submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

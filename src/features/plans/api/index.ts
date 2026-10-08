@@ -34,6 +34,15 @@ export const createPlan = (input: PlanDetailsInput) =>
 export const updatePlan = (planId: string, input: PlanDetailsInput) =>
   apiFetch<Plan>(`${BASE}/${planId}`, { method: "PUT", ...json(input) });
 
+/** One picture of the event (JPEG, PNG or WebP, up to 10 MB); replaces the one before. */
+export const uploadCoverImage = (planId: string, file: File) => {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch<Plan>(`${BASE}/${planId}/cover-image`, { method: "POST", body: form });
+};
+
+export const removeCoverImage = (planId: string) => apiFetch<Plan>(`${BASE}/${planId}/cover-image`, { method: "DELETE" });
+
 export const deletePlan = (planId: string) => apiFetch<void>(`${BASE}/${planId}`, { method: "DELETE" });
 
 export const addSubEvent = (planId: string, input: SubEventInput) =>

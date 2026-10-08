@@ -26,6 +26,8 @@ export interface PlanSummary {
   guestCount?: number;
   subEventCount: number;
   itemCount: number;
+  /** The customer's picture of the event; absent when there is none. */
+  coverImageUrl?: string;
   createdAt: string;
   /** What this account may do on the plan; absent from older responses (treat as the owner). */
   myRole?: PlanRole;
@@ -109,6 +111,8 @@ export interface Plan {
   guestCount?: number;
   /** What the customer calls the items on no function; absent shows as "Your event". */
   generalLabel?: string;
+  /** The customer's picture of the event; absent when there is none. */
+  coverImageUrl?: string;
   status: PlanStatus;
   createdAt: string;
   updatedAt?: string;
