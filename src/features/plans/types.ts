@@ -107,7 +107,7 @@ export interface Plan {
   eventEndDate?: string;
   venue?: string;
   guestCount?: number;
-  /** What the customer calls the items on no function; absent shows as "Your event". */
+  /** What the customer calls the items on no function; absent shows as "Main function". */
   generalLabel?: string;
   status: PlanStatus;
   createdAt: string;

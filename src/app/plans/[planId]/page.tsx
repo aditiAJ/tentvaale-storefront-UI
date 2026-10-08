@@ -49,7 +49,7 @@ import { cn } from "@/lib/utils";
 import { ApiError } from "@/services/api-client";
 import { useRequireAccount } from "@/features/auth";
 import { ItemPicker, type PickedLine } from "@/features/plans/components/ItemPicker";
-import { PLAN_STATUS_LABEL, planGroupLabel, serves, type BoardItem, type BoardProduct, type BoardSubEvent } from "@/features/plans/board";
+import { PLAN_STATUS_LABEL, functionComplete, planGroupLabel, quoteBlocker, serves, type BoardItem, type BoardProduct, type BoardSubEvent } from "@/features/plans/board";
 import { usePlanActions, useBoard } from "@/features/plans/hooks";
 import { getProductUsage, needsSharingDecision, requiredQuantity, reuseBreakdown } from "@/features/plans/inventory-sharing";
 import { usePlanNudges } from "@/features/plans/nudges";
@@ -97,8 +97,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
   // null = General, an id = that function, undefined = not chosen yet (auto-pick below).
   const [chosenTab, setActiveTab] = useState<string | null | undefined>(undefined);
-  // Inline rename of the "Your event" group — null when not editing.
-  const [baseNameDraft, setBaseNameDraft] = useState<string | null>(null);
+  // The function form is turning the main function (the items on no function yet) into a real one.
+  const [promotingGeneral, setPromotingGeneral] = useState(false);
   // Keyed by sub-event id ("general" for the untagged list) so each
   // sub-event gets its own set of starter suggestions to work through.
   // Manual expand/collapse of "Complete your setup", per sub-event; unset = auto.
@@ -145,11 +145,11 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // A plan sent for a quotation is the vendor's to work from: it can be read, not changed.
   const canSubmit = plan.editable && plan.role === "OWNER";
 
-  // Before anything is picked: open "Your event" if it has items (or there are
-  // no functions), otherwise the first function. A removed function falls back the same way.
-  const chosenStillExists = chosenTab === null || plan.subEvents.some((se) => se.id === chosenTab);
-  const activeTab: string | null =
-    chosenTab !== undefined && chosenStillExists ? chosenTab : plan.subEvents.length > 0 && !plan.items.some((it) => it.subEventIds.length === 0) ? plan.subEvents[0].id : null;
+  // The main function stands for the items on no function yet: shown while there is no function, or while
+  // some items still have none. Otherwise the first function opens. A removed function falls back the same way.
+  const generalVisible = plan.subEvents.length === 0 || plan.items.some((it) => it.subEventIds.length === 0);
+  const chosenStillExists = (chosenTab === null && generalVisible) || plan.subEvents.some((se) => se.id === chosenTab);
+  const activeTab: string | null = chosenTab !== undefined && chosenStillExists ? chosenTab : generalVisible ? null : plan.subEvents[0].id;
   const activeItems = plan.items.filter((it) => serves(it, activeTab));
   const activeSubEvent = activeTab ? plan.subEvents.find((se) => se.id === activeTab) : undefined;
   const baseName = planGroupLabel(plan);
@@ -884,12 +884,14 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     );
   }
 
-  // Only name is required. Date, time, venue, setup/teardown and guest count
-  // are logistics the customer often doesn't know yet — they stay optional
-  // and can be left blank without blocking the sub-event.
+  // Name, date, start time and venue are required; setup/teardown and guest count stay optional.
+  const subEventFormValid = Boolean(
+    subEventForm.name.trim() && subEventForm.eventDate && subEventForm.startTime && (subEventForm.venue.trim() || subEventForm.venueId),
+  );
+
   async function handleSaveSubEvent() {
     const f = subEventForm;
-    if (!f.name.trim()) return;
+    if (!subEventFormValid) return;
     const details = {
       venue: f.venue.trim() || undefined,
       venueId: f.venueId || null,
@@ -910,14 +912,26 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       startTime: details.startTime,
       endTime: details.endTime,
     };
+    const before = new Set(plan!.subEvents.map((se) => se.id));
     const saved = editingSubEventId ? await actions.updateSubEvent(editingSubEventId, input) : await actions.addSubEvent(input);
-    if (saved) closeSubEventDialog();
+    if (!saved) return;
+    if (promotingGeneral) {
+      // The main function becomes this function: its items move onto it.
+      const created = saved.subEvents.find((se) => !before.has(String(se.id)));
+      if (created) {
+        const id = String(created.id);
+        for (const item of plan!.items.filter((it) => it.subEventIds.length === 0)) await actions.setFunctions(item.id, [id]);
+        setActiveTab(id);
+      }
+    }
+    closeSubEventDialog();
   }
 
   function closeSubEventDialog() {
     setSubEventForm(EMPTY_SUB_EVENT);
     setCustomFunctionName(false);
     setEditingSubEventId(null);
+    setPromotingGeneral(false);
     setSubEventDialogOpen(false);
   }
 
@@ -955,6 +969,17 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     setSubEventForm(EMPTY_SUB_EVENT);
     setCustomFunctionName(false);
     setEditingSubEventId(null);
+    setPromotingGeneral(false);
+    setSubEventDialogOpen(true);
+  }
+
+  // Editing the main function opens the function form; saving it makes a real function of it.
+  function openEditGeneral() {
+    const name = plan!.generalLabel?.trim() ?? "";
+    setSubEventForm({ ...EMPTY_SUB_EVENT, name });
+    setCustomFunctionName(name !== "" && !(FUNCTION_PRESETS as readonly string[]).includes(name));
+    setEditingSubEventId(null);
+    setPromotingGeneral(true);
     setSubEventDialogOpen(true);
   }
 
@@ -972,6 +997,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     });
     setCustomFunctionName(!(FUNCTION_PRESETS as readonly string[]).includes(se.name));
     setEditingSubEventId(se.id);
+    setPromotingGeneral(false);
     setSubEventDialogOpen(true);
   }
 
@@ -987,7 +1013,18 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     { label: "Get a quote", hint: "Submit or order directly", done: plan.status !== "DRAFT", onClick: undefined },
   ];
   const currentStep = steps.findIndex((s) => !s.done);
+  const blocker = quoteBlocker(plan);
+  const incompleteFunctions = plan.subEvents.filter((se) => !functionComplete(se));
   const todos = [
+    ...(generalVisible && itemsCount > 0
+      ? [{ key: "general", text: `${baseName} needs a date, time and venue`, action: "Add details", onClick: openEditGeneral }]
+      : []),
+    ...incompleteFunctions.map((se) => ({
+      key: `details-${se.id}`,
+      text: `${se.name} needs ${[!se.eventDate && "a date", !se.startTime && "a time", !(se.venue?.trim() || se.venueId) && "a venue"].filter(Boolean).join(", ")}`,
+      action: "Add details",
+      onClick: () => openEditSubEvent(se),
+    })),
     ...emptySubEvents.map((se) => ({
       key: `empty-${se.id}`,
       text: `${se.name} has no items yet`,
@@ -1004,16 +1041,11 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       onClick: () => setView("inventory"),
     })),
   ];
-  // "Your event" (renamable) always leads — it's where a newcomer starts adding.
+  // The main function leads while it is shown: it's where a newcomer starts adding.
   const functionCards = [
-    { id: null as string | null, name: baseName, sub: "Items for the whole event" },
+    ...(generalVisible ? [{ id: null as string | null, name: baseName, sub: "Set its date, time and venue" }] : []),
     ...plan.subEvents.map((se) => ({ id: se.id as string | null, name: se.name, sub: se.eventDate ? formatEventDate(se.eventDate) : "No date yet" })),
   ];
-
-  function saveBaseName() {
-    void actions.renameGeneral(baseNameDraft ?? "");
-    setBaseNameDraft(null);
-  }
 
   async function confirmRemoveSubEvent(se: SubEvent) {
     if (!window.confirm(`Remove ${se.name}? Its items will move to ${baseName}.`)) return;
@@ -1028,9 +1060,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   }
 
   const submitActions = canSubmit ? (
-    <Button className="w-full gap-2 rounded-lg" disabled={itemsCount === 0} nativeButton={itemsCount === 0} render={itemsCount === 0 ? undefined : <Link href={`/plans/${planId}/submit`} />}>
-      <Send className="size-4" /> Submit for Quotation
-    </Button>
+    <div className="flex flex-col gap-1.5">
+      <Button className="w-full gap-2 rounded-lg" disabled={blocker !== null} nativeButton={blocker !== null} render={blocker !== null ? undefined : <Link href={`/plans/${planId}/submit`} />}>
+        <Send className="size-4" /> Submit for Quotation
+      </Button>
+      {blocker && itemsCount > 0 && <p className="text-xs text-muted-foreground">{blocker}</p>}
+    </div>
   ) : (
     <p className="text-sm text-muted-foreground">This plan has been sent for a quotation and can no longer be changed.</p>
   );
@@ -1224,34 +1259,25 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                           );
                         })()}
                       </>
-                    ) : baseNameDraft !== null ? (
-                      <form
-                        className="flex items-center gap-2"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          saveBaseName();
-                        }}
-                      >
-                        <Input autoFocus value={baseNameDraft} onChange={(e) => setBaseNameDraft(e.target.value)} placeholder="e.g. Priya & Arjun's Wedding" className="h-9 max-w-xs font-serif text-lg" onKeyDown={(e) => e.key === "Escape" && setBaseNameDraft(null)} />
-                        <Button type="submit" size="sm" className="rounded-lg">
-                          Save
-                        </Button>
-                        <Button type="button" size="sm" variant="ghost" className="rounded-lg" onClick={() => setBaseNameDraft(null)}>
-                          Cancel
-                        </Button>
-                      </form>
                     ) : (
                       <>
-                        <button className="group flex w-fit items-center gap-2 text-left" onClick={() => setBaseNameDraft(plan.generalLabel ?? "")} title="Rename">
-                          <h2 className="truncate font-serif text-xl text-foreground">{baseName}</h2>
-                          <Pencil className="size-3.5 text-muted-foreground transition-colors group-hover:text-primary" />
-                        </button>
+                        <h2 className="truncate font-serif text-xl text-foreground">{baseName}</h2>
                         <p className="text-xs text-muted-foreground">
-                          {plan.generalLabel ? "Items for the whole event." : "Click the name to rename it — then add items, or split them into functions like Haldi or Sangeet."}
+                          A function of your event. Set its date, time and venue with the pencil, or add more functions like Haldi or Sangeet.
                         </p>
                       </>
                     )}
                   </div>
+                  {!activeSubEvent && (
+                    <button
+                      className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-primary"
+                      onClick={openEditGeneral}
+                      title="Edit function"
+                      aria-label="Edit function"
+                    >
+                      <Pencil className="size-4" />
+                    </button>
+                  )}
                   {activeSubEvent && (
                     <div className="flex shrink-0 items-center gap-1">
                       <button className="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-primary" onClick={() => openEditSubEvent(activeSubEvent)} title="Edit details" aria-label="Edit details">
@@ -1274,7 +1300,13 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </span>
               <span className="flex items-center gap-2">
                 <Button variant="outline" size="sm" className="border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}/summary`}>View summary</Link>} />
-                <Button size="sm" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Submit for Quotation</Link>} />
+                {blocker ? (
+                  <Button size="sm" disabled title={blocker}>
+                    Submit for Quotation
+                  </Button>
+                ) : (
+                  <Button size="sm" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Submit for Quotation</Link>} />
+                )}
               </span>
             </section>
           ) : availableSuggestions.length > 0 && (
@@ -1524,7 +1556,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       <Dialog open={subEventDialogOpen} onOpenChange={(open) => (open ? setSubEventDialogOpen(true) : closeSubEventDialog())}>
                   <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingSubEventId ? "Edit sub-event" : "Add sub-event"}</DialogTitle>
+              <DialogTitle>{editingSubEventId || promotingGeneral ? "Edit function" : "Add function"}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
@@ -1569,10 +1601,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   />
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">Everything below is optional — fill in what you know now.</p>
+              <p className="text-xs text-muted-foreground">Date, start time and venue are needed; the rest can wait.</p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="se-date">Date</Label>
+                  <Label htmlFor="se-date">Date *</Label>
                   <DateWheelPicker id="se-date" value={subEventForm.eventDate} onChange={(v) => setSubEventForm({ ...subEventForm, eventDate: v })} />
                 </div>
                 <div className="flex flex-col gap-2">
@@ -1588,7 +1620,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="se-start-time">Start time</Label>
+                  <Label htmlFor="se-start-time">Start time *</Label>
                   <Input
                     id="se-start-time"
                     type="time"
@@ -1608,10 +1640,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="se-venue">Venue</Label>
+                <Label htmlFor="se-venue">Venue *</Label>
                 <VenueSelect
                   value={subEventForm.venueId}
-                  noneLabel="Same as the event"
+                  noneLabel="Type it below"
                   onChange={(venueId, text) => setSubEventForm({ ...subEventForm, venueId, venue: venueId ? text : subEventForm.venue })}
                 />
                 <Input
@@ -1638,8 +1670,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
             </div>
             <DialogFooter>
-              <Button onClick={handleSaveSubEvent} disabled={!subEventForm.name.trim()}>
-                {editingSubEventId ? "Save" : "Add"}
+              <Button onClick={handleSaveSubEvent} disabled={!subEventFormValid}>
+                {editingSubEventId || promotingGeneral ? "Save" : "Add"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1655,7 +1687,13 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
         </div>
         <div className="ml-auto flex gap-2">
           {canSubmit && itemsCount > 0 ? (
-            <Button size="sm" className="rounded-lg" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Get quote</Link>} />
+            blocker ? (
+              <Button size="sm" className="rounded-lg" disabled title={blocker}>
+                Get quote
+              </Button>
+            ) : (
+              <Button size="sm" className="rounded-lg" nativeButton={false} render={<Link href={`/plans/${planId}/submit`}>Get quote</Link>} />
+            )
           ) : canSubmit && (
             <Button size="sm" className="rounded-lg" onClick={openBrowsePicker}>
               <Plus className="size-4" /> Add items

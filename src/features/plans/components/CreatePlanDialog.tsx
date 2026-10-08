@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -27,22 +27,15 @@ export const EVENT_TYPES = [
   "Private Gathering",
 ] as const;
 
+/** A new plan starts empty: the customer types their own name, venue, dates and guests. */
 export function getDefaultPlanValues() {
-  const start = new Date();
-  start.setDate(start.getDate() + 14); // 2 weeks out
-  const end = new Date(start);
-  end.setDate(end.getDate() + 1); // 1-day span
-
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const toIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
   return {
     eventType: "Wedding",
-    name: "My Wedding Celebration",
-    venue: "Main Venue / Banquet",
-    startDate: toIso(start),
-    endDate: toIso(end),
-    guestCount: 150,
+    name: "",
+    venue: "",
+    startDate: "",
+    endDate: "",
+    guestCount: undefined as number | undefined,
   };
 }
 
@@ -88,25 +81,22 @@ export function CreatePlanDialog({
   const [guestCount, setGuestCount] = useState<number | undefined>(initialGuestCount ?? defaults.guestCount);
   const [submitting, setSubmitting] = useState(false);
 
-  // Re-seed defaults whenever the dialog opens or initial props change
-  useEffect(() => {
+  // Re-seed whenever the dialog opens, so a cancelled attempt never leaves its values behind.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (open) {
-      const def = getDefaultPlanValues();
-      setEventType(initialEventType ?? def.eventType);
-      setName(initialName ?? (initialEventType ? `My ${initialEventType}` : def.name));
-      setVenue(initialVenue ?? def.venue);
-      setStartDate(initialStartDate ?? def.startDate);
-      setEndDate(initialEndDate ?? def.endDate);
-      setGuestCount(initialGuestCount ?? def.guestCount);
+      setEventType(initialEventType ?? defaults.eventType);
+      setName(initialName ?? defaults.name);
+      setVenue(initialVenue ?? defaults.venue);
+      setStartDate(initialStartDate ?? defaults.startDate);
+      setEndDate(initialEndDate ?? defaults.endDate);
+      setGuestCount(initialGuestCount ?? defaults.guestCount);
     }
-  }, [open, initialName, initialEventType, initialVenue, initialStartDate, initialEndDate, initialGuestCount]);
+  }
 
   function handleEventTypeChange(newType: string) {
     setEventType(newType);
-    // If the name was a default-style name, update it automatically to reflect the new event type
-    if (!name || name.startsWith("My ") || name.endsWith("Celebration") || name.endsWith("Event")) {
-      setName(`My ${newType} Celebration`);
-    }
   }
 
   const isValid = name.trim() !== "" && venue.trim() !== "" && startDate !== "" && endDate !== "" && (guestCount ?? 0) > 0;

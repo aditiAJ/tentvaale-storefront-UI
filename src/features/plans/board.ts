@@ -164,7 +164,26 @@ export function lineQuantity(item: BoardItem): number {
 }
 
 export function planGroupLabel(plan: Pick<BoardPlan, "generalLabel">): string {
-  return plan.generalLabel?.trim() || "Your event";
+  return plan.generalLabel?.trim() || "Main function";
+}
+
+/** A function is ready for a quotation once it has its date, start time and venue. */
+export function functionComplete(se: BoardSubEvent): boolean {
+  return Boolean(se.eventDate && se.startTime && (se.venue?.trim() || se.venueId));
+}
+
+/**
+ * Why the plan cannot be sent for a quotation yet, or null when it can. Every item belongs to a function, and
+ * every function has its date, time and venue.
+ */
+export function quoteBlocker(plan: Pick<BoardPlan, "subEvents" | "items" | "generalLabel">): string | null {
+  if (plan.items.length === 0) return "Add items first.";
+  if (plan.subEvents.length === 0 || plan.items.some((it) => it.subEventIds.length === 0)) {
+    return `Set the date, time and venue of ${planGroupLabel(plan)} first.`;
+  }
+  const incomplete = plan.subEvents.filter((se) => !functionComplete(se));
+  if (incomplete.length > 0) return `Add the date, time and venue of ${incomplete.map((se) => se.name).join(", ")} first.`;
+  return null;
 }
 
 /**

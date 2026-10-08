@@ -27,6 +27,15 @@ export interface QuotationLine {
   lineTotal: Money;
   /** Set when the line came from a bundle. */
   bundleName?: string;
+  /** What the quotation document groups and pictures the line by; absent on a quotation written before they were kept. */
+  categoryName?: string | null;
+  imageUrl?: string | null;
+  functionName?: string | null;
+  /** yyyy-MM-dd */
+  functionDate?: string | null;
+  /** HH:mm */
+  functionStartTime?: string | null;
+  functionVenue?: string | null;
 }
 
 /** One discount line per bundle: its percentage off what its items add up to. */
@@ -73,6 +82,26 @@ export interface QuotationVersion {
   depositWaiver?: DepositWaiver;
 }
 
+/** The business as the quotation document prints it. */
+export interface QuotationCompany {
+  name: string;
+  gstin: string | null;
+  pan: string | null;
+  addressLine: string | null;
+  city: string | null;
+  state: string | null;
+  postalCode: string | null;
+  primaryPhone: string | null;
+  publicEmail: string | null;
+  websiteUrl: string | null;
+  bankName: string | null;
+  bankAccount: string | null;
+  bankIfsc: string | null;
+  upiId: string | null;
+  logoUrl: string | null;
+  signatureUrl: string | null;
+}
+
 export interface CustomerQuotation {
   requestId: string;
   planId: string;
@@ -96,6 +125,9 @@ export interface CustomerQuotation {
   depositWaiver?: DepositWaiver;
   /** The policy versions this quotation was sent with. */
   policies?: PolicyRef[];
+  eventDate?: string | null;
+  venue?: string | null;
+  company?: QuotationCompany | null;
 }
 
 /** What the customer reads for each stage, and how loudly. */

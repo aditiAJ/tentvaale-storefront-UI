@@ -36,7 +36,7 @@ export function usePlanTarget() {
     subEvents,
     /** The chosen function's id, or null for the plan as a whole; what the backend takes. */
     subEventId: subEventId === WHOLE_PLAN ? null : subEventId,
-    wholeLabel: plan.data ? planGroupLabel(plan.data) : "Your event",
+    wholeLabel: plan.data ? planGroupLabel(plan.data) : "Main function",
     setPlanId: (id: string) => {
       setChosenPlan(id);
       setChosenSubEvent(WHOLE_PLAN);

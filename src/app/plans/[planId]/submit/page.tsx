@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/services/api-client";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
-import { lineQuantity, planGroupLabel, type BoardItem } from "@/features/plans/board";
+import { lineQuantity, planGroupLabel, quoteBlocker, type BoardItem } from "@/features/plans/board";
 import { useBoard } from "@/features/plans/hooks";
 import { planKeys } from "@/features/plans/api";
 import { submitPlanForQuotation, type QuotationRequest } from "@/features/plans/quotation-request";
@@ -58,6 +58,7 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
   ].filter((g) => g.items.length > 0);
   const total = plan.items.reduce((sum, it) => sum + lineTotal(it), 0);
   const unavailable = plan.products.filter((p) => !p.available);
+  const blocker = quoteBlocker(plan);
   const firstDate = plan.eventStartDate ?? plan.subEvents.find((se) => se.eventDate)?.eventDate;
 
   function toggleExpanded(key: string | null) {
@@ -192,6 +193,12 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
         <p className="font-serif text-3xl text-primary">Estimated Total: {formatRupees(total)}</p>
       </div>
 
+      {blocker && (
+        <p role="alert" className="rounded-lg border border-primary/40 bg-primary/5 p-4 text-sm text-foreground">
+          {blocker} <Link href={`/plans/${planId}`} className="text-primary underline">Back to the plan</Link>
+        </p>
+      )}
+
       {problem && (
         <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
           {problem}
@@ -200,7 +207,7 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
 
       <footer className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
         <Button variant="outline" className="rounded-lg border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}`}>Back</Link>} />
-        <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || plan.items.length === 0 || unavailable.length > 0}>
+        <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || blocker !== null || unavailable.length > 0}>
           {submitting ? "Sending…" : "Confirm & Submit"}
         </Button>
       </footer>

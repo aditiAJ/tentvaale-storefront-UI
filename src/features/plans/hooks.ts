@@ -127,7 +127,7 @@ export function usePlanActions(planId: string) {
 
       updateDetails: (input: PlanDetailsInput) => run(() => apiUpdatePlan(planId, input)),
 
-      /** The label for the items on no function ("Your event" when empty). Keeps the other details. */
+      /** The label for the items on no function ("Main function" when empty). Keeps the other details. */
       renameGeneral: (label: string) => {
         const plan = current();
         if (!plan) return Promise.resolve(undefined);
