@@ -23,7 +23,7 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
   const quotation = query.data;
   const printable = Boolean(quotation && quotation.totalAmount);
   const ready = Boolean(signedIn && account && printable);
-  const [pdf, setPdf] = useState<{ key: string; url: string } | null>(null);
+  const [pdf, setPdf] = useState<{ key: string; url: string; missing: number } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const key = `${quotation?.requestId}:${quotation?.stage}:${quotation?.totalAmount?.amount}:${theme}`;
   const fileName = `Tentvaale-Quotation-${quotation?.quotationNumber ?? ""}.pdf`;
@@ -44,7 +44,7 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
         const blob = await render(<QuotationDocument doc={doc} theme={theme} />).toBlob();
         if (cancelled) return;
         made = URL.createObjectURL(blob);
-        setPdf({ key, url: made });
+        setPdf({ key, url: made, missing: doc.picturesMissing });
         setFailed(null);
         if (new URLSearchParams(window.location.search).has("download")) {
           const a = document.createElement("a");
@@ -107,6 +107,12 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
       {failed ? (
         <p role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
           The PDF could not be made: {failed}
+        </p>
+      ) : null}
+
+      {current && pdf && pdf.missing > 0 ? (
+        <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+          {pdf.missing} product picture{pdf.missing === 1 ? "" : "s"} could not be loaded and show as plain tiles.
         </p>
       ) : null}
 

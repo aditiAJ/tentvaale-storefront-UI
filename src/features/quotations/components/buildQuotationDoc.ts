@@ -1,5 +1,6 @@
 import type { CustomerQuotation, QuotationStage } from "@/features/quotations/types";
 import { POLICY_LABEL } from "@/features/quotations/tax";
+import { apiFetch } from "@/services/api-client";
 import type { DocFunction, QuotationDoc } from "./QuotationDocument";
 import { loadImageData, loadMarkData, loadQrCodes } from "./pdfAssets";
 
@@ -69,6 +70,22 @@ export async function buildQuotationDoc(
   const images: Record<string, string> = {};
   for (const [url, data] of pictures) if (data) images[url] = data;
 
+  // The text of each policy at the version the quotation was sent with. A policy that cannot be read is left out.
+  const policyTexts = (
+    await Promise.all(
+      (q.policies ?? []).map(async (ref) => {
+        try {
+          const found = await apiFetch<{ title: string; version: number; body: string }>(
+            `storefront/policies/${ref.kind}?version=${ref.version}`,
+          );
+          return found.body.trim() ? { title: found.title, version: found.version, body: found.body } : null;
+        } catch {
+          return null;
+        }
+      }),
+    )
+  ).filter((p): p is { title: string; version: number; body: string } => p !== null);
+
   const name = company?.name ?? "Tentvaale";
   const qr = await loadQrCodes({ name, upiId: company?.upiId ?? null, phone: company?.primaryPhone ?? null });
   const tax = q.tax && q.tax.rate != null ? q.tax : null;
@@ -105,6 +122,7 @@ export async function buildQuotationDoc(
       amount: waived ? amount(q.depositWaiver?.amount) : amount(q.securityDeposit),
     },
     policies: (q.policies ?? []).map((p) => `${POLICY_LABEL[p.kind] ?? p.kind} (v${p.version})`),
+    policyTexts,
     company: {
       name,
       address: [company?.addressLine, company?.city, company?.state, company?.postalCode].filter(Boolean).join(", ") || null,
@@ -121,6 +139,7 @@ export async function buildQuotationDoc(
       signature,
     },
     images,
+    picturesMissing: urls.length - Object.keys(images).length,
     qr,
   };
 }
