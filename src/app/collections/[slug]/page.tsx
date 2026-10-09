@@ -8,6 +8,7 @@ import { DUR, EASE, Reveal, Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
+import { HoverImageGallery } from "@/components/hover-image-gallery";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/services/api-client";
 import { cn } from "@/lib/utils";
@@ -129,10 +130,10 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                   <div className="surface-interactive group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-card p-3 shadow-e1 hover:border-primary/50">
                     <div className="relative overflow-hidden rounded-xl bg-muted/60">
                       <Link href={`/catalog/${p.slug}`}>
-                        <ProductThumb
-                          imageUrl={p.imageUrl}
+                        <HoverImageGallery
+                          images={p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : []}
                           alt={p.name}
-                          className="aspect-square w-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.06]"
+                          imgClassName="aspect-square w-full rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-[1.06]"
                         />
                       </Link>
                       {currentAccount && (

@@ -9,6 +9,7 @@ import { useSkipEntrance } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
+import { HoverImageGallery } from "@/components/hover-image-gallery";
 import { formatMoney } from "@/lib/money";
 import { rateUnitLabel } from "@/features/catalog/format";
 import { useBundles, useCategories, useCollections, useOccasions, useProductPreview } from "@/features/catalog/hooks";
@@ -226,7 +227,11 @@ export default function Home() {
           {featuredProducts.map((p) => (
             <motion.div key={p.id} variants={gridItem}>
               <Link href={`/catalog/${p.slug}`} className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary">
-                <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-36 w-full rounded-xl md:h-44" />
+                <HoverImageGallery
+                  images={p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : []}
+                  alt={p.name}
+                  imgClassName="h-36 w-full rounded-xl md:h-44"
+                />
                 <div className="flex flex-col gap-1 px-1 pb-1">
                   <span className="text-sm font-medium text-foreground transition-colors group-hover:text-primary">{p.name}</span>
                   <span className="text-xs text-muted-foreground">From {formatMoney(p.dailyRate)} / day</span>
