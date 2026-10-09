@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { NumberStepper } from "@/components/number-stepper";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProductThumb } from "@/components/product-thumb";
+import { HoverImageGallery } from "@/components/hover-image-gallery";
 import { RentalTerms } from "@/components/rental-terms";
 import { ApiError } from "@/services/api-client";
 import { cn } from "@/lib/utils";
@@ -161,10 +162,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       <section className="grid gap-6 md:grid-cols-[55%_45%] md:gap-8">
         {/* Image column sticks while the long configuration panel scrolls: the thing being bought stays on screen. */}
         <Reveal immediate direction="up" distance={16} className="md:sticky md:top-24 md:self-start">
-          <ProductThumb
-            imageUrl={images[activeImage]?.url}
+          <HoverImageGallery
+            images={images.map((image) => image.url)}
             alt={images[activeImage]?.altText || product.name}
-            className="h-[320px] rounded-2xl bg-muted p-6 shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
+            index={activeImage}
+            onIndexChange={setActiveImage}
+            className="h-[320px] rounded-2xl bg-muted shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
+            imgClassName="size-full rounded-2xl bg-muted p-6"
           />
           {images.length > 1 && (
             <div className="mt-3 flex gap-2.5">

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SkeletonCard } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { useBundles } from "@/features/catalog/hooks";
+import { useBundles, useOccasions } from "@/features/catalog/hooks";
 import type { BundleCard } from "@/features/catalog/types";
 
 const ALL = "__all";
@@ -42,8 +42,13 @@ export default function BundlesPage() {
   const [occasion, setOccasion] = useState<string>(ALL);
   const [guests, setGuests] = useState<string>(ALL);
 
+  // The occasions the shop offers as filters, already in the order and visibility the back office set.
+  const offered = useOccasions().data;
+
   // Tabs and bands come from the data, so a new bundle brings its own options with it. Occasions
-  // lead with the most-stocked so the rail opens on the ones worth scanning.
+  // follow the back office's own sequence and leave out the ones it has hidden; an occasion no
+  // bundle uses gets no tab. Until that list loads (or if it fails) the rail falls back to the
+  // most-stocked first, so it is never empty.
   const { occasions, guestBands } = useMemo(() => {
     const byOccasion = new Map<string, { name: string; count: number }>();
     const byBand = new Set<string>();
@@ -51,11 +56,15 @@ export default function BundlesPage() {
       for (const o of b.occasions) byOccasion.set(o.slug, { name: o.name, count: (byOccasion.get(o.slug)?.count ?? 0) + 1 });
       byBand.add(guestBand(b));
     }
+    const entries = [...byOccasion.entries()];
+    const sequence = offered ? new Map(offered.map((o, index) => [o.slug, index])) : null;
     return {
-      occasions: [...byOccasion.entries()].sort((a, b) => b[1].count - a[1].count || a[1].name.localeCompare(b[1].name)),
+      occasions: sequence
+        ? entries.filter(([slug]) => sequence.has(slug)).sort((a, b) => sequence.get(a[0])! - sequence.get(b[0])!)
+        : entries.sort((a, b) => b[1].count - a[1].count || a[1].name.localeCompare(b[1].name)),
       guestBands: [...byBand].sort(),
     };
-  }, [bundles]);
+  }, [bundles, offered]);
 
   const shown = bundles.filter((b) => (occasion === ALL || b.occasions.some((o) => o.slug === occasion)) && (guests === ALL || guestBand(b) === guests));
 
@@ -92,7 +101,11 @@ export default function BundlesPage() {
         <>
           <Reveal immediate delay={0.05} className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 border-b border-border pb-3">
             {/* Scrolls rather than wraps, so the rail stays one line on narrow screens. */}
-            <div className="-mb-3 flex min-w-0 flex-1 gap-1 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <div
+              role="group"
+              aria-label="Filter by occasion"
+              className="-mb-3 flex min-w-0 flex-1 gap-1 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {tabs.map((tab) => {
                 const active = occasion === tab.value;
                 return (
