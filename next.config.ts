@@ -8,6 +8,7 @@ import type { NextConfig } from "next";
  * on the server side, where CORS does not apply.
  */
 const nextConfig: NextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
   },
