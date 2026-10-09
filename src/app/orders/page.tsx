@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireAccount } from "@/features/auth";
-import { STATUS_COPY, useOrders, type OrderStatus } from "@/features/orders";
+import { statusCopy, useOrders, type OrderStatus } from "@/features/orders";
 import { formatMoney } from "@/lib/money";
 import { ApiError } from "@/services/api-client";
 
@@ -99,7 +99,7 @@ export default function OrdersPage() {
 
       <ul className="flex flex-col gap-3">
         {visible.map((order) => {
-          const copy = STATUS_COPY[order.status];
+          const copy = statusCopy(order);
           return (
             <li key={order.orderId}>
               <Link

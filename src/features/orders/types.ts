@@ -9,6 +9,9 @@ import type { Money } from "@/lib/money";
  */
 export type OrderStatus = "CONFIRMED" | "DISPATCHED" | "RETURNED" | "COMPLETED" | "CANCELLED";
 
+/** Whether the goods are held for payment: AWAITED until a payment is recorded, then CONFIRMED. */
+export type PaymentStage = "NOT_REQUIRED" | "AWAITED" | "CONFIRMED";
+
 export type DepositStatus = "HELD" | "REFUND_PENDING" | "REFUNDED" | "FORFEITED";
 
 export interface OrderSummary {
@@ -22,6 +25,7 @@ export interface OrderSummary {
   totalAmount: Money;
   itemCount: number;
   placedAt?: string;
+  paymentStage?: PaymentStage;
 }
 
 export interface OrderLine {
@@ -85,6 +89,25 @@ export const STATUS_COPY: Record<
   COMPLETED: { label: "Completed", tone: "success", text: "All done. Thank you for choosing Tentvaale." },
   CANCELLED: { label: "Cancelled", tone: "destructive", text: "This order was cancelled." },
 };
+
+/** What the customer reads for an order: its status, with the payment step shown while the order is still only confirmed. */
+export function statusCopy(order: { status: OrderStatus; paymentStage?: PaymentStage }) {
+  if (order.status === "CONFIRMED" && order.paymentStage === "AWAITED") {
+    return {
+      label: "Payment awaited",
+      tone: "warning" as const,
+      text: "Your order is placed. We prepare and dispatch it once your payment is received.",
+    };
+  }
+  if (order.status === "CONFIRMED" && order.paymentStage === "CONFIRMED") {
+    return {
+      label: "Payment confirmed",
+      tone: "success" as const,
+      text: "We have your payment. We will prepare your order and be in touch about delivery.",
+    };
+  }
+  return STATUS_COPY[order.status];
+}
 
 export const DEPOSIT_COPY: Record<DepositStatus, { label: string; text: string }> = {
   HELD: { label: "Held", text: "Held as security. It is returned after your items come back in good condition." },

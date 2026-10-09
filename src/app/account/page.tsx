@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useRequireAccount, useSession } from "@/features/auth";
 import { ApiError } from "@/services/api-client";
-import { STATUS_COPY, useOrders } from "@/features/orders";
+import { statusCopy, useOrders } from "@/features/orders";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
 
@@ -286,7 +286,7 @@ export default function AccountPage() {
                       {o.orderNumber} — {o.planName}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {STATUS_COPY[o.status].label} · {formatMoney(o.totalAmount)}
+                      {statusCopy(o).label} · {formatMoney(o.totalAmount)}
                     </p>
                   </div>
                   <Link href={`/orders/${o.orderId}`} className="shrink-0 text-sm text-primary underline-offset-4 transition-colors hover:underline">

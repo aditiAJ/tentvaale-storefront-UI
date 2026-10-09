@@ -11,7 +11,7 @@ import { useRequireAccount } from "@/features/auth";
 import {
   DEPOSIT_COPY,
   DOCUMENT_LABEL,
-  STATUS_COPY,
+  statusCopy,
   useOrder,
   useOrderBilling,
   useOrderDocuments,
@@ -66,7 +66,7 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 }
 
 function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean }) {
-  const copy = STATUS_COPY[order.status];
+  const copy = statusCopy(order);
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 page-x">
       {justPlaced && (
@@ -187,8 +187,13 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 /** Placed, dispatched, returned, completed, from the order's own dates. A cancelled order stops where it was. */
 function Timeline({ order }: { order: Order }) {
   const cancelled = order.status === "CANCELLED";
-  const steps: { label: string; at?: string; note: string }[] = [
+  const paying = order.paymentStage === "AWAITED" || order.paymentStage === "CONFIRMED";
+  const paid = order.paymentStage === "CONFIRMED";
+  const steps: { label: string; at?: string; done?: boolean; note: string }[] = [
     { label: "Order placed", at: order.placedAt, note: "Your quotation was accepted." },
+    ...(paying
+      ? [{ label: paid ? "Payment confirmed" : "Payment awaited", done: paid, note: "We have received your payment." }]
+      : []),
     { label: "Dispatched", at: order.dispatchedAt, note: "Your items were sent for your event." },
     { label: "Returned", at: order.returnedAt, note: "Your items came back to us." },
     { label: "Completed", at: order.completedAt, note: "Everything is settled." },
@@ -199,7 +204,7 @@ function Timeline({ order }: { order: Order }) {
       <h2 className="font-serif text-xl text-foreground">Progress</h2>
       <ol className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6">
         {visible.map((step) => {
-          const done = Boolean(step.at);
+          const done = step.done ?? Boolean(step.at);
           const isCancel = step.label === "Cancelled";
           return (
             <li key={step.label} className="flex items-start gap-3">
