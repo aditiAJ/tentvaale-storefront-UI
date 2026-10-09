@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ProductThumb } from "@/components/product-thumb";
+import { HoverImageGallery } from "@/components/hover-image-gallery";
 import { cn } from "@/lib/utils";
 import { useRequireAccount } from "@/features/auth";
 import { useMockStore } from "@/mock-data/store";
@@ -24,7 +24,7 @@ import { parseItemKey } from "@/features/plans/keys";
 import { ApiError } from "@/services/api-client";
 import { useQueryClient } from "@tanstack/react-query";
 import { planKeys } from "@/features/plans/api";
-import { formatRupees, rateTypeLabel } from "@/mock-data/seed";
+import { formatRupees, productImages, rateTypeLabel } from "@/mock-data/seed";
 
 // Flowstep screens 15 (desktop, populated) / 16 (mobile, empty state).
 // Both states are real here — which one shows depends on the actual wishlist.
@@ -216,10 +216,10 @@ export default function WishlistPage() {
                     <Heart className="size-5 fill-primary text-primary" />
                   </button>
                   <div className="overflow-hidden rounded-xl bg-muted">
-                    <ProductThumb
-                      imageUrl={p.imageUrl}
+                    <HoverImageGallery
+                      images={productImages(p)}
                       alt={p.name}
-                      className="aspect-[4/3] rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-105"
+                      imgClassName="aspect-[4/3] rounded-none bg-transparent transition-transform duration-600 ease-out-quint group-hover:scale-105"
                     />
                   </div>
                   <div className="flex flex-col gap-2">

@@ -51,6 +51,9 @@ export interface ProductCard {
   slug: string;
   name: string;
   imageUrl?: string;
+  /** Every photo on the product, in order — for the card's own hover gallery. Empty or one-item
+   * when the product has 0 or 1 photos, in which case no arrows show. */
+  imageUrls?: string[];
   dailyRate: Money;
   rateType: CatalogRateType;
   categorySlug: string;

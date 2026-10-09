@@ -23,10 +23,11 @@ function todayParts(): Parts {
   const t = new Date();
   return { d: t.getDate(), m: t.getMonth(), y: t.getFullYear() };
 }
-// Keep the day valid for the month and never earlier than `min`.
-function normalise(p: Parts, min: Parts | null): Parts {
+// Keep the day valid for the month and within [min, max].
+function normalise(p: Parts, min: Parts | null, max: Parts | null = null): Parts {
   let next = { ...p, d: Math.min(p.d, daysIn(p.y, p.m)) };
   if (min && toIso(next) < toIso(min)) next = { ...min };
+  if (max && toIso(next) > toIso(max)) next = { ...max };
   return next;
 }
 
@@ -108,6 +109,7 @@ type DateWheelPickerProps = {
   value: string; // "yyyy-mm-dd" or ""
   onChange: (value: string) => void;
   min?: string;
+  max?: string;
   id?: string;
   placeholder?: string;
   clearable?: boolean;
@@ -116,31 +118,34 @@ type DateWheelPickerProps = {
 
 // App-wide date field: a button showing the date, opening three scroll wheels
 // (day · month · year). Values stay ISO yyyy-mm-dd, same as <input type="date">.
-export function DateWheelPicker({ value, onChange, min, id, placeholder = "Select date", clearable = true, className }: DateWheelPickerProps) {
+export function DateWheelPicker({ value, onChange, min, max, id, placeholder = "Select date", clearable = true, className }: DateWheelPickerProps) {
   const [open, setOpen] = useState(false);
   const minParts = fromIso(min);
-  const [draft, setDraft] = useState<Parts>(() => normalise(fromIso(value) ?? todayParts(), minParts));
+  const maxParts = fromIso(max);
+  const [draft, setDraft] = useState<Parts>(() => normalise(fromIso(value) ?? todayParts(), minParts, maxParts));
 
   function handleOpenChange(next: boolean) {
-    if (next) setDraft(normalise(fromIso(value) ?? todayParts(), fromIso(min)));
+    if (next) setDraft(normalise(fromIso(value) ?? todayParts(), fromIso(min), fromIso(max)));
     setOpen(next);
   }
-  const update = (patch: Partial<Parts>) => setDraft((p) => normalise({ ...p, ...patch }, minParts));
+  const update = (patch: Partial<Parts>) => setDraft((p) => normalise({ ...p, ...patch }, minParts, maxParts));
 
   const thisYear = new Date().getFullYear();
   const firstYear = Math.min(minParts?.y ?? thisYear - 1, draft.y, thisYear - 1);
-  const years: WheelItem[] = Array.from({ length: thisYear + 10 - firstYear + 1 }, (_, i) => {
+  const lastYear = Math.max(maxParts?.y ?? thisYear + 10, draft.y);
+  const years: WheelItem[] = Array.from({ length: lastYear - firstYear + 1 }, (_, i) => {
     const y = firstYear + i;
-    return { value: y, label: String(y), disabled: !!minParts && y < minParts.y };
+    return { value: y, label: String(y), disabled: (!!minParts && y < minParts.y) || (!!maxParts && y > maxParts.y) };
   });
   const months: WheelItem[] = MONTHS.map((label, m) => ({
     value: m,
     label,
-    disabled: !!minParts && (draft.y < minParts.y || (draft.y === minParts.y && m < minParts.m)),
+    disabled: (!!minParts && (draft.y < minParts.y || (draft.y === minParts.y && m < minParts.m))) || (!!maxParts && (draft.y > maxParts.y || (draft.y === maxParts.y && m > maxParts.m))),
   }));
   const days: WheelItem[] = Array.from({ length: daysIn(draft.y, draft.m) }, (_, i) => {
     const d = i + 1;
-    return { value: d, label: pad(d), disabled: !!minParts && toIso({ d, m: draft.m, y: draft.y }) < toIso(minParts) };
+    const iso = toIso({ d, m: draft.m, y: draft.y });
+    return { value: d, label: pad(d), disabled: (!!minParts && iso < toIso(minParts)) || (!!maxParts && iso > toIso(maxParts)) };
   });
 
   return (
@@ -191,7 +196,7 @@ export function DateWheelPicker({ value, onChange, min, id, placeholder = "Selec
               <button
                 type="button"
                 className="rounded-md px-2 py-1.5 text-xs text-primary hover:bg-primary/10"
-                onClick={() => setDraft(normalise(todayParts(), minParts))}
+                onClick={() => setDraft(normalise(todayParts(), minParts, maxParts))}
               >
                 Today
               </button>

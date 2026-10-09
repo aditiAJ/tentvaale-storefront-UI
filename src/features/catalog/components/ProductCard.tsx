@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { toast } from "sonner";
 import { Heart, Minus, Plus } from "lucide-react";
-import { ProductThumb } from "@/components/product-thumb";
+import { HoverImageGallery } from "@/components/hover-image-gallery";
 import { cn } from "@/lib/utils";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
@@ -65,7 +65,11 @@ export function ProductCard({ card, onQuickAdd }: { card: ProductCardData; onQui
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-border bg-card shadow-e1 transition-[box-shadow,border-color] duration-[260ms] ease-out-quint hover:glow hover:border-[var(--glow)]">
       <div className="relative overflow-hidden bg-muted/60">
         <Link href={href} className="block">
-          <ProductThumb imageUrl={card.imageUrl} alt={card.name} className="aspect-[4/3] w-full rounded-none bg-transparent" />
+          <HoverImageGallery
+            images={card.imageUrls?.length ? card.imageUrls : card.imageUrl ? [card.imageUrl] : []}
+            alt={card.name}
+            imgClassName="aspect-[4/3] w-full rounded-none bg-transparent"
+          />
         </Link>
         {currentAccount && (
           <button

@@ -1,7 +1,7 @@
 "use client";
 
 import { VenueSelect } from "@/features/venues";
-import { use, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -75,8 +75,48 @@ const STATUS_STYLE: Record<PlanStatus, string> = {
 
 const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", venueId: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
 
+// One calendar day before/after an ISO yyyy-mm-dd date, for the setup/tear-down defaults below.
+// Built on Date.UTC/getUTCDate so it's correct regardless of the browser's local timezone offset
+// (plain `new Date(iso)` + toISOString() rolls the date back a day in any zone ahead of UTC).
+function shiftDate(iso: string, days: number): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
 // "Add items" outside the setup suggestions opens the same picker on the full catalog.
 const BROWSE_PICKER: (typeof STARTER_SUGGESTIONS)[number] = { key: "browse", label: "product", categories: [] };
+
+const SCROLL_FADE = "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)";
+
+// A horizontally-scrolling strip whose edges fade only once it actually overflows — applying the
+// fade unconditionally clips the first/last few pixels of content (e.g. a date label's leading
+// digit) even when everything already fits and there's nothing to scroll to.
+function ScrollFade({ children, className }: { children: React.ReactNode; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setOverflowing(el.scrollWidth > el.clientWidth + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={cn("overflow-x-auto", className)}
+      style={overflowing ? { maskImage: SCROLL_FADE, WebkitMaskImage: SCROLL_FADE } : undefined}
+    >
+      {children}
+    </div>
+  );
+}
 
 const NO_PRODUCTS: BoardProduct[] = [];
 
@@ -463,89 +503,75 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       );
     }
 
-    const axisMin = Math.min(...scheduled.map((s) => s.start.getTime()));
-    const axisMax = Math.max(...scheduled.map((s) => s.end.getTime()));
-    const span = Math.max(axisMax - axisMin, 60 * 60 * 1000);
-    const pct = (t: number) => ((t - axisMin) / span) * 100;
-
-    const dayTicks: { key: string; label: string; pct: number }[] = [];
-    const seenDays = new Set<string>();
-    for (const { se } of scheduled) {
-      if (seenDays.has(se.eventDate)) continue;
-      seenDays.add(se.eventDate);
-      dayTicks.push({ key: se.eventDate, label: formatEventDate(se.eventDate), pct: Math.max(0, Math.min(100, pct(new Date(`${se.eventDate}T00:00`).getTime()))) });
+    // Grouped by day, in order — a route of day-stops rather than a single
+    // time-proportional axis, so a 3-day gap between functions doesn't burn
+    // most of the screen on empty space. Overlap is flagged within a day only
+    // (cross-day "overlap" isn't meaningful here).
+    const byDay = new Map<string, typeof scheduled>();
+    for (const item of scheduled) {
+      const list = byDay.get(item.se.eventDate) ?? [];
+      list.push(item);
+      byDay.set(item.se.eventDate, list);
     }
-    dayTicks.sort((a, b) => a.pct - b.pct);
-
-    // Merge every stretch where 2+ sub-events are concurrently running into
-    // highlight bands — a sweep over start/end edges, not a conflict check.
-    const edges = scheduled.flatMap(({ start, end }) => [
-      { t: start.getTime(), delta: 1 },
-      { t: end.getTime(), delta: -1 },
-    ]);
-    edges.sort((a, b) => a.t - b.t);
-    const overlapRanges: { start: number; end: number }[] = [];
-    let concurrent = 0;
-    let rangeStart: number | null = null;
-    for (const e of edges) {
-      const was = concurrent >= 2;
-      concurrent += e.delta;
-      const is = concurrent >= 2;
-      if (!was && is) rangeStart = e.t;
-      if (was && !is && rangeStart !== null) {
-        overlapRanges.push({ start: rangeStart, end: e.t });
-        rangeStart = null;
-      }
-    }
+    const days = [...byDay.entries()]
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, items]) => {
+        const sorted = [...items].sort((a, b) => a.start.getTime() - b.start.getTime());
+        return {
+          date,
+          label: formatEventDate(date),
+          events: sorted.map((item, i) => ({
+            se: item.se,
+            overlaps: sorted.some((other, j) => j !== i && item.start < other.end && other.start < item.end),
+          })),
+        };
+      });
+    const hasOverlap = days.some((d) => d.events.some((e) => e.overlaps));
 
     return (
       <div className="mt-6 flex flex-col gap-4">
-        <div className="overflow-x-auto rounded-xl border border-border bg-card p-5">
-          <div className="min-w-[640px]">
-            <div className="relative mb-5 h-5 border-b border-border">
-              {dayTicks.map((t) => (
-                <span key={t.key} className="absolute top-0 -translate-x-1/2 text-[11px] whitespace-nowrap text-muted-foreground" style={{ left: `${t.pct}%` }}>
-                  {t.label}
-                </span>
-              ))}
-            </div>
-            <div className="relative flex flex-col gap-3">
-              {overlapRanges.map((r, i) => (
-                <div
-                  key={i}
-                  className="absolute top-0 bottom-0 rounded-lg bg-primary/10"
-                  style={{ left: `${pct(r.start)}%`, width: `${Math.max(pct(r.end) - pct(r.start), 0.5)}%` }}
-                />
-              ))}
-              {scheduled.map(({ se, start, end }) => {
-                const left = pct(start.getTime());
-                const width = Math.max(pct(end.getTime()) - left, 4);
-                return (
-                  <div key={se.id} className="relative h-12">
+        <ScrollFade className="pb-1">
+          <div className="flex min-w-min">
+            {days.map((day, i) => (
+              <div key={day.date} className="flex w-48 shrink-0 flex-col sm:w-56">
+                {/* Route node, matching the progress-steps pattern above. */}
+                <div className="relative flex items-center px-1">
+                  <span className={cn("h-0.5 flex-1", i === 0 ? "bg-transparent" : "bg-border")} />
+                  <span className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-sm border border-primary bg-card text-[11px] font-semibold text-primary ring-4 ring-background">
+                    {i + 1}
+                  </span>
+                  <span className={cn("h-0.5 flex-1", i === days.length - 1 ? "bg-transparent" : "bg-border")} />
+                </div>
+                <div className="mt-2 px-1 text-xs font-medium whitespace-nowrap text-foreground">{day.label}</div>
+                <div className="mt-3 flex flex-1 flex-col gap-2 rounded-xl border border-border bg-card p-2.5">
+                  {day.events.map(({ se, overlaps }) => (
                     <button
+                      key={se.id}
                       onClick={() => {
                         setActiveTab(se.id);
                         setView("sub-events");
                       }}
-                      className="absolute flex h-10 items-center gap-2 overflow-hidden rounded-lg border border-primary/50 bg-primary/15 px-3 text-left transition-colors hover:bg-primary/25"
-                      style={{ left: `${left}%`, width: `${width}%` }}
+                      className={cn(
+                        "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-primary/15",
+                        overlaps ? "border-primary/60 bg-primary/10" : "border-border/80 bg-background/40",
+                      )}
                     >
                       <span className="truncate text-sm font-medium text-foreground">{se.name}</span>
-                      <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
+                      <span className="text-xs text-muted-foreground">
                         {se.startTime}
                         {se.endTime ? `–${se.endTime}` : ""}
                       </span>
                     </button>
-                  </div>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
-        </div>
+        </ScrollFade>
 
-        {overlapRanges.length > 0 && (
+        {hasOverlap && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="inline-block size-3 shrink-0 rounded-sm bg-primary/10" /> Highlighted bands mark sub-events that share the same time window — worth a look in the Inventory view for anything they could reuse.
+            <span className="inline-block size-3 shrink-0 rounded-sm border border-primary/60 bg-primary/10" /> Highlighted functions share a day and overlap in time — worth a look in the Inventory view for anything they could reuse.
           </p>
         )}
 
@@ -976,7 +1002,14 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   }
 
   function openAddSubEvent() {
-    setSubEventForm(EMPTY_SUB_EVENT);
+    setSubEventForm({
+      ...EMPTY_SUB_EVENT,
+      // Defaults from the plan's own dates, so they're filled in before a function-specific date is
+      // even picked; the Date field's onChange below re-anchors them once it is, as long as neither
+      // has been touched by hand yet.
+      setupDate: startDate ? shiftDate(startDate, -1) : "",
+      teardownDate: (plan.eventEndDate || startDate) ? shiftDate(plan.eventEndDate || startDate, 1) : "",
+    });
     setCustomFunctionName(false);
     setEditingSubEventId(null);
     setPromotingGeneral(false);
@@ -986,7 +1019,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // Editing the main function opens the function form; saving it makes a real function of it.
   function openEditGeneral() {
     const name = plan!.generalLabel?.trim() ?? "";
-    setSubEventForm({ ...EMPTY_SUB_EVENT, name });
+    setSubEventForm({
+      ...EMPTY_SUB_EVENT,
+      name,
+      setupDate: startDate ? shiftDate(startDate, -1) : "",
+      teardownDate: (plan.eventEndDate || startDate) ? shiftDate(plan.eventEndDate || startDate, 1) : "",
+    });
     setCustomFunctionName(name !== "" && !(FUNCTION_PRESETS as readonly string[]).includes(name));
     setEditingSubEventId(null);
     setPromotingGeneral(true);
@@ -999,8 +1037,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       eventDate: se.eventDate,
       venue: se.venue ?? "",
       venueId: se.venueId ?? "",
-      setupDate: se.setupDate ?? "",
-      teardownDate: se.teardownDate ?? "",
+      setupDate: se.setupDate ?? (se.eventDate ? shiftDate(se.eventDate, -1) : ""),
+      teardownDate: se.teardownDate ?? (se.eventDate ? shiftDate(se.eventDate, 1) : ""),
       guestCount: se.guestCount ? String(se.guestCount) : "",
       startTime: se.startTime ?? "",
       endTime: se.endTime ?? "",
@@ -1633,7 +1671,21 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="se-date">Date *</Label>
-                  <DateWheelPicker id="se-date" value={subEventForm.eventDate} onChange={(v) => setSubEventForm({ ...subEventForm, eventDate: v })} />
+                  <DateWheelPicker
+                    id="se-date"
+                    min={startDate || undefined}
+                    max={plan.eventEndDate || startDate || undefined}
+                    value={subEventForm.eventDate}
+                    onChange={(v) =>
+                      setSubEventForm({
+                        ...subEventForm,
+                        eventDate: v,
+                        // Prefilled from the chosen date, once — never overwrites a value already picked.
+                        setupDate: subEventForm.setupDate || (v ? shiftDate(v, -1) : ""),
+                        teardownDate: subEventForm.teardownDate || (v ? shiftDate(v, 1) : ""),
+                      })
+                    }
+                  />
                 </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="se-guests">Guest count</Label>
@@ -1688,12 +1740,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="se-teardown">Tear-down date</Label>
-                  <DateWheelPicker
-                    id="se-teardown"
-                    min={subEventForm.setupDate || undefined}
-                    value={subEventForm.teardownDate}
-                    onChange={(v) => setSubEventForm({ ...subEventForm, teardownDate: v })}
-                  />
+                  <DateWheelPicker id="se-teardown" value={subEventForm.teardownDate} onChange={(v) => setSubEventForm({ ...subEventForm, teardownDate: v })} />
                 </div>
               </div>
             </div>

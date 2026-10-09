@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Stagger, StaggerItem } from "@/components/motion";
-import { ProductThumb } from "@/components/product-thumb";
+import { HoverImageGallery } from "@/components/hover-image-gallery";
 import { formatMoney } from "@/lib/money";
 import type { ProductCard } from "../types";
 
@@ -44,7 +44,11 @@ export function ProductRail({
               className="group flex h-full flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-e1 transition-colors duration-200 ease-out-quint hover:border-primary/50"
             >
               <div className="overflow-hidden rounded-xl bg-muted/60">
-                <ProductThumb imageUrl={p.imageUrl} alt={p.name} className="h-32 rounded-none bg-transparent md:h-44" />
+                <HoverImageGallery
+                  images={p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : []}
+                  alt={p.name}
+                  imgClassName="h-32 rounded-none bg-transparent md:h-44"
+                />
               </div>
               <h3 className="line-clamp-2 px-1 text-sm leading-snug font-medium text-foreground transition-colors duration-200 ease-out-quint group-hover:text-primary">
                 {p.name}
