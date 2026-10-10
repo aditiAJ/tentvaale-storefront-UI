@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EASE, DUR, SPRING } from "@/components/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { SiteWordmark } from "@/components/site-logo";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import { useSession } from "@/features/auth/session";
@@ -249,15 +250,19 @@ function CatalogMenu({ active }: { active: boolean }) {
 }
 
 export function SiteHeader() {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const scrolled = useScrolled();
   const reduce = useReducedMotion();
 
-  // Route change closes the menu — otherwise it stays open behind the new page.
-  useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
+  // The menu remembers which page it was opened on and counts as open only there, so a route change closes it
+  // (otherwise it stays open behind the new page) without an effect that sets state.
+  const [openedOn, setOpenedOn] = useState<string | null>(null);
+  const mobileMenuOpen = openedOn === pathname;
+  const setMobileMenuOpen = (next: boolean | ((open: boolean) => boolean)) =>
+    setOpenedOn((previous) => {
+      const open = typeof next === "function" ? next(previous === pathname) : next;
+      return open ? pathname : null;
+    });
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -274,9 +279,7 @@ export function SiteHeader() {
       <nav className="hidden w-full md:block">
         <div className="mx-auto flex w-full max-w-[110rem] items-center gap-6 py-3 page-x">
           <Link href="/" className="press flex shrink-0 items-center" aria-label="Tentvaale home">
-            <span className="font-serif text-2xl tracking-wide text-primary transition-colors duration-200 ease-out-quint hover:text-[color-mix(in_oklab,var(--primary),white_18%)]">
-              Tentvaale
-            </span>
+            <SiteWordmark className="text-lg" />
           </Link>
           <ul className="flex shrink-0 items-center gap-5">
             {NAV_LINKS.map((c) => (
@@ -326,8 +329,8 @@ export function SiteHeader() {
             </motion.span>
           </AnimatePresence>
         </button>
-        <Link href="/" className="font-serif text-xl tracking-wide text-primary" aria-label="Tentvaale home">
-          Tentvaale
+        <Link href="/" className="flex items-center" aria-label="Tentvaale home">
+          <SiteWordmark className="text-sm" />
         </Link>
         <div className="flex items-center gap-0.5">
           <MobileWishlistLink />

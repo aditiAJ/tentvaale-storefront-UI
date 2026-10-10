@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MapPin, Phone } from "lucide-react";
 import { COMPANY, telHref } from "@/lib/company";
 import { SocialLinks } from "@/components/social-icons";
+import { SiteLogoIcon, SiteWordmark } from "@/components/site-logo";
 import { useCategories } from "@/features/catalog/hooks";
 
 // Flowstep screens 1 (desktop 4-col grid) / 2 (mobile stacked). Bottom tab
@@ -53,7 +54,10 @@ export function SiteFooter() {
           {/* Wordmark leads the grid on desktop so the footer opens with the
               brand rather than a link column. */}
           <div className="col-span-2 flex flex-col gap-3 md:col-span-1">
-            <span className="font-serif text-2xl tracking-wide text-primary">Tentvaale</span>
+            <div className="flex flex-col items-start gap-2">
+              <SiteLogoIcon size="lg" />
+              <SiteWordmark className="text-lg" />
+            </div>
             <p className="max-w-56 text-sm leading-6 text-muted-foreground">
               Furniture, décor and fully styled collections, rented for the day.
             </p>
