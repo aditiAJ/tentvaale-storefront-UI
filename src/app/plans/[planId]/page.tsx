@@ -1008,7 +1008,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       // even picked; the Date field's onChange below re-anchors them once it is, as long as neither
       // has been touched by hand yet.
       setupDate: startDate ? shiftDate(startDate, -1) : "",
-      teardownDate: (plan.eventEndDate || startDate) ? shiftDate(plan.eventEndDate || startDate, 1) : "",
+      teardownDate: (plan!.eventEndDate || startDate) ? shiftDate(plan!.eventEndDate || startDate, 1) : "",
     });
     setCustomFunctionName(false);
     setEditingSubEventId(null);
@@ -1023,7 +1023,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       ...EMPTY_SUB_EVENT,
       name,
       setupDate: startDate ? shiftDate(startDate, -1) : "",
-      teardownDate: (plan.eventEndDate || startDate) ? shiftDate(plan.eventEndDate || startDate, 1) : "",
+      teardownDate: (plan!.eventEndDate || startDate) ? shiftDate(plan!.eventEndDate || startDate, 1) : "",
     });
     setCustomFunctionName(name !== "" && !(FUNCTION_PRESETS as readonly string[]).includes(name));
     setEditingSubEventId(null);
