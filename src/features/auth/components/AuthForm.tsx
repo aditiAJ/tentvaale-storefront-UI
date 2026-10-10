@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { SiteWordmark } from "@/components/site-logo";
 import { ApiError } from "@/services/api-client";
 import { useSession } from "../session";
 
@@ -107,11 +108,11 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         >
           <ChevronLeft className="size-6 text-foreground" />
         </button>
-        <span className="font-serif text-2xl tracking-wide text-primary">Tentvaale</span>
+        <SiteWordmark className="text-sm" />
         <div className="size-10" />
       </div>
 
-      <span className="hidden font-serif text-2xl tracking-wide text-primary md:block">Tentvaale</span>
+      <SiteWordmark className="hidden text-xl md:block" />
 
       {/* Heading re-keys on the tab so the copy cross-fades with the form. */}
       <div className="flex w-full flex-col gap-2 text-center">
