@@ -44,6 +44,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { ProductThumb } from "@/components/product-thumb";
 import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
+import { TimeSelect, formatClock } from "@/components/time-select";
 import { RentalTerms } from "@/components/rental-terms";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -73,7 +74,7 @@ const STATUS_STYLE: Record<PlanStatus, string> = {
   ORDERED: "bg-primary text-primary-foreground",
 };
 
-const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", venueId: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
+const EMPTY_SUB_EVENT = { name: "", eventDate: "", venue: "", subVenue: "", venueId: "", setupDate: "", teardownDate: "", guestCount: "", startTime: "", endTime: "" };
 
 // One calendar day before/after an ISO yyyy-mm-dd date, for the setup/tear-down defaults below.
 // Built on Date.UTC/getUTCDate so it's correct regardless of the browser's local timezone offset
@@ -151,9 +152,10 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   // null = the dialog is adding a new sub-event; an id = editing that one.
   const [editingSubEventId, setEditingSubEventId] = useState<string | null>(null);
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
-  const [planForm, setPlanForm] = useState<{ name: string; venue: string; venueId?: string; eventStartDate: string; eventEndDate: string; guestCount?: number }>({
+  const [planForm, setPlanForm] = useState<{ name: string; venue: string; subVenue: string; venueId?: string; eventStartDate: string; eventEndDate: string; guestCount?: number }>({
     name: "",
     venue: "",
+    subVenue: "",
     eventStartDate: "",
     eventEndDate: "",
   });
@@ -443,7 +445,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             <h3 className="font-serif text-lg text-foreground">{title}</h3>
             {subEvent && (
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                {subEvent.venue && <span>{subEvent.venue}</span>}
+                {subEvent.venue && <span>{subEvent.subVenue ? `${subEvent.venue}, ${subEvent.subVenue}` : subEvent.venue}</span>}
                 {subEvent.guestCount ? <span>· {subEvent.guestCount} guests</span> : null}
                 {subEvent.setupDate && <span>· Setup {formatEventDate(subEvent.setupDate)}</span>}
                 {subEvent.teardownDate && <span>· Tear-down {formatEventDate(subEvent.teardownDate)}</span>}
@@ -558,8 +560,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                     >
                       <span className="truncate text-sm font-medium text-foreground">{se.name}</span>
                       <span className="text-xs text-muted-foreground">
-                        {se.startTime}
-                        {se.endTime ? `–${se.endTime}` : ""}
+                        {se.startTime ? formatClock(se.startTime) : null}
+                        {se.endTime ? `–${formatClock(se.endTime)}` : ""}
                       </span>
                     </button>
                   ))}
@@ -924,6 +926,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     if (!subEventFormValid) return;
     const details = {
       venue: f.venue.trim() || undefined,
+      subVenue: f.subVenue.trim() || undefined,
       venueId: f.venueId || null,
       setupDate: f.setupDate || undefined,
       teardownDate: f.teardownDate || undefined,
@@ -935,6 +938,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       name: f.name.trim(),
       scheduledOn: f.eventDate || undefined,
       venue: details.venue,
+      subVenue: details.subVenue,
       venueId: details.venueId,
       setupOn: details.setupDate,
       teardownOn: details.teardownDate,
@@ -970,6 +974,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     setPlanForm({
       name: plan!.name,
       venue: plan!.venue ?? "",
+      subVenue: plan!.subVenue ?? "",
       venueId: plan!.venueId ?? "",
       eventStartDate: plan!.eventStartDate ?? "",
       eventEndDate: plan!.eventEndDate ?? "",
@@ -983,6 +988,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     const saved = await actions.updateDetails({
       name: planForm.name.trim(),
       venue: planForm.venue.trim() || undefined,
+      subVenue: planForm.subVenue.trim() || undefined,
       venueId: planForm.venueId || null,
       eventDate: planForm.eventStartDate || undefined,
       eventEndDate: planForm.eventEndDate || undefined,
@@ -1036,6 +1042,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       name: se.name,
       eventDate: se.eventDate,
       venue: se.venue ?? "",
+      subVenue: se.subVenue ?? "",
       venueId: se.venueId ?? "",
       setupDate: se.setupDate ?? (se.eventDate ? shiftDate(se.eventDate, -1) : ""),
       teardownDate: se.teardownDate ?? (se.eventDate ? shiftDate(se.eventDate, 1) : ""),
@@ -1150,7 +1157,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
             </div>
             <div className="flex flex-wrap gap-2">
               <MetaChip icon={CalendarDays} value={startDate ? planDateLabel : undefined} empty="Add dates" onClick={openEditPlan} />
-              <MetaChip icon={MapPin} value={plan.venue} empty="Add venue" onClick={openEditPlan} />
+              <MetaChip icon={MapPin} value={plan.venue ? (plan.subVenue ? `${plan.venue}, ${plan.subVenue}` : plan.venue) : undefined} empty="Add venue" onClick={openEditPlan} />
               <MetaChip icon={Users} value={plan.guestCount ? `${plan.guestCount} guests` : undefined} empty="Add guest count" onClick={openEditPlan} />
               {plan.editable && !plan.coverImageUrl && <MetaChip icon={ImagePlus} empty="Add photo" onClick={openEditPlan} />}
               <MetaChip icon={LayoutList} value={`${functionsCount} function${functionsCount === 1 ? "" : "s"} · ${itemsCount} item${itemsCount === 1 ? "" : "s"}`} />
@@ -1302,8 +1309,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                           const se = activeSubEvent;
                           const facts = [
                             se.eventDate && { icon: CalendarDays, text: formatEventDate(se.eventDate) },
-                            se.startTime && { icon: Clock, text: `${se.startTime}${se.endTime ? `–${se.endTime}` : ""}` },
-                            se.venue && { icon: MapPin, text: se.venue },
+                            se.startTime && { icon: Clock, text: `${formatClock(se.startTime)}${se.endTime ? `–${formatClock(se.endTime)}` : ""}` },
+                            se.venue && { icon: MapPin, text: se.subVenue ? `${se.venue}, ${se.subVenue}` : se.venue },
                             se.guestCount && { icon: Users, text: `${se.guestCount} guests` },
                             (se.setupDate || se.teardownDate) && { icon: Truck, text: `Setup ${formatEventDate(se.setupDate) || "—"} → ${formatEventDate(se.teardownDate) || "—"}` },
                           ].filter(Boolean) as { icon: LucideIcon; text: string }[];
@@ -1575,6 +1582,17 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                     />
                     <Input id="plan-edit-venue" placeholder="Taj Palace, Delhi" value={planForm.venue} onChange={(e) => setPlanForm({ ...planForm, venue: e.target.value })} />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="plan-edit-sub-venue">Sub-venue</Label>
+                    <Input
+                      id="plan-edit-sub-venue"
+                      placeholder="Grand Ballroom (optional)"
+                      maxLength={200}
+                      value={planForm.subVenue}
+                      onChange={(e) => setPlanForm({ ...planForm, subVenue: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">The hall, lawn or room inside the venue.</p>
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="plan-edit-start">Start date</Label>
@@ -1701,21 +1719,28 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="se-start-time">Start time *</Label>
-                  <Input
+                  <TimeSelect
                     id="se-start-time"
-                    type="time"
                     value={subEventForm.startTime}
-                    onChange={(e) => setSubEventForm({ ...subEventForm, startTime: e.target.value })}
+                    onChange={(startTime) =>
+                      // An end time that is no longer after the start is dropped rather than left to fail on save.
+                      setSubEventForm({
+                        ...subEventForm,
+                        startTime,
+                        endTime: subEventForm.endTime && startTime && subEventForm.endTime <= startTime ? "" : subEventForm.endTime,
+                      })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="se-end-time">End time</Label>
-                  <Input
+                  <TimeSelect
                     id="se-end-time"
-                    type="time"
-                    min={subEventForm.startTime || undefined}
+                    optional
+                    placeholder="Optional"
+                    after={subEventForm.startTime || undefined}
                     value={subEventForm.endTime}
-                    onChange={(e) => setSubEventForm({ ...subEventForm, endTime: e.target.value })}
+                    onChange={(endTime) => setSubEventForm({ ...subEventForm, endTime })}
                   />
                 </div>
               </div>
@@ -1731,6 +1756,16 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   placeholder="Garden Lawn, Taj Palace"
                   value={subEventForm.venue}
                   onChange={(e) => setSubEventForm({ ...subEventForm, venue: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="se-sub-venue">Sub-venue</Label>
+                <Input
+                  id="se-sub-venue"
+                  placeholder="Grand Ballroom (optional)"
+                  maxLength={200}
+                  value={subEventForm.subVenue}
+                  onChange={(e) => setSubEventForm({ ...subEventForm, subVenue: e.target.value })}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">

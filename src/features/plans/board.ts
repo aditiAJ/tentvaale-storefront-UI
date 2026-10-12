@@ -28,6 +28,7 @@ export interface BoardSubEvent {
   /** "" when no date has been given yet. */
   eventDate: string;
   venue?: string;
+  subVenue?: string;
   venueId?: string;
   setupDate?: string;
   teardownDate?: string;
@@ -62,6 +63,7 @@ export interface BoardPlan {
   /** What the signed-in account may do on the plan. */
   role: "OWNER" | "EDITOR" | "VIEWER";
   venue?: string;
+  subVenue?: string;
   venueId?: string;
   eventStartDate?: string;
   eventEndDate?: string;
@@ -134,6 +136,7 @@ export function toBoard(plan: Plan): BoardPlan {
     editable: plan.status === "DRAFT" && plan.myRole !== "VIEWER",
     role: plan.myRole ?? "OWNER",
     venue: plan.venue,
+    subVenue: plan.subVenue,
     venueId: plan.venueDetail?.id,
     eventStartDate: plan.eventDate,
     eventEndDate: plan.eventEndDate,
@@ -145,6 +148,7 @@ export function toBoard(plan: Plan): BoardPlan {
       name: se.name,
       eventDate: se.scheduledOn ?? "",
       venue: se.venue,
+      subVenue: se.subVenue,
       venueId: se.venueDetail?.id,
       setupDate: se.setupOn,
       teardownDate: se.teardownOn,

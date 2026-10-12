@@ -142,6 +142,8 @@ export function usePlanActions(planId: string) {
           apiUpdatePlan(planId, {
             name: plan.name,
             venue: plan.venue,
+            // Sent back, or the saved sub-venue would be cleared.
+            subVenue: plan.subVenue,
             eventDate: plan.eventDate,
             eventEndDate: plan.eventEndDate,
             guestCount: plan.guestCount,

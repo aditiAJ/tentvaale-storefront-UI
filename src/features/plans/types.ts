@@ -83,6 +83,8 @@ export interface PlanSubEvent {
   name: string;
   scheduledOn?: string;
   venue?: string;
+  /** The hall or room inside the venue, as the customer worded it. */
+  subVenue?: string;
   setupOn?: string;
   teardownOn?: string;
   guestCount?: number;
@@ -108,6 +110,8 @@ export interface Plan {
   eventDate?: string;
   eventEndDate?: string;
   venue?: string;
+  /** The hall or room inside the venue, as the customer worded it. */
+  subVenue?: string;
   guestCount?: number;
   /** What the customer calls the items on no function; absent shows as "Main function". */
   generalLabel?: string;
@@ -163,6 +167,8 @@ export interface Venue {
 export interface PlanDetailsInput {
   name: string;
   venue?: string;
+  /** Sent on every save: an update replaces the plan's details, so leaving it out clears it. */
+  subVenue?: string;
   eventDate?: string;
   eventEndDate?: string;
   guestCount?: number;
@@ -175,6 +181,7 @@ export interface SubEventInput {
   name: string;
   scheduledOn?: string;
   venue?: string;
+  subVenue?: string;
   setupOn?: string;
   teardownOn?: string;
   guestCount?: number;

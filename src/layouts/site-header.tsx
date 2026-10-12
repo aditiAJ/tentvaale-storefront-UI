@@ -8,6 +8,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { EASE, DUR, SPRING } from "@/components/motion";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { SiteWordmark } from "@/components/site-logo";
+import { GuideButton } from "@/features/help/GuideButton";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import { useSession } from "@/features/auth/session";
@@ -94,6 +95,7 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
       >
         <User className="size-5" />
       </Link>
+      <GuideButton />
       <ThemeToggle />
       {!currentAccount && status !== "loading" && (
         <div className="ml-1.5 flex items-center gap-2">
@@ -341,6 +343,7 @@ export function SiteHeader() {
           >
             <User className="size-5" />
           </Link>
+          <GuideButton />
           <ThemeToggle />
         </div>
       </div>
