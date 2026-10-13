@@ -184,7 +184,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
   );
 }
 
-/** Placed, dispatched, returned, completed, from the order's own dates. A cancelled order stops where it was. */
+/** Placed, dispatched, installation, returned, completed, from the order's own dates. A cancelled order stops where it was. */
 function Timeline({ order }: { order: Order }) {
   const cancelled = order.status === "CANCELLED";
   const paying = order.paymentStage === "AWAITED" || order.paymentStage === "CONFIRMED";
@@ -195,6 +195,7 @@ function Timeline({ order }: { order: Order }) {
       ? [{ label: paid ? "Payment confirmed" : "Payment awaited", done: paid, note: "We have received your payment." }]
       : []),
     { label: "Dispatched", at: order.dispatchedAt, note: "Your items were sent for your event." },
+    { label: "Installation", at: order.installationStartedAt, note: "Our team installed your items at the venue." },
     { label: "Returned", at: order.returnedAt, note: "Your items came back to us." },
     { label: "Completed", at: order.completedAt, note: "Everything is settled." },
   ];

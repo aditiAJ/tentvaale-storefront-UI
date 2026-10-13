@@ -73,6 +73,8 @@ export interface QuotationVersion {
   validUntil?: string;
   subtotalAmount: Money;
   deliveryCharge: Money;
+  transportationCharge?: Money;
+  installationCharge?: Money;
   discountAmount: Money;
   /** The percentage the discount was given as; absent when it was a flat amount. */
   discountPercent?: number;
@@ -113,6 +115,8 @@ export interface CustomerQuotation {
   sentAt?: string;
   subtotalAmount?: Money;
   deliveryCharge?: Money;
+  transportationCharge?: Money;
+  installationCharge?: Money;
   discountAmount?: Money;
   /** The percentage the discount was given as; absent when it was a flat amount. */
   discountPercent?: number;

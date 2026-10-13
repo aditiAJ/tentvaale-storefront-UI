@@ -184,6 +184,8 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
             <Totals
               subtotal={quotation.subtotalAmount}
               delivery={quotation.deliveryCharge}
+              transportation={quotation.transportationCharge}
+              installation={quotation.installationCharge}
               discount={quotation.discountAmount}
               discountPercent={quotation.discountPercent}
               bundleDiscounts={quotation.bundleDiscounts}
@@ -319,6 +321,8 @@ function LineTable({ lines }: { lines: QuotationLine[] }) {
 function Totals({
   subtotal,
   delivery,
+  transportation,
+  installation,
   discount,
   discountPercent,
   total,
@@ -330,6 +334,8 @@ function Totals({
 }: {
   subtotal?: Money;
   delivery?: Money;
+  transportation?: Money;
+  installation?: Money;
   discount?: Money;
   /** Shown beside "Discount" when the discount was a percentage. */
   discountPercent?: number;
@@ -357,6 +363,8 @@ function Totals({
       {discount && discount.amount > 0 && row(discountPercent != null ? `Discount (${discountPercent}%)` : "Discount", discount, true)}
       {taxLines(tax).map((line) => row(line.label, line.value))}
       {delivery && delivery.amount > 0 && row("Delivery", delivery)}
+      {transportation && transportation.amount > 0 && row("Transportation", transportation)}
+      {installation && installation.amount > 0 && row("Installation", installation)}
       <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
         <span className="text-sm font-medium text-foreground">Total</span>
         <span className="font-serif text-3xl text-primary tabular-nums">{formatMoney(total)}</span>
@@ -409,6 +417,8 @@ function History({ versions }: { versions: QuotationVersion[] }) {
                 <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                   <span>Items {formatMoney(version.subtotalAmount)}</span>
                   {version.deliveryCharge.amount > 0 && <span>Delivery {formatMoney(version.deliveryCharge)}</span>}
+                  {(version.transportationCharge?.amount ?? 0) > 0 && <span>Transportation {formatMoney(version.transportationCharge)}</span>}
+                  {(version.installationCharge?.amount ?? 0) > 0 && <span>Installation {formatMoney(version.installationCharge)}</span>}
                   {version.discountAmount.amount > 0 && (
                     <span>
                       Discount{version.discountPercent != null ? ` (${version.discountPercent}%)` : ""} −{formatMoney(version.discountAmount)}

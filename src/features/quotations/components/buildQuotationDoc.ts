@@ -117,6 +117,8 @@ export async function buildQuotationDoc(
           ]
         : [{ label: `IGST (${tax.rate ?? 0}%)`, amount: amount(tax.igst) }],
     delivery: amount(q.deliveryCharge),
+    transportation: amount(q.transportationCharge),
+    installation: amount(q.installationCharge),
     total: amount(q.totalAmount),
     deposit: {
       label: waived ? "Security deposit (waived)" : "Refundable security deposit (not taxed)",
