@@ -309,7 +309,14 @@
     @apply border-border outline-ring/50;
   }
   body {
-    background: var(--bg-page);
+    /* Longhand, not the `background` shorthand: the shorthand resets
+       background-size/-repeat to their initial auto/repeat values, and on the
+       root element "auto" sizes the gradient to the viewport rather than the
+       full scrollable page — so on anything taller than one screen it tiled,
+       visibly restarting the warm glow at every viewport-height. */
+    background-image: var(--bg-page);
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
     color: var(--foreground);
     /* Optical: the serif headings sit better over slightly tightened body copy. */
     text-rendering: optimizeLegibility;
