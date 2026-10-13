@@ -19,12 +19,14 @@ import { useCategories } from "@/features/catalog/hooks";
 // Flowstep screens 1 (desktop) / 2 (mobile). Desktop: full nav rail +
 // inline search + auth in one row. Mobile: hamburger + wordmark + icons, with
 // a separate fixed bottom tab bar (site-mobile-nav.tsx) for primary nav.
+// Labels kept short on purpose: the desktop nav row (logo + links + search +
+// auth) was overflowing between 1280-1360px with the fuller wording.
 const NAV_LINKS = [
-  { href: "/collections", label: "Featured Collections" },
+  { href: "/collections", label: "Collections" },
   { href: "/bundles", label: "Bundles" },
   { href: "/catalog", label: "Product Catalog" },
   { href: "/plans", label: "Plan Event" },
-  { href: "/orders", label: "My Orders" },
+  { href: "/orders", label: "Orders" },
   { href: "/about", label: "About" },
 ];
 
@@ -76,7 +78,7 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
   const { status } = useSession();
 
   return (
-    <div className="flex shrink-0 items-center gap-1.5">
+    <div className="flex shrink-0 items-center gap-1">
       <Link
         href="/wishlist"
         onClick={onNavigate}
@@ -98,18 +100,18 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
       <GuideButton />
       <ThemeToggle />
       {!currentAccount && status !== "loading" && (
-        <div className="ml-1.5 flex items-center gap-2">
+        <div className="ml-1 flex items-center gap-1.5">
           <Link
             href="/login"
             onClick={onNavigate}
-            className="press rounded-sm border border-border px-4 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
+            className="press rounded-sm border border-border px-3.5 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
           >
             Log In
           </Link>
           <Link
             href="/signup"
             onClick={onNavigate}
-            className="press rounded-sm bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
+            className="press rounded-sm bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
           >
             Sign Up
           </Link>
@@ -279,11 +281,11 @@ export function SiteHeader() {
     >
       {/* Desktop */}
       <nav className="hidden w-full xl:block">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-6 py-3 page-x">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-5 py-3 page-x">
           <Link href="/" className="press flex shrink-0 items-center" aria-label="Tentvaale home">
             <SiteWordmark className="text-lg" />
           </Link>
-          <ul className="flex shrink-0 items-center gap-5">
+          <ul className="flex shrink-0 items-center gap-4">
             {NAV_LINKS.map((c) => (
               <li key={c.label}>
                 {c.href === "/catalog" ? (
