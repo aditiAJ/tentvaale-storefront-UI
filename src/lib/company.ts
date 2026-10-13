@@ -24,11 +24,10 @@ export const COMPANY = {
 
   phones: [
     { display: "+91 87809 83664", e164: "918780983664" },
-    { display: "+91 96018 29992", e164: "919601829992" },
   ] as PhoneNumber[],
 
-  /** The second number doubles as the WhatsApp line. */
-  whatsapp: { display: "+91 96018 29992", e164: "919601829992" } as PhoneNumber,
+  /** The primary number doubles as the WhatsApp line. */
+  whatsapp: { display: "+91 87809 83664", e164: "918780983664" } as PhoneNumber,
 
   /**
    * TODO: both addresses on tentvaale.com sit behind Cloudflare email
