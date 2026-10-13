@@ -106,6 +106,7 @@ export async function buildQuotationDoc(
     subtotal: q.subtotalAmount ? amount(q.subtotalAmount) : null,
     bundleDiscounts: (q.bundleDiscounts ?? []).map((d) => ({ label: `${d.name} (${d.percent}% off)`, amount: amount(d.amount) })),
     discount: amount(q.discountAmount),
+    discountLabel: q.discountPercent != null ? `Discount (${q.discountPercent}%)` : "Discount",
     taxable: tax ? amount(tax.taxableAmount) : null,
     taxes: !tax
       ? []

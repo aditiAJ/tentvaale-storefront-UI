@@ -24,7 +24,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
       "Add what you like to a plan. If you don't have a plan yet, you are asked to name one first.",
       "Add your functions (Haldi, Sangeet and so on) with their date, time and venue, and place items on them.",
       "Review the plan and submit it for a quotation. You are not charged.",
-      "Our team sends a quotation with the prices. You can accept it, ask for changes or reject it.",
+      "Our team sends a quotation with the prices. You can accept it, ask for changes or close it.",
       "When you accept, an order is created. Follow it under My Orders.",
     ],
   },
@@ -84,7 +84,7 @@ export const GUIDE_TOPICS: GuideTopic[] = [
       "It shows the items, the delivery charge, any discount, the total, the deposit and how long the quotation is valid.",
       "Accept quotation accepts the whole quotation. You cannot accept part of it.",
       "Request changes lets you say what to change. Our team revises it and sends a new version; every version is kept.",
-      "Reject quotation turns it down. You can start over afterwards.",
+      "Close quotation ends it, and a closed quotation cannot be reopened. You can start over from your plan afterwards.",
     ],
   },
   {

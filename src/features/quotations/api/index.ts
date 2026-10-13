@@ -23,6 +23,6 @@ export const requestQuotationChanges = (requestId: string, note: string) =>
 export const rejectQuotation = (requestId: string, reason: string) =>
   apiFetch<QuotationRequest>(`${base(requestId)}/reject`, { method: "POST", body: { reason } });
 
-/** After a rejected or expired quotation: closes the request and makes the plan a draft again. */
+/** After a closed or expired quotation: closes the request and makes the plan a draft again. */
 export const reopenPlan = (requestId: string) =>
   apiFetch<QuotationRequest>(`${base(requestId)}/reopen-plan`, { method: "POST" });

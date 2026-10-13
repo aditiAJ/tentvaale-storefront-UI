@@ -34,7 +34,7 @@ import { ApiError } from "@/services/api-client";
  * Everything on this page is what the backend says: the prices, the delivery charge, the discount,
  * the total, the deposit and the validity. Nothing is worked out here, and nothing is shown until the
  * vendor has sent the quotation. The customer's choices are the whole quotation or nothing: accept it,
- * ask for changes (the vendor revises and re-sends, and every version is kept), or reject it.
+ * ask for changes (the vendor revises and re-sends, and every version is kept), or close it.
  */
 const day = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const formatDay = (iso?: string) => (iso ? day.format(new Date(`${iso}T00:00:00`)) : "");
@@ -115,7 +115,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
         toast.success("Sent. We'll revise the quotation and send it again.");
       } else {
         await actions.reject.mutateAsync(text.trim());
-        toast.success("Quotation rejected.");
+        toast.success("Quotation closed.");
       }
       setDialog(null);
     } catch (error) {
@@ -185,6 +185,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
               subtotal={quotation.subtotalAmount}
               delivery={quotation.deliveryCharge}
               discount={quotation.discountAmount}
+              discountPercent={quotation.discountPercent}
               bundleDiscounts={quotation.bundleDiscounts}
               tax={quotation.tax}
               depositWaiver={quotation.depositWaiver}
@@ -211,7 +212,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
                   Request changes
                 </Button>
                 <Button variant="ghost" size="lg" className="w-full text-destructive" onClick={() => openDialog("reject")} disabled={busy}>
-                  Reject quotation
+                  Close quotation
                 </Button>
               </div>
             )}
@@ -250,7 +251,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{dialog === "changes" ? "Request changes" : "Reject this quotation"}</DialogTitle>
+            <DialogTitle>{dialog === "changes" ? "Request changes" : "Close this quotation"}</DialogTitle>
           </DialogHeader>
           <p className="text-sm leading-6 text-muted-foreground">
             {dialog === "changes"
@@ -262,7 +263,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
             onChange={(event) => setText(event.target.value)}
             maxLength={dialog === "changes" ? 2000 : 1000}
             placeholder={dialog === "changes" ? "For example: can we drop one day?" : "Your reason"}
-            aria-label={dialog === "changes" ? "What to change" : "Reason for rejecting"}
+            aria-label={dialog === "changes" ? "What to change" : "Reason for closing"}
           />
           {problem && <p className="text-sm text-destructive">{problem}</p>}
           <DialogFooter className="gap-2 sm:justify-start">
@@ -271,7 +272,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
               onClick={submitDialog}
               disabled={text.trim() === "" || busy}
             >
-              {dialog === "changes" ? "Send request" : "Reject quotation"}
+              {dialog === "changes" ? "Send request" : "Close quotation"}
             </Button>
             <Button variant="outline" onClick={() => setDialog(null)} disabled={busy}>
               Back
@@ -319,6 +320,7 @@ function Totals({
   subtotal,
   delivery,
   discount,
+  discountPercent,
   total,
   deposit,
   bundleDiscounts,
@@ -329,6 +331,8 @@ function Totals({
   subtotal?: Money;
   delivery?: Money;
   discount?: Money;
+  /** Shown beside "Discount" when the discount was a percentage. */
+  discountPercent?: number;
   total?: Money;
   deposit?: Money;
   bundleDiscounts?: { name: string; percent: number; amount: Money }[];
@@ -337,7 +341,7 @@ function Totals({
   policies?: PolicyRef[];
 }) {
   const row = (label: string, value?: Money, negative = false) => (
-    <div className="flex items-baseline justify-between gap-3 text-sm">
+    <div key={label} className="flex items-baseline justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span className="text-foreground tabular-nums">
         {negative && value && value.amount > 0 ? "−" : ""}
@@ -350,7 +354,7 @@ function Totals({
       <h2 className="font-serif text-2xl text-foreground">Your quotation</h2>
       {row("Items", subtotal)}
       {(bundleDiscounts ?? []).map((bundle) => row(`${bundle.name} (${bundle.percent}% off)`, bundle.amount, true))}
-      {discount && discount.amount > 0 && row("Discount", discount, true)}
+      {discount && discount.amount > 0 && row(discountPercent != null ? `Discount (${discountPercent}%)` : "Discount", discount, true)}
       {taxLines(tax).map((line) => row(line.label, line.value))}
       {delivery && delivery.amount > 0 && row("Delivery", delivery)}
       <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
@@ -405,7 +409,11 @@ function History({ versions }: { versions: QuotationVersion[] }) {
                 <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                   <span>Items {formatMoney(version.subtotalAmount)}</span>
                   {version.deliveryCharge.amount > 0 && <span>Delivery {formatMoney(version.deliveryCharge)}</span>}
-                  {version.discountAmount.amount > 0 && <span>Discount −{formatMoney(version.discountAmount)}</span>}
+                  {version.discountAmount.amount > 0 && (
+                    <span>
+                      Discount{version.discountPercent != null ? ` (${version.discountPercent}%)` : ""} −{formatMoney(version.discountAmount)}
+                    </span>
+                  )}
                   {version.validUntil && <span>Valid until {formatDay(version.validUntil)}</span>}
                 </div>
               </div>

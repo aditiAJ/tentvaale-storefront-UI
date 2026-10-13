@@ -74,6 +74,8 @@ export interface QuotationVersion {
   subtotalAmount: Money;
   deliveryCharge: Money;
   discountAmount: Money;
+  /** The percentage the discount was given as; absent when it was a flat amount. */
+  discountPercent?: number;
   totalAmount: Money;
   securityDeposit: Money;
   lines: QuotationLine[];
@@ -112,6 +114,8 @@ export interface CustomerQuotation {
   subtotalAmount?: Money;
   deliveryCharge?: Money;
   discountAmount?: Money;
+  /** The percentage the discount was given as; absent when it was a flat amount. */
+  discountPercent?: number;
   totalAmount?: Money;
   securityDeposit?: Money;
   lines: QuotationLine[];
@@ -143,7 +147,7 @@ export const STAGE_COPY: Record<
   READY: {
     label: "Ready for your decision",
     tone: "default",
-    text: "Review the quotation below. You can accept it, ask for changes, or reject it.",
+    text: "Review the quotation below. You can accept it, ask for changes, or close it.",
   },
   CHANGES_REQUESTED: {
     label: "Revision requested",
@@ -156,7 +160,8 @@ export const STAGE_COPY: Record<
     text: "Our team has approved this quotation. Place your order below to confirm it.",
   },
   ORDERED: { label: "Order confirmed", tone: "success", text: "This quotation became an order." },
-  REJECTED: { label: "Rejected", tone: "destructive", text: "This quotation was rejected." },
+  // Stored as REJECTED; "Close Quotation" is the name customers and staff use (MOM-15).
+  REJECTED: { label: "Closed", tone: "destructive", text: "This quotation was closed." },
   EXPIRED: {
     label: "Expired",
     tone: "destructive",
