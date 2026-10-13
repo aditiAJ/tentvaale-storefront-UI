@@ -7,7 +7,7 @@ import type { Money } from "@/lib/money";
  * Dispatch and return are recorded for the whole order, not per function of the plan, so the
  * delivery history is order-level. Every amount is the backend's; nothing here is calculated on.
  */
-export type OrderStatus = "CONFIRMED" | "DISPATCHED" | "RETURNED" | "COMPLETED" | "CANCELLED";
+export type OrderStatus = "CONFIRMED" | "DISPATCHED" | "INSTALLATION" | "RETURNED" | "COMPLETED" | "CANCELLED";
 
 /** Whether the goods are held for payment: AWAITED until a payment is recorded, then CONFIRMED. */
 export type PaymentStage = "NOT_REQUIRED" | "AWAITED" | "CONFIRMED";
@@ -60,6 +60,7 @@ export interface Order extends Omit<OrderSummary, "itemCount"> {
   /** Total less any credit notes. Payments are not recorded yet. */
   balanceOwed: Money;
   dispatchedAt?: string;
+  installationStartedAt?: string;
   returnedAt?: string;
   completedAt?: string;
   cancelledAt?: string;
@@ -81,6 +82,7 @@ export const STATUS_COPY: Record<
     text: "Your order is confirmed. We will prepare it and be in touch about delivery.",
   },
   DISPATCHED: { label: "Dispatched", tone: "warning", text: "Your items have been sent for your event." },
+  INSTALLATION: { label: "Installation", tone: "warning", text: "Our team is installing your items at the venue." },
   RETURNED: {
     label: "Returned",
     tone: "default",
