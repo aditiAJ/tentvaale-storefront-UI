@@ -7,12 +7,15 @@ import { cn } from "cn"
 // interrupted, where a translate on an element that also lifts on hover fights
 // itself. Hover/press are transform+shadow only, so both composite.
 const buttonVariants = cva(
-  "group/button relative inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none [transition:background-color_200ms_var(--ease-out-quint),border-color_200ms_var(--ease-out-quint),color_200ms_var(--ease-out-quint),box-shadow_260ms_var(--ease-out-quint),transform_140ms_var(--ease-out-quint),opacity_200ms_var(--ease-out-quint)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button relative inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap outline-none select-none [transition:background-color_200ms_var(--ease-out-quint),border-color_200ms_var(--ease-out-quint),color_200ms_var(--ease-out-quint),box-shadow_260ms_var(--ease-out-quint),transform_140ms_var(--ease-out-quint),opacity_200ms_var(--ease-out-quint),filter_200ms_var(--ease-out-quint)] focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
+        // Gradient surface (--button-primary-bg), so hover reacts via a
+        // brightness filter rather than swapping background-color — a flat
+        // color-mix hover can't repaint a gradient.
         default:
-          "bg-primary text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18),0_0_0_0_color-mix(in_oklab,var(--primary)_40%,transparent)] hover:bg-[color-mix(in_oklab,var(--primary),white_8%)] hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent),0_0_20px_-2px_color-mix(in_oklab,var(--primary)_45%,transparent)]",
+          "btn-primary-surface shadow-[0_1px_2px_0_rgba(0,0,0,0.25),0_0_0_0_color-mix(in_oklab,var(--primary)_40%,transparent)] hover:brightness-110 hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent),0_0_20px_-2px_color-mix(in_oklab,var(--primary)_45%,transparent)]",
         outline:
           "border-border bg-background hover:border-primary/60 hover:bg-muted hover:text-foreground hover:shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_35%,transparent),0_4px_14px_-6px_color-mix(in_oklab,var(--primary)_50%,transparent)] aria-expanded:border-primary/60 aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

@@ -50,7 +50,7 @@ const PROJECTS = [
 // Every band below the hero shares this wrapper so gutters, max width and
 // vertical rhythm stay identical down the page.
 function Section({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <section className={`mx-auto w-full max-w-7xl py-10 md:py-14 page-x ${className}`}>{children}</section>;
+  return <section className={`mx-auto w-full max-w-7xl py-6 md:py-10 page-x ${className}`}>{children}</section>;
 }
 
 function SectionHeading({ title, href, linkLabel = "View all" }: { title: string; href?: string; linkLabel?: string }) {
@@ -125,15 +125,20 @@ export default function Home() {
         {/* Fade confined to the bottom band only — the rest of the photo stays fully visible, undimmed. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/85 via-black/40 to-transparent" />
         <motion.div
-          className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-4 pb-8 md:gap-6 md:pb-12 page-x"
+          className="absolute inset-0 mx-auto flex max-w-7xl flex-col justify-end gap-3 pb-6 md:gap-4 md:pb-8 page-x"
           variants={heroContainer}
           initial={skip ? "visible" : "hidden"}
           animate="visible"
         >
-          <motion.h1 variants={heroItem} className="max-w-2xl font-serif text-3xl leading-tight text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)] md:text-5xl">
-            Design Every Detail of Your Event
+          <motion.h1
+            variants={heroItem}
+            className="max-w-2xl font-serif leading-[1.1] font-semibold text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)]"
+          >
+            <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl">Events</span>
+            <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl">Spaces</span>
+            <span className="block text-3xl text-primary sm:text-4xl md:text-5xl lg:text-6xl">Experience</span>
           </motion.h1>
-          <motion.p variants={heroItem} className="max-w-lg text-base text-white/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)] md:text-lg">
+          <motion.p variants={heroItem} className="max-w-lg text-sm text-white/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)] md:text-base">
             Rent furniture, décor and fully styled collections for weddings, corporate events and shoots.
           </motion.p>
           <motion.div variants={heroItem} className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">

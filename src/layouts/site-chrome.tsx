@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { PageTransition } from "@/components/motion";
+import { CinematicIntro } from "@/components/cinematic-intro";
 import { SiteHeader } from "./site-header";
 import { SiteFooter } from "./site-footer";
 import { SiteMobileNav } from "./site-mobile-nav";
@@ -19,6 +20,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <CinematicIntro />
       <SiteHeader />
       <main className="flex flex-1 flex-col pb-16 md:pb-0">
         {/* Keyed by pathname so every navigation mounts a fresh transition and

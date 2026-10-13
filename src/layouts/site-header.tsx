@@ -279,7 +279,7 @@ export function SiteHeader() {
     >
       {/* Desktop */}
       <nav className="hidden w-full md:block">
-        <div className="mx-auto flex w-full max-w-[110rem] items-center gap-6 py-3 page-x">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-6 py-3 page-x">
           <Link href="/" className="press flex shrink-0 items-center" aria-label="Tentvaale home">
             <SiteWordmark className="text-lg" />
           </Link>

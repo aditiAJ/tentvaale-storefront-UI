@@ -48,9 +48,9 @@ export function SiteFooter() {
     ...COLUMNS,
   ];
   return (
-    <footer className="mt-16 w-full border-t border-border bg-secondary">
-      <div className="mx-auto w-full max-w-[110rem] pt-14 pb-12 page-x">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-6">
+    <footer className="mt-10 w-full border-t border-border bg-secondary">
+      <div className="mx-auto w-full max-w-7xl pt-10 pb-8 page-x">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-7 md:grid-cols-6">
           {/* Wordmark leads the grid on desktop so the footer opens with the
               brand rather than a link column. */}
           <div className="col-span-2 flex flex-col items-center gap-3 text-center md:col-span-1">
