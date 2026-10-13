@@ -57,10 +57,6 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         setError("Please tell us your name.");
         return;
       }
-      if (!phone.trim()) {
-        setError("Please enter your phone number.");
-        return;
-      }
       if (!city.trim()) {
         setError("Please enter your city.");
         return;
@@ -186,7 +182,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="auth-email" className="text-xs text-muted-foreground">
-            Email
+            Email <span className="text-destructive">*</span>
           </Label>
           <Input
             id="auth-email"
@@ -196,13 +192,14 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="h-11 bg-card"
+            required
           />
         </div>
         {tab === "signup" && (
           <>
             <div className="flex flex-col gap-2">
               <Label htmlFor="auth-phone" className="text-xs text-muted-foreground">
-                Phone number <span className="text-destructive">*</span>
+                Phone number
               </Label>
               <Input
                 id="auth-phone"
@@ -212,7 +209,6 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="h-11 bg-card"
-                required
               />
             </div>
             <div className="grid grid-cols-2 gap-3">

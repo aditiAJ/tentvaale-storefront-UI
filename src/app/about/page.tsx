@@ -5,7 +5,7 @@ const STATS = [
   { value: "12,000+", label: "Inventory Pieces" },
   { value: "3,400+", label: "Events Styled" },
   { value: "6", label: "Cities" },
-  { value: "9", label: "Years" },
+  { value: "25+", label: "Years of Legacy" },
 ];
 
 const PHILOSOPHY = [
@@ -28,29 +28,32 @@ export default function AboutPage() {
         <div className="relative z-10 flex h-full items-center justify-center px-8 text-center">
           <div className="max-w-3xl">
             <h1 className="font-serif text-6xl leading-tight text-foreground">The Studio Behind Every Event</h1>
-            <p className="mt-4 text-lg text-foreground/80">Curating unforgettable spaces since 2016.</p>
+            <p className="mt-4 text-lg text-foreground/80">A 25-year Vadodara legacy, styling spaces across India.</p>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-12 py-16 md:grid-cols-2 page-x">
+      <section className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 py-16 md:grid-cols-2 page-x">
         <div className="flex flex-col gap-6">
           <h2 className="font-serif text-4xl text-foreground">Our Story</h2>
           <div className="flex flex-col gap-4 text-base leading-7 text-foreground/75">
             <p>
-              Tentvaale began as a small props workshop in Mumbai, styling intimate weddings one mandap at a time. Today we style events
+              Tentvaale carries forward the legacy of Shyam Shankar Decorators Pvt Ltd, a name trusted across Vadodara, Gujarat for
+              almost 25 years. What began as a city-rooted mandap and wedding décor house has grown into a styling studio working
               across six cities, from rooftop sangeets to stadium-scale receptions.
             </p>
             <p>
-              Every piece in our inventory is chosen for how it photographs and how it holds up under a five-day rental — because luxury
-              should also be durable.
+              Every piece in our inventory carries that same discipline forward — chosen for how it photographs and how it holds up
+              under a five-day rental, because a legacy built over 25 years is one where luxury is also durable.
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        {/* mt-16 ~ the "Our Story" heading's line height + the gap-6 below it,
+            so this grid's top lines up with the paragraph, not the heading. */}
+        <div className="grid grid-cols-2 gap-4 md:mt-16">
           {STATS.map((s) => (
-            <div key={s.label} className="flex flex-col gap-2 rounded-xl border border-primary/20 bg-card p-6">
-              <span className="font-serif text-3xl text-primary">{s.value}</span>
+            <div key={s.label} className="flex flex-col gap-1.5 rounded-xl border border-primary/20 bg-card p-5">
+              <span className="font-serif text-2xl text-primary">{s.value}</span>
               <span className="text-sm text-foreground/70">{s.label}</span>
             </div>
           ))}
