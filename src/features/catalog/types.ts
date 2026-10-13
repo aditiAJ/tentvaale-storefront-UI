@@ -134,6 +134,8 @@ export interface CollectionDetail {
   occasions: Occasion[];
   /** In the order the admin set. */
   products: ProductCard[];
+  /** The bundle this collection was made from, while that bundle is on sale; absent otherwise. */
+  bundleSlug?: string;
 }
 
 export interface BundleCard {
@@ -158,6 +160,7 @@ export interface BundleItemOption {
   variantId?: number;
   name: string;
   slug: string;
+  rateType?: "QTY" | "SQFT" | "RFT";
   dailyRate: Money;
 }
 
@@ -168,9 +171,18 @@ export interface BundleItem {
   slug: string;
   imageUrl?: string;
   quantity: number;
+  /** What `quantity` counts: pieces, square feet or running feet. */
+  rateType?: "QTY" | "SQFT" | "RFT";
   dailyRate: Money;
   /** The only alternatives the customer may swap this item for. */
   swapOptions: BundleItemOption[];
+}
+
+/** A quantity with what it counts: "4 pcs", "120 sq ft", "30 rft". */
+export function quantityLabel(quantity: number, rateType?: BundleItem["rateType"]): string {
+  if (rateType === "SQFT") return `${quantity} sq ft`;
+  if (rateType === "RFT") return `${quantity} rft`;
+  return `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
 }
 
 export interface BundleDetail {
