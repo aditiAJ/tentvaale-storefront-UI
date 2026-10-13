@@ -122,7 +122,7 @@ export function SiteFooter() {
         </div>
       </div>
       {/* Clears the fixed mobile tab bar so the last row isn't sat on. */}
-      <div className="h-16 md:hidden" aria-hidden />
+      <div className="h-16 xl:hidden" aria-hidden />
     </footer>
   );
 }

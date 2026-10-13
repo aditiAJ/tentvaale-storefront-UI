@@ -21,7 +21,7 @@ export function SiteMobileNav() {
 
   return (
     <nav
-      className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-around border-t border-border bg-background/90 px-2 pb-[env(safe-area-inset-bottom)] supports-backdrop-filter:bg-background/75 supports-backdrop-filter:backdrop-blur-xl md:hidden"
+      className="fixed right-0 bottom-0 left-0 z-40 flex items-center justify-around border-t border-border bg-background/90 px-2 pb-[env(safe-area-inset-bottom)] supports-backdrop-filter:bg-background/75 supports-backdrop-filter:backdrop-blur-xl xl:hidden"
       aria-label="Primary"
     >
       {TABS.map((tab) => {

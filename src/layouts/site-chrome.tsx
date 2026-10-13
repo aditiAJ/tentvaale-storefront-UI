@@ -22,7 +22,7 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
     <>
       <CinematicIntro />
       <SiteHeader />
-      <main className="flex flex-1 flex-col pb-16 md:pb-0">
+      <main className="flex flex-1 flex-col pb-16 xl:pb-0">
         {/* Keyed by pathname so every navigation mounts a fresh transition and
             replays the entrance — a route change should feel like a change. */}
         <PageTransition key={pathname}>{children}</PageTransition>

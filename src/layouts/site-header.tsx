@@ -278,7 +278,7 @@ export function SiteHeader() {
       )}
     >
       {/* Desktop */}
-      <nav className="hidden w-full md:block">
+      <nav className="hidden w-full xl:block">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-6 py-3 page-x">
           <Link href="/" className="press flex shrink-0 items-center" aria-label="Tentvaale home">
             <SiteWordmark className="text-lg" />
@@ -310,7 +310,7 @@ export function SiteHeader() {
       </nav>
 
       {/* Mobile */}
-      <div className="flex h-14 items-center justify-between page-x md:hidden">
+      <div className="flex h-14 items-center justify-between page-x xl:hidden">
         <button
           className="press -ml-2 flex size-10 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-secondary"
           onClick={() => setMobileMenuOpen((v) => !v)}
@@ -359,7 +359,7 @@ export function SiteHeader() {
               height: { duration: reduce ? 0.01 : DUR.base, ease: EASE.inOut },
               opacity: { duration: reduce ? 0.01 : DUR.fast, ease: EASE.out },
             }}
-            className="overflow-hidden border-b border-border bg-background md:hidden"
+            className="overflow-hidden border-b border-border bg-background xl:hidden"
           >
             <div className="space-y-4 py-4 page-x">
               <form action="/search" className="relative w-full">
