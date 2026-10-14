@@ -184,7 +184,15 @@
 }
 
 .dark {
-  --bg-page: radial-gradient(ellipse at 50% 0%, #44250E 0%, #14100D 35%, #080808 75%);
+  /* Stops in vh, not %: with background-size:100% 100% (see body, below) a
+     percentage stop is relative to the WHOLE page's height, so on a long page
+     the warm glow kept bleeding through unrelated content far below the hero
+     (e.g. the category icons) instead of staying confined near the top. vh
+     keeps its reach roughly "one screen" regardless of page length — but the
+     gradient is hidden behind the opaque hero photo (h-110/h-140, 440-560px)
+     until that ends, so the stops need enough reach to still read as a glow
+     for a beat *after* the hero, not just before it. */
+  --bg-page: radial-gradient(ellipse at 50% 0%, #44250E 0%, #14100D 35vh, #080808 100vh);
 
   --background: #030303;
   --foreground: #FFFFFF;
