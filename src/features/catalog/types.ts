@@ -51,6 +51,12 @@ export interface MediaVariant {
   url: string;
 }
 
+/** One photo in a card's hover gallery, with its own size tiers — see CatalogViews.GalleryImage. */
+export interface GalleryImageData {
+  url: string;
+  variants?: MediaVariant[];
+}
+
 /** A product card: what listings and the "similar" and "complements" rails show. */
 export interface ProductCard {
   id: number;
@@ -60,9 +66,9 @@ export interface ProductCard {
   /** Size tiers for imageUrl, for a real srcset. Empty on media that predates variant generation —
    * callers fall back to plain imageUrl in that case, same as the backend does for cardImage(). */
   imageVariants?: MediaVariant[];
-  /** Every photo on the product, in order — for the card's own hover gallery. Empty or one-item
-   * when the product has 0 or 1 photos, in which case no arrows show. */
-  imageUrls?: string[];
+  /** Every photo on the product, in order, each with its own size tiers — for the card's own hover
+   * gallery. Empty or one-item when the product has 0 or 1 photos, in which case no arrows show. */
+  imageUrls?: GalleryImageData[];
   dailyRate: Money;
   rateType: CatalogRateType;
   categorySlug: string;

@@ -66,8 +66,16 @@ export function ProductCard({ card, onQuickAdd }: { card: ProductCardData; onQui
       <div className="relative overflow-hidden bg-muted/60">
         <Link href={href} className="block">
           <HoverImageGallery
-            images={card.imageUrls?.length ? card.imageUrls : card.imageUrl ? [card.imageUrl] : []}
+            images={
+              card.imageUrls?.length
+                ? card.imageUrls
+                : card.imageUrl
+                  ? [{ url: card.imageUrl, variants: card.imageVariants }]
+                  : []
+            }
             alt={card.name}
+            // Matches the grid's own breakpoints (grid-cols-2/3/4/5/6) in src/app/catalog/page.tsx.
+            sizes="(min-width: 1800px) 16vw, (min-width: 1536px) 20vw, (min-width: 1280px) 25vw, (min-width: 640px) 33vw, 50vw"
             imgClassName="aspect-[4/3] w-full rounded-none bg-transparent"
           />
         </Link>

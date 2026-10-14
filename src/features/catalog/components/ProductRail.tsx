@@ -45,8 +45,15 @@ export function ProductRail({
             >
               <div className="overflow-hidden rounded-xl bg-muted/60">
                 <HoverImageGallery
-                  images={p.imageUrls?.length ? p.imageUrls : p.imageUrl ? [p.imageUrl] : []}
+                  images={
+                    p.imageUrls?.length
+                      ? p.imageUrls
+                      : p.imageUrl
+                        ? [{ url: p.imageUrl, variants: p.imageVariants }]
+                        : []
+                  }
                   alt={p.name}
+                  sizes="(min-width: 768px) 25vw, 50vw"
                   imgClassName="h-32 rounded-none bg-transparent md:h-44"
                 />
               </div>
