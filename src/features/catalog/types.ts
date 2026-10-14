@@ -45,12 +45,21 @@ export interface Occasion {
   slug: string;
 }
 
+/** One WebP size tier (300/600/1200/2000) of a product image — see CatalogViews.MediaVariant. */
+export interface MediaVariant {
+  size: number;
+  url: string;
+}
+
 /** A product card: what listings and the "similar" and "complements" rails show. */
 export interface ProductCard {
   id: number;
   slug: string;
   name: string;
   imageUrl?: string;
+  /** Size tiers for imageUrl, for a real srcset. Empty on media that predates variant generation —
+   * callers fall back to plain imageUrl in that case, same as the backend does for cardImage(). */
+  imageVariants?: MediaVariant[];
   /** Every photo on the product, in order — for the card's own hover gallery. Empty or one-item
    * when the product has 0 or 1 photos, in which case no arrows show. */
   imageUrls?: string[];
@@ -72,6 +81,9 @@ export interface Media {
   type: string;
   url: string;
   altText?: string;
+  /** Size tiers for url, for a real srcset. Empty for a plain linked URL, a VIDEO, or media that
+   * predates variant generation. */
+  variants?: MediaVariant[];
 }
 
 export interface Facet {

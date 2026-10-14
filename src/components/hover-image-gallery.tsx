@@ -4,12 +4,32 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { MediaVariant } from "@/features/catalog/types";
+
+/** A plain URL (no variants — most callers today) or one with WebP size tiers for a real srcset. */
+export type GalleryImageInput = string | { url: string; variants?: MediaVariant[] };
+
+function normalize(image: GalleryImageInput | undefined): { url?: string; variants?: MediaVariant[] } {
+  if (image === undefined) return {};
+  return typeof image === "string" ? { url: image } : image;
+}
 
 // Mirrors ProductThumb's own fallback behaviour (broken/missing image -> neutral icon), reimplemented
 // here rather than reused: the sliding layer below needs the <img> on its own, not wrapped in
 // ProductThumb's own sizing div — that div becomes this component's "frame" instead (see below).
-function GalleryImage({ url, alt }: { url?: string; alt: string }) {
+function GalleryImage({
+  image,
+  alt,
+  eager,
+  sizes = "(min-width: 768px) 45vw, 100vw",
+}: {
+  image: GalleryImageInput | undefined;
+  alt: string;
+  eager?: boolean;
+  sizes?: string;
+}) {
   const [failed, setFailed] = useState(false);
+  const { url, variants } = normalize(image);
   if (!url || failed) {
     return (
       <div className="flex size-full items-center justify-center">
@@ -17,11 +37,17 @@ function GalleryImage({ url, alt }: { url?: string; alt: string }) {
       </div>
     );
   }
+  const sorted = variants?.length ? [...variants].sort((a, b) => a.size - b.size) : undefined;
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={url}
+      src={sorted?.[0]?.url ?? url}
+      srcSet={sorted?.map((v) => `${v.url} ${v.size}w`).join(", ")}
+      sizes={sorted ? sizes : undefined}
+      width={1200}
+      height={1200}
       alt={alt}
+      loading={eager ? undefined : "lazy"}
       onError={() => setFailed(true)}
       className={cn("size-full", url.startsWith("/") ? "object-contain p-[8%]" : "object-cover")}
     />
@@ -60,13 +86,19 @@ export function HoverImageGallery({
   imgClassName,
   index: indexProp,
   onIndexChange,
+  eager,
+  sizes,
 }: {
-  images: string[];
+  images: GalleryImageInput[];
   alt: string;
   className?: string;
   imgClassName?: string;
   index?: number;
   onIndexChange?: (index: number) => void;
+  /** Set for a gallery known to render above the fold (e.g. the product page's main image). */
+  eager?: boolean;
+  /** Overrides the default `sizes` guess when this instance's rendered width is known precisely. */
+  sizes?: string;
 }) {
   const [internalIndex, setInternalIndex] = useState(0);
   const [direction, setDirection] = useState(1);
@@ -106,7 +138,7 @@ export function HoverImageGallery({
               transition={{ duration: 0.38, ease: [0.4, 0, 0.2, 1] }}
               className="absolute inset-0"
             >
-              <GalleryImage url={images[index]} alt={alt} />
+              <GalleryImage image={images[index]} alt={alt} eager={eager} sizes={sizes} />
             </motion.div>
           </AnimatePresence>
         </div>
@@ -131,7 +163,7 @@ export function HoverImageGallery({
           </button>
           <div className="pointer-events-none absolute inset-x-0 bottom-1.5 z-10 flex justify-center gap-1 opacity-0 transition-opacity duration-200 ease-out-quint group-hover:opacity-100">
             {images.map((image, i) => (
-              <span key={image + i} className={cn("size-1.5 rounded-full transition-colors", i === index ? "bg-primary" : "bg-background/70")} />
+              <span key={(normalize(image).url ?? "") + i} className={cn("size-1.5 rounded-full transition-colors", i === index ? "bg-primary" : "bg-background/70")} />
             ))}
           </div>
         </>
