@@ -34,7 +34,7 @@ export function AuthLayout({ children }: { children: React.ReactNode }) {
           </Reveal>
         </div>
       </div>
-      <div className="flex w-full flex-1 flex-col items-center justify-center px-6 py-10 md:w-1/2 md:px-12">
+      <div className="flex w-full flex-1 flex-col items-center justify-center px-6 py-6 md:w-1/2 md:px-12">
         <Reveal immediate direction="up" distance={16} className="flex w-full justify-center">
           {children}
         </Reveal>

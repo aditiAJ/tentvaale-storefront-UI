@@ -180,7 +180,7 @@ function PickerRow({ card, selected, onToggle, onChange }: { card: ProductCard; 
           <span className={cn("flex size-5 shrink-0 items-center justify-center rounded border", selected ? "border-primary bg-primary text-primary-foreground" : "border-border")}>
             {selected && <Check className="size-3" />}
           </span>
-          <ProductThumb imageUrl={card.imageUrl} alt={card.name} className="size-14 shrink-0" />
+          <ProductThumb imageUrl={card.imageUrl} imageVariants={card.imageVariants} alt={card.name} className="size-14 shrink-0" />
           <span className="flex min-w-0 flex-col gap-0.5">
             <span className="truncate text-sm text-foreground">{card.name}</span>
             <span className="text-xs text-primary">

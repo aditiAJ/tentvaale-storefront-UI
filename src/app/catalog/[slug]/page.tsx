@@ -163,10 +163,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
         {/* Image column sticks while the long configuration panel scrolls: the thing being bought stays on screen. */}
         <Reveal immediate direction="up" distance={16} className="md:sticky md:top-24 md:self-start">
           <HoverImageGallery
-            images={images.map((image) => image.url)}
+            images={images}
             alt={images[activeImage]?.altText || product.name}
             index={activeImage}
             onIndexChange={setActiveImage}
+            eager
+            sizes="(min-width: 768px) 55vw, 100vw"
             className="h-[320px] rounded-2xl bg-muted shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
             imgClassName="size-full rounded-2xl bg-muted p-6"
           />
@@ -183,7 +185,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                     i === activeImage ? "ring-2 ring-primary" : "ring-border hover:ring-primary/50",
                   )}
                 >
-                  <ProductThumb imageUrl={image.url} alt="" className="size-16 rounded-none bg-muted md:size-20" />
+                  <ProductThumb imageUrl={image.url} imageVariants={image.variants} alt="" className="size-16 rounded-none bg-muted md:size-20" />
                 </button>
               ))}
             </div>

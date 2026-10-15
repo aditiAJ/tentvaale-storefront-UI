@@ -95,6 +95,9 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
                 ))}
               </div>
             )}
+            {collection.bundleSlug && (
+              <Button className="mt-5" nativeButton={false} render={<Link href={`/bundles/${collection.bundleSlug}`}>Book this as a bundle</Link>} />
+            )}
           </Reveal>
         </div>
       </section>

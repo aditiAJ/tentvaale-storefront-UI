@@ -45,15 +45,30 @@ export interface Occasion {
   slug: string;
 }
 
+/** One WebP size tier (300/600/1200/2000) of a product image — see CatalogViews.MediaVariant. */
+export interface MediaVariant {
+  size: number;
+  url: string;
+}
+
+/** One photo in a card's hover gallery, with its own size tiers — see CatalogViews.GalleryImage. */
+export interface GalleryImageData {
+  url: string;
+  variants?: MediaVariant[];
+}
+
 /** A product card: what listings and the "similar" and "complements" rails show. */
 export interface ProductCard {
   id: number;
   slug: string;
   name: string;
   imageUrl?: string;
-  /** Every photo on the product, in order — for the card's own hover gallery. Empty or one-item
-   * when the product has 0 or 1 photos, in which case no arrows show. */
-  imageUrls?: string[];
+  /** Size tiers for imageUrl, for a real srcset. Empty on media that predates variant generation —
+   * callers fall back to plain imageUrl in that case, same as the backend does for cardImage(). */
+  imageVariants?: MediaVariant[];
+  /** Every photo on the product, in order, each with its own size tiers — for the card's own hover
+   * gallery. Empty or one-item when the product has 0 or 1 photos, in which case no arrows show. */
+  imageUrls?: GalleryImageData[];
   dailyRate: Money;
   rateType: CatalogRateType;
   categorySlug: string;
@@ -72,6 +87,9 @@ export interface Media {
   type: string;
   url: string;
   altText?: string;
+  /** Size tiers for url, for a real srcset. Empty for a plain linked URL, a VIDEO, or media that
+   * predates variant generation. */
+  variants?: MediaVariant[];
 }
 
 export interface Facet {
@@ -134,6 +152,8 @@ export interface CollectionDetail {
   occasions: Occasion[];
   /** In the order the admin set. */
   products: ProductCard[];
+  /** The bundle this collection was made from, while that bundle is on sale; absent otherwise. */
+  bundleSlug?: string;
 }
 
 export interface BundleCard {
@@ -158,6 +178,7 @@ export interface BundleItemOption {
   variantId?: number;
   name: string;
   slug: string;
+  rateType?: "QTY" | "SQFT" | "RFT";
   dailyRate: Money;
 }
 
@@ -168,9 +189,18 @@ export interface BundleItem {
   slug: string;
   imageUrl?: string;
   quantity: number;
+  /** What `quantity` counts: pieces, square feet or running feet. */
+  rateType?: "QTY" | "SQFT" | "RFT";
   dailyRate: Money;
   /** The only alternatives the customer may swap this item for. */
   swapOptions: BundleItemOption[];
+}
+
+/** A quantity with what it counts: "4 pcs", "120 sq ft", "30 rft". */
+export function quantityLabel(quantity: number, rateType?: BundleItem["rateType"]): string {
+  if (rateType === "SQFT") return `${quantity} sq ft`;
+  if (rateType === "RFT") return `${quantity} rft`;
+  return `${quantity} ${quantity === 1 ? "pc" : "pcs"}`;
 }
 
 export interface BundleDetail {

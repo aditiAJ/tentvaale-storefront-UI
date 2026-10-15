@@ -57,10 +57,6 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         setError("Please tell us your name.");
         return;
       }
-      if (!phone.trim()) {
-        setError("Please enter your phone number.");
-        return;
-      }
       if (!city.trim()) {
         setError("Please enter your city.");
         return;
@@ -99,7 +95,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   }
 
   return (
-    <div className="flex w-full max-w-md flex-col items-center gap-6 md:gap-7">
+    <div className="flex w-full max-w-md flex-col items-center gap-4 md:gap-5">
       <div className="flex w-full items-center justify-between md:hidden">
         <button
           className="press -ml-1 flex size-10 items-center justify-center rounded-sm transition-colors hover:bg-secondary"
@@ -112,10 +108,13 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         <div className="size-10" />
       </div>
 
-      <SiteWordmark className="hidden text-xl md:block" />
+      {/* No desktop wordmark here — the sticky header above already shows it;
+          repeating it just ate vertical space and pushed the submit button
+          (and on signup, everything after it) below the fold on shorter
+          viewports. */}
 
       {/* Heading re-keys on the tab so the copy cross-fades with the form. */}
-      <div className="flex w-full flex-col gap-2 text-center">
+      <div className="flex w-full flex-col gap-1.5 text-center">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={tab}
@@ -123,9 +122,9 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: reduce ? 0 : -6 }}
             transition={{ duration: reduce ? 0.01 : DUR.fast, ease: EASE.out }}
-            className="flex flex-col gap-2"
+            className="flex flex-col gap-1.5"
           >
-            <h1 className="font-serif text-3xl text-foreground">{tab === "signup" ? "Create your account" : "Welcome back"}</h1>
+            <h1 className="font-serif text-2xl text-foreground">{tab === "signup" ? "Create your account" : "Welcome back"}</h1>
             <p className="text-sm text-muted-foreground">
               {tab === "signup" ? "Save your favourites and start planning in minutes" : "Log in to pick up your Plan Event"}
             </p>
@@ -159,7 +158,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
         {error && (
           <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
             {error}
@@ -177,13 +176,13 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
               placeholder="Your full name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              className="h-12 bg-card"
+              className="h-11 bg-card"
             />
           </div>
         )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="auth-email" className="text-xs text-muted-foreground">
-            Email
+            Email <span className="text-destructive">*</span>
           </Label>
           <Input
             id="auth-email"
@@ -192,14 +191,15 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
             placeholder="Enter your email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-12 bg-card"
+            className="h-11 bg-card"
+            required
           />
         </div>
         {tab === "signup" && (
           <>
             <div className="flex flex-col gap-2">
               <Label htmlFor="auth-phone" className="text-xs text-muted-foreground">
-                Phone number <span className="text-destructive">*</span>
+                Phone number
               </Label>
               <Input
                 id="auth-phone"
@@ -208,8 +208,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
                 placeholder="+91 98765 43210"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="h-12 bg-card"
-                required
+                className="h-11 bg-card"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -224,7 +223,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
                   placeholder="e.g. Ahmedabad"
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  className="h-12 bg-card"
+                  className="h-11 bg-card"
                   required
                 />
               </div>
@@ -240,7 +239,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
                   placeholder="e.g. Gujarat"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  className="h-12 bg-card"
+                  className="h-11 bg-card"
                   required
                 />
                 <datalist id="indian-states">
@@ -296,7 +295,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="h-12 bg-card pr-12"
+              className="h-11 bg-card pr-12"
             />
             <button
               type="button"
@@ -366,7 +365,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
           </button>
         )}
 
-        <Button type="submit" size="lg" disabled={submitting} className="mt-1 h-12 w-full">
+        <Button type="submit" size="lg" disabled={submitting} className="mt-1 h-11 w-full">
           {submitting && <Loader2 className="size-4 animate-spin" />}
           {tab === "signup" ? "Create Account" : "Log In"}
         </Button>
@@ -388,16 +387,13 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
       ) : null}
 
       <div className="flex w-full flex-col gap-3 md:flex-row">
-        {[
-          ...(GOOGLE_CLIENT_ID ? [] : [{ label: "Google", glyph: "G" }]),
-          { label: "Facebook", glyph: "f" },
-        ].map((provider) => (
+        {(GOOGLE_CLIENT_ID ? [] : [{ label: "Google", glyph: "G" }]).map((provider) => (
           <Button
             key={provider.label}
             type="button"
             variant="outline"
             size="lg"
-            className="h-12 flex-1"
+            className="h-11 flex-1"
             onClick={() => toast.info(`${provider.label} sign-in isn't wired up yet.`)}
           >
             <span className="text-base leading-none font-semibold">{provider.glyph}</span> {provider.label}

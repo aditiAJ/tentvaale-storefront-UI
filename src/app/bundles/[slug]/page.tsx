@@ -17,7 +17,7 @@ import { ApiError } from "@/services/api-client";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
 import { useBundle, useBundles } from "@/features/catalog/hooks";
-import type { BundleDetail } from "@/features/catalog/types";
+import { quantityLabel, type BundleDetail } from "@/features/catalog/types";
 import { usePlanActions } from "@/features/plans/hooks";
 import { addBundle as apiAddBundle } from "@/features/plans/api";
 import { PlanTargetFields, usePlanTarget } from "@/features/plans/target";
@@ -33,6 +33,7 @@ interface BundleLine {
   imageUrl?: string;
   dailyRate: Money;
   quantity: number;
+  rateType?: "QTY" | "SQFT" | "RFT";
 }
 
 // Flowstep screens 11 (desktop) / 12 (mobile).
@@ -105,6 +106,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
           imageUrl: option ? undefined : item.imageUrl,
           dailyRate: option?.dailyRate ?? item.dailyRate,
           quantity: item.quantity,
+          rateType: option ? option.rateType : item.rateType,
           swappable: item.swapOptions.length > 0,
           swapped: !!option,
         };
@@ -257,8 +259,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
                         </Link>
                       </h3>
                       <p className="text-sm leading-6 text-muted-foreground">
-                        {line.quantity > 1 ? `${line.quantity} × ` : ""}
-                        {formatMoney(line.dailyRate)} · priced individually in your quotation
+                        {quantityLabel(line.quantity, line.rateType)} × {formatMoney(line.dailyRate)} · priced individually in your quotation
                       </p>
                       {line.swappable && (
                         <div className="pt-1.5">
