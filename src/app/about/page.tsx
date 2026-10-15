@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { ShieldCheck, Sparkles, WandSparkles } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "About Us",
+  description:
+    "25 years styling Vadodara's most memorable events — from intimate sangeets to stadium-scale receptions. The legacy behind Tentvaale's best and famous luxury event decor and antique inventory.",
+};
 
 // Flowstep screen 47 (desktop) — static content page, no mobile variant fetched.
 const STATS = [

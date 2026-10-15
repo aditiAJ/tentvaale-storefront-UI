@@ -67,7 +67,7 @@ export function QuickAddDialog({ card, onClose }: { card: ProductCard | null; on
               <DialogTitle>Add to plan</DialogTitle>
             </DialogHeader>
             <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 p-3">
-              <ProductThumb imageUrl={card.imageUrl} alt={card.name} className="size-14 shrink-0" />
+              <ProductThumb imageUrl={card.imageUrl} imageVariants={card.imageVariants} alt={card.name} className="size-14 shrink-0" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{card.name}</p>
                 <p className="truncate text-xs text-muted-foreground">
