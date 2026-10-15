@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { SiteWordmark } from "@/components/site-logo";
 import { ApiError } from "@/services/api-client";
 import { useSession } from "../session";
+import { InlineError } from "@/components/inline-error";
 
 /** The two kinds of account the form offers; the backend spells them CUSTOMER and EVENT_PLANNER. */
 type AccountType = "Customer" | "EventPlanner";
@@ -160,9 +161,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
 
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
         {error && (
-          <p role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-            {error}
-          </p>
+          <InlineError>{error}</InlineError>
         )}
         {tab === "signup" && (
           <div className="flex flex-col gap-2">

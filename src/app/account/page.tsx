@@ -19,6 +19,7 @@ import { ApiError } from "@/services/api-client";
 import { statusCopy, useOrders } from "@/features/orders";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
+import { InlineError } from "@/components/inline-error";
 
 // Flowstep screen 40 (desktop) — mobile 41 not fetched; stacks naturally.
 const NAV_SECTIONS = [
@@ -334,9 +335,7 @@ export default function AccountPage() {
               }}
             >
               {profileError && (
-                <p role="alert" className="text-sm text-destructive">
-                  {profileError}
-                </p>
+                <InlineError>{profileError}</InlineError>
               )}
               <div className="space-y-2">
                 <Label htmlFor="profile-name">Name</Label>

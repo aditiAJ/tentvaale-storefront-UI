@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { InlineError } from "@/components/inline-error";
 
 /** What the server takes: JPEG, PNG or WebP, up to 10 MB. Checked here first so the message is clear. */
 export const COVER_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -137,9 +138,7 @@ export function PlanCoverField({
       )}
 
       {error && (
-        <p role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
+        <InlineError>{error}</InlineError>
       )}
 
       <input

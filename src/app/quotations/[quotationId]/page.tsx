@@ -27,6 +27,7 @@ import {
 } from "@/features/quotations";
 import { formatMoney, type Money } from "@/lib/money";
 import { ApiError } from "@/services/api-client";
+import { InlineError } from "@/components/inline-error";
 
 /**
  * A quotation, as its customer sees it. The route id is the quotation REQUEST id.
@@ -267,7 +268,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
             placeholder={dialog === "changes" ? "For example: can we drop one day?" : "Your reason"}
             aria-label={dialog === "changes" ? "What to change" : "Reason for closing"}
           />
-          {problem && <p className="text-sm text-destructive">{problem}</p>}
+          {problem && <InlineError>{problem}</InlineError>}
           <DialogFooter className="gap-2 sm:justify-start">
             <Button
               variant={dialog === "reject" ? "destructive" : "default"}

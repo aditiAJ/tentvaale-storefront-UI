@@ -16,6 +16,7 @@ import { planKeys, uploadCoverImage } from "../api";
 import { NO_COVER_CHANGE, PlanCoverField, type CoverChange } from "./PlanCoverField";
 import { useCreatePlan } from "../hooks";
 import type { Plan } from "../types";
+import { InlineError } from "@/components/inline-error";
 
 export const EVENT_TYPES = [
   "Wedding",
@@ -249,7 +250,7 @@ export function CreatePlanDialog({
 
           <PlanCoverField change={cover} onChange={setCover} disabled={submitting} />
 
-          {datesInvalid && <p className="text-xs text-destructive">End date cannot be before the start date.</p>}
+          {datesInvalid && <InlineError>End date cannot be before the start date.</InlineError>}
         </div>
 
         <DialogFooter className="pt-2">

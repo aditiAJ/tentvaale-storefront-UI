@@ -11,6 +11,7 @@ import { ApiError } from "@/services/api-client";
 import type { Venue } from "@/features/plans/types";
 import { createVenue, venueKeys } from "@/features/venues/api";
 import { MAPS_KEY, loadMaps } from "@/features/venues/maps";
+import { InlineError } from "@/components/inline-error";
 
 /**
  * Saves a venue. With a Google Maps key the customer searches a place, sees it on a map and can
@@ -131,7 +132,7 @@ export function AddVenueDialog({
             <Label htmlFor="venue-notes">Access notes</Label>
             <Input id="venue-notes" placeholder="Gate, parking, lift..." value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          {error ? <InlineError>{error}</InlineError> : null}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={onClose} disabled={saving}>
               Cancel

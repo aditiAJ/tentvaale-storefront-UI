@@ -10,6 +10,8 @@ interface ProblemBody {
   status?: number;
   error?: string;
   detail?: string;
+  /** Per-field messages for a 400 validation failure, keyed by field name. */
+  errors?: Record<string, string>;
 }
 
 /**
@@ -19,10 +21,15 @@ interface ProblemBody {
  * and its `detail` is written for the person, so the UI shows `message` verbatim. A 403 or a 500
  * gets generic copy instead (see defaultMessage).
  */
+/** Status carried by an ApiError when the server could not be reached at all (no HTTP response). */
+export const NETWORK_ERROR_STATUS = 0;
+
 export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    /** Set for a validation failure: field name to message. Empty otherwise. */
+    public readonly fieldErrors: Record<string, string> = {},
   ) {
     super(message);
     this.name = "ApiError";
@@ -60,18 +67,25 @@ export async function apiFetch<T>(
 ): Promise<T> {
   // A file (FormData) is sent as it is: the browser writes its own multipart Content-Type, with the boundary.
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
-  const res = await fetch(`${API_BASE_PATH}/${path.replace(/^\/?(api\/)?/, "")}`, {
-    method,
-    // The gateway refuses writes without this header: a cross-site form or image cannot add one, so
-    // it is what stops another site making the browser act on the customer's behalf.
-    headers: {
-      "X-Tentvaale-Client": "web",
-      ...(body !== undefined && !isForm ? { "Content-Type": "application/json" } : {}),
-    },
-    credentials: "same-origin",
-    body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_PATH}/${path.replace(/^\/?(api\/)?/, "")}`, {
+      method,
+      // The gateway refuses writes without this header: a cross-site form or image cannot add one, so
+      // it is what stops another site making the browser act on the customer's behalf.
+      headers: {
+        "X-Tentvaale-Client": "web",
+        ...(body !== undefined && !isForm ? { "Content-Type": "application/json" } : {}),
+      },
+      credentials: "same-origin",
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
+      signal,
+    });
+  } catch (caught) {
+    // A cancelled request is the caller's own doing, not a failure to report.
+    if (caught instanceof DOMException && caught.name === "AbortError") throw caught;
+    throw new ApiError("Cannot reach the server. Check your connection and try again.", NETWORK_ERROR_STATUS);
+  }
 
   if (res.status === 401) {
     // Wrong passwords are a 422, never a 401, so a 401 always means "not signed in" (or expired).
@@ -84,15 +98,14 @@ export async function apiFetch<T>(
   const raw = await res.text();
 
   if (!res.ok) {
-    // Spring's entry point and its 403 handler answer with an empty body, so `detail` exists for
-    // domain errors but not for those.
-    let detail: string | undefined;
+    // The backend answers every failure with a `detail`; a proxy's own error page has none.
+    let problem: ProblemBody = {};
     try {
-      detail = (JSON.parse(raw) as ProblemBody).detail;
+      problem = JSON.parse(raw) as ProblemBody;
     } catch {
-      detail = undefined;
+      // Not JSON (a proxy's error page, or an empty body): fall back to the status copy.
     }
-    throw new ApiError(detail ?? defaultMessage(res.status, res.statusText), res.status);
+    throw new ApiError(problem.detail ?? defaultMessage(res.status, res.statusText), res.status, problem.errors);
   }
 
   // 204 and any other empty success: calling JSON.parse on "" would throw.
@@ -108,6 +121,8 @@ export async function apiFetch<T>(
 function defaultMessage(status: number, statusText: string): string {
   if (status === 403) return "You do not have permission to do that.";
   if (status === 404) return "Not found.";
+  if (status === 429) return "Too many attempts. Please wait a moment and try again.";
+  if (status === 502 || status === 503 || status === 504) return "The server is not reachable right now. Please try again in a moment.";
   if (status >= 500) return "The server could not complete the request.";
   return statusText || "Request failed";
 }
