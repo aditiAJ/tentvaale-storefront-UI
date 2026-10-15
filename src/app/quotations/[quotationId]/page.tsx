@@ -346,8 +346,8 @@ function Totals({
   depositWaiver?: DepositWaiver;
   policies?: PolicyRef[];
 }) {
-  const row = (label: string, value?: Money, negative = false) => (
-    <div key={label} className="flex items-baseline justify-between gap-3 text-sm">
+  const row = (label: string, value?: Money, negative = false, key = label) => (
+    <div key={key} className="flex items-baseline justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
       <span className="text-foreground tabular-nums">
         {negative && value && value.amount > 0 ? "−" : ""}
@@ -359,7 +359,8 @@ function Totals({
     <>
       <h2 className="font-serif text-2xl text-foreground">Your quotation</h2>
       {row("Items", subtotal)}
-      {(bundleDiscounts ?? []).map((bundle) => row(`${bundle.name} (${bundle.percent}% off)`, bundle.amount, true))}
+      {/* The same bundle added twice gives two rows with the same label, so the key adds the position. */}
+      {(bundleDiscounts ?? []).map((bundle, i) => row(`${bundle.name} (${bundle.percent}% off)`, bundle.amount, true, `${bundle.name}-${i}`))}
       {discount && discount.amount > 0 && row(discountPercent != null ? `Discount (${discountPercent}%)` : "Discount", discount, true)}
       {taxLines(tax).map((line) => row(line.label, line.value))}
       {delivery && delivery.amount > 0 && row("Delivery", delivery)}
