@@ -35,8 +35,9 @@ export function ProductThumb({
   return (
     <div className={cn("relative flex items-center justify-center overflow-hidden rounded-md bg-muted", className)}>
       {imageUrl && !failed ? (
-        // Local /brand PNGs are transparent studio cut-outs and need breathing
-        // room; remote photos are full-bleed scenes and should fill the frame.
+        // Always contain, never crop — product photos (square, validated 1:1 at
+        // upload) must stay fully visible; local /brand cutouts get extra padding
+        // since they're not pre-validated to fill their square cleanly.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={sorted?.[0]?.url ?? imageUrl}
@@ -47,7 +48,7 @@ export function ProductThumb({
           alt={alt}
           loading={eager ? undefined : "lazy"}
           onError={() => setFailed(true)}
-          className={cn("size-full", imageUrl.startsWith("/") ? "object-contain p-[8%]" : "object-cover")}
+          className={cn("size-full object-contain", imageUrl.startsWith("/") && "p-[8%]")}
         />
       ) : (
         <Package className="h-1/3 w-1/3 text-muted-foreground" aria-hidden />

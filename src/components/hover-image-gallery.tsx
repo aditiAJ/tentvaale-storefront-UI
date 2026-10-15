@@ -49,7 +49,7 @@ function GalleryImage({
       alt={alt}
       loading={eager ? undefined : "lazy"}
       onError={() => setFailed(true)}
-      className={cn("size-full", url.startsWith("/") ? "object-contain p-[8%]" : "object-cover")}
+      className={cn("size-full object-contain", url.startsWith("/") && "p-[8%]")}
     />
   );
 }
