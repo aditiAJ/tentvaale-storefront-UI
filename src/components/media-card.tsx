@@ -67,8 +67,8 @@ export function MediaCard({
         {description && <p className="line-clamp-2 flex-1 text-sm leading-6 text-muted-foreground">{description}</p>}
         {tags && tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <span key={tag} className="rounded-sm bg-primary/8 px-2.5 py-0.5 text-[11px] text-primary ring-1 ring-primary/25 ring-inset">
+            {tags.map((tag, i) => (
+              <span key={`${tag}-${i}`}className="rounded-sm bg-primary/8 px-2.5 py-0.5 text-[11px] text-primary ring-1 ring-primary/25 ring-inset">
                 {tag}
               </span>
             ))}

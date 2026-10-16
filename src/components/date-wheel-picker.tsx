@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Popover } from "@base-ui/react/popover";
 import { CalendarDays, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatEventDate } from "@/mock-data/seed";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const ITEM_H = 36; // px per row
-const VISIBLE = 5; // rows shown; the middle one is the selection
+export const ITEM_H = 36; // px per row
+export const VISIBLE = 5; // rows shown; the middle one is the selection
 
 type Parts = { d: number; m: number; y: number }; // m is 0-11
 
@@ -31,11 +31,26 @@ function normalise(p: Parts, min: Parts | null, max: Parts | null = null): Parts
   return next;
 }
 
-type WheelItem = { value: number; label: string; disabled?: boolean };
+export type WheelItem = { value: number; label: string; disabled?: boolean };
+
+// The selection band and top/bottom fades shared by every wheel picker; the
+// WheelColumns go inside.
+export function Wheels({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative flex gap-1">
+      {/* selection band */}
+      <div className="pointer-events-none absolute inset-x-0 rounded-lg border border-primary/40 bg-primary/10" style={{ top: ITEM_H * Math.floor(VISIBLE / 2), height: ITEM_H }} />
+      {/* fade top/bottom */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-14 bg-gradient-to-b from-popover to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-14 bg-gradient-to-t from-popover to-transparent" />
+      {children}
+    </div>
+  );
+}
 
 // One scroll-snapping column. Scroll, drag or click a row; the row that
 // settles in the middle band is the selection.
-function WheelColumn({ items, selected, onSelect, label }: { items: WheelItem[]; selected: number; onSelect: (v: number) => void; label: string }) {
+export function WheelColumn({ items, selected, onSelect, label }: { items: WheelItem[]; selected: number; onSelect: (v: number) => void; label: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const firstPaint = useRef(true);
@@ -181,16 +196,11 @@ export function DateWheelPicker({ value, onChange, min, max, id, placeholder = "
               <span>Month</span>
               <span>Year</span>
             </div>
-            <div className="relative flex gap-1">
-              {/* selection band */}
-              <div className="pointer-events-none absolute inset-x-0 rounded-lg border border-primary/40 bg-primary/10" style={{ top: ITEM_H * Math.floor(VISIBLE / 2), height: ITEM_H }} />
-              {/* fade top/bottom */}
-              <div className="pointer-events-none absolute inset-x-0 top-0 z-20 h-14 bg-gradient-to-b from-popover to-transparent" />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 h-14 bg-gradient-to-t from-popover to-transparent" />
+            <Wheels>
               <WheelColumn label="Day" items={days} selected={draft.d} onSelect={(d) => update({ d })} />
               <WheelColumn label="Month" items={months} selected={draft.m} onSelect={(m) => update({ m })} />
               <WheelColumn label="Year" items={years} selected={draft.y} onSelect={(y) => update({ y })} />
-            </div>
+            </Wheels>
             <p className="mt-2 text-center text-sm text-foreground">{formatEventDate(toIso(draft))}</p>
             <div className="mt-3 flex items-center justify-between gap-2">
               <button

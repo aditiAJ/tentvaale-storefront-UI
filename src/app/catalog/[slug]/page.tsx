@@ -213,8 +213,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              {[product.categoryName, product.subCategoryName].map((tag) => (
-                <span key={tag} className="rounded-sm bg-primary/10 px-3 py-1 text-xs text-primary ring-1 ring-primary/30 ring-inset">
+              {[product.categoryName, product.subCategoryName].map((tag, i) => (
+                <span key={`${tag}-${i}`}className="rounded-sm bg-primary/10 px-3 py-1 text-xs text-primary ring-1 ring-primary/30 ring-inset">
                   {tag}
                 </span>
               ))}
@@ -234,8 +234,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
           {rows.length > 0 && (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-3.5 rounded-xl border border-border bg-muted/30 p-4 text-sm">
-              {rows.map(([label, value]) => (
-                <div key={label} className="min-w-0">
+              {/* Labels can repeat (the dimensions' "Size" and a "Size" filter), so the key adds the position. */}
+              {rows.map(([label, value], i) => (
+                <div key={`${label}-${i}`} className="min-w-0">
                   <dt className="text-[11px] tracking-[0.1em] text-muted-foreground uppercase">{label}</dt>
                   <dd className="mt-0.5 text-foreground">{value}</dd>
                 </div>
