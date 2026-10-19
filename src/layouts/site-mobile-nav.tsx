@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Home, LayoutGrid, Search, CalendarDays, User } from "lucide-react";
 import { SPRING } from "@/components/motion";
 import { cn } from "@/lib/utils";
+import { useGuardedHref } from "@/features/auth/hooks/useGuardedHref";
 
 const TABS = [
   { href: "/", label: "Home", icon: Home },
@@ -18,6 +19,7 @@ const TABS = [
 // Flowstep screen 2 etc. — fixed bottom tab bar, mobile only.
 export function SiteMobileNav() {
   const pathname = usePathname();
+  const guarded = useGuardedHref();
 
   return (
     <nav
@@ -30,7 +32,7 @@ export function SiteMobileNav() {
         return (
           <Link
             key={tab.href}
-            href={tab.href}
+            href={guarded(tab.href)}
             aria-current={active ? "page" : undefined}
             className="relative flex h-16 flex-1 flex-col items-center justify-center gap-1"
           >
