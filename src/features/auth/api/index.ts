@@ -39,6 +39,19 @@ export function updateAccount(payload: UpdateProfilePayload): Promise<Storefront
   return apiFetch<StorefrontAccount>("storefront/account", { method: "PUT", body: payload });
 }
 
+/**
+ * "Forgot password?". Always succeeds (204) whether or not the email has an account, so the page can only
+ * say "if it exists, we sent a link"; the email carries a one-time link to /reset-password.
+ */
+export function requestPasswordReset(email: string): Promise<void> {
+  return apiFetch<void>("storefront/auth/forgot-password", { method: "POST", body: { email } });
+}
+
+/** 422 when the link is wrong, already used or expired (its message is written for the person). Does not sign anyone in. */
+export function resetPassword(token: string, password: string): Promise<void> {
+  return apiFetch<void>("storefront/auth/reset-password", { method: "POST", body: { token, password } });
+}
+
 export const authKeys = {
   me: ["auth", "me"] as const,
 };

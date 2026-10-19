@@ -355,13 +355,12 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         </AnimatePresence>
 
         {tab === "login" && (
-          <button
-            type="button"
+          <Link
+            href="/forgot-password"
             className="self-end text-xs text-muted-foreground transition-colors hover:text-primary"
-            onClick={() => toast.info("Password reset isn't wired up yet.")}
           >
             Forgot password?
-          </button>
+          </Link>
         )}
 
         <Button type="submit" size="lg" disabled={submitting} className="mt-1 h-11 w-full">
