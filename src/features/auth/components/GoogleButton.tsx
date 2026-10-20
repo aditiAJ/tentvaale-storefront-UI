@@ -16,6 +16,9 @@ interface GoogleIdApi {
 const googleId = () => (window as unknown as { google?: { accounts?: { id?: GoogleIdApi } } }).google?.accounts?.id;
 
 let script: Promise<GoogleIdApi> | null = null;
+// Google wants initialize() once per page; calling it on every mount made the button redraw and the form jump.
+let initialised = false;
+let currentHandler: { current: (idToken: string) => Promise<void> } | null = null;
 
 function loadGoogle(): Promise<GoogleIdApi> {
   const ready = googleId();
@@ -44,6 +47,7 @@ export function GoogleButton({ onToken }: { onToken: (idToken: string) => Promis
   const handler = useRef(onToken);
   useEffect(() => {
     handler.current = onToken;
+    currentHandler = handler;
   }, [onToken]);
 
   useEffect(() => {
@@ -52,15 +56,18 @@ export function GoogleButton({ onToken }: { onToken: (idToken: string) => Promis
     void loadGoogle()
       .then((google) => {
         if (cancelled || !holder.current) return;
-        google.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: ({ credential }) => {
-            if (!credential) return;
-            handler.current(credential).catch((error) =>
-              toast.error(error instanceof ApiError ? error.message : "We couldn't sign you in with Google. Please try again."),
-            );
-          },
-        });
+        if (!initialised) {
+          initialised = true;
+          google.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: ({ credential }) => {
+              if (!credential || !currentHandler) return;
+              currentHandler.current(credential).catch((error) =>
+                toast.error(error instanceof ApiError ? error.message : "We couldn't sign you in with Google. Please try again."),
+              );
+            },
+          });
+        }
         google.renderButton(holder.current, { theme: "outline", size: "large", text: "continue_with", width: 320 });
       })
       .catch(() => undefined);

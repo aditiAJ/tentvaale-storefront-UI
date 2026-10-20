@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, ChevronRight, Heart } from "lucide-react";
+import { Check, ChevronRight, Heart, Play } from "lucide-react";
 import { Reveal, SPRING } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -112,6 +112,9 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   }
 
   const images = product.media.filter((m) => m.type === "IMAGE");
+  // The video is the last item of the gallery: its tile sits after the photos and plays only when pressed.
+  const video = product.media.find((m) => m.type === "VIDEO");
+  const showVideo = video !== undefined && activeImage >= images.length;
   // A product with variants is bought as one of them; stock and price belong to the variant.
   const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0];
   const rate = variant?.dailyRate ?? product.dailyRate;
@@ -162,17 +165,29 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       <section className="grid gap-6 md:grid-cols-[55%_45%] md:gap-8">
         {/* Image column sticks while the long configuration panel scrolls: the thing being bought stays on screen. */}
         <Reveal immediate direction="up" distance={16} className="md:sticky md:top-24 md:self-start">
-          <HoverImageGallery
-            images={images}
-            alt={images[activeImage]?.altText || product.name}
-            index={activeImage}
-            onIndexChange={setActiveImage}
-            eager
-            sizes="(min-width: 768px) 55vw, 100vw"
-            className="h-[320px] rounded-2xl bg-muted shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
-            imgClassName="size-full rounded-2xl bg-muted p-6"
-          />
-          {images.length > 1 && (
+          {showVideo ? (
+            <video
+              key={video.url}
+              src={video.url}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label={`${product.name} video`}
+              className="h-[320px] w-full rounded-2xl bg-black object-contain shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
+            />
+          ) : (
+            <HoverImageGallery
+              images={images}
+              alt={images[activeImage]?.altText || product.name}
+              index={activeImage}
+              onIndexChange={setActiveImage}
+              eager
+              sizes="(min-width: 768px) 55vw, 100vw"
+              className="h-[320px] rounded-2xl bg-muted shadow-e2 ring-1 ring-foreground/5 md:h-[560px]"
+              imgClassName="size-full rounded-2xl bg-muted p-6"
+            />
+          )}
+          {images.length + (video ? 1 : 0) > 1 && (
             <div className="mt-3 flex gap-2.5">
               {images.map((image, i) => (
                 <button
@@ -188,6 +203,19 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                   <ProductThumb imageUrl={image.url} imageVariants={image.variants} alt="" className="size-16 rounded-none bg-muted md:size-20" />
                 </button>
               ))}
+              {video && (
+                <button
+                  onClick={() => setActiveImage(images.length)}
+                  aria-label="Play video"
+                  aria-current={showVideo}
+                  className={cn(
+                    "flex size-16 items-center justify-center rounded-md bg-black text-white ring-1 transition-colors duration-200 ease-out-quint md:size-20",
+                    showVideo ? "ring-2 ring-primary" : "ring-border hover:ring-primary/50",
+                  )}
+                >
+                  <Play className="size-6" fill="currentColor" />
+                </button>
+              )}
             </div>
           )}
         </Reveal>

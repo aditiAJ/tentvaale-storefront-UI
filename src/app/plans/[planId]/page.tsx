@@ -1,7 +1,12 @@
 "use client";
 
+<<<<<<< HEAD
 import { VenueSelect } from "@/features/venues";
 import { use, useMemo, useState } from "react";
+=======
+import { VenueField } from "@/features/venues";
+import { use, useEffect, useMemo, useRef, useState } from "react";
+>>>>>>> f6de42a37824b87e8c1349383097c888d8b5e62b
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -43,7 +48,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { ProductThumb } from "@/components/product-thumb";
 import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
-import { TimeSelect, formatClock } from "@/components/time-select";
+import { TimeSelect, endTimeOk, formatClock } from "@/components/time-select";
 import { RentalTerms } from "@/components/rental-terms";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -469,6 +474,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       .map((se) => {
         const start = new Date(`${se.eventDate}T${se.startTime}`);
         const end = se.endTime ? new Date(`${se.eventDate}T${se.endTime}`) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+        // An end before the start is a function that runs past midnight: it finishes the next day.
+        if (se.endTime && end <= start) end.setDate(end.getDate() + 1);
         return { se, start, end: end > start ? end : new Date(start.getTime() + 30 * 60 * 1000) };
       })
       .sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -1614,11 +1621,13 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="plan-edit-venue">Venue</Label>
-                    <VenueSelect
-                      value={planForm.venueId}
-                      onChange={(venueId, text) => setPlanForm({ ...planForm, venueId, venue: venueId ? text : planForm.venue })}
+                    <VenueField
+                      id="plan-edit-venue"
+                      placeholder="Type a venue, or pick a saved one"
+                      value={planForm.venue}
+                      venueId={planForm.venueId}
+                      onChange={(venue, venueId) => setPlanForm({ ...planForm, venue, venueId })}
                     />
-                    <Input id="plan-edit-venue" placeholder="Taj Palace, Delhi" value={planForm.venue} onChange={(e) => setPlanForm({ ...planForm, venue: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="plan-edit-sub-venue">Sub-venue</Label>
@@ -1765,7 +1774,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       setSubEventForm({
                         ...subEventForm,
                         startTime,
-                        endTime: subEventForm.endTime && startTime && subEventForm.endTime <= startTime ? "" : subEventForm.endTime,
+                        endTime: subEventForm.endTime && startTime && !endTimeOk(startTime, subEventForm.endTime) ? "" : subEventForm.endTime,
                       })
                     }
                   />
@@ -1784,16 +1793,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
               <div className="space-y-2">
                 <Label htmlFor="se-venue">Venue *</Label>
-                <VenueSelect
-                  value={subEventForm.venueId}
-                  noneLabel="Type it below"
-                  onChange={(venueId, text) => setSubEventForm({ ...subEventForm, venueId, venue: venueId ? text : subEventForm.venue })}
-                />
-                <Input
+                <VenueField
                   id="se-venue"
-                  placeholder="Garden Lawn, Taj Palace"
+                  placeholder="Type a venue, or pick a saved one"
                   value={subEventForm.venue}
-                  onChange={(e) => setSubEventForm({ ...subEventForm, venue: e.target.value })}
+                  venueId={subEventForm.venueId}
+                  onChange={(venue, venueId) => setSubEventForm({ ...subEventForm, venue, venueId })}
                 />
               </div>
               <div className="space-y-2">

@@ -9,6 +9,16 @@ import { cn } from "@/lib/utils";
 /** The gap between the minutes on offer (decision D2, 2026-10-12). */
 export const TIME_STEP_MINUTES = 15;
 
+/** A function may finish after midnight: an end before its start counts as the next morning, but only before this. */
+const OVERNIGHT_UNTIL = "06:00";
+
+/** Whether `end` is a valid end for a function starting at `start` (later the same day, or the small hours of the next). */
+export function endTimeOk(start: string, end: string): boolean {
+  const s = start.slice(0, 5);
+  const e = end.slice(0, 5);
+  return e > s || (e < s && e < OVERNIGHT_UNTIL);
+}
+
 /** "19:00" -> "7:00 PM". */
 export function formatClock(time: string): string {
   const [h, m] = time.split(":").map(Number);
@@ -36,8 +46,9 @@ const DEFAULT_TIME = "10:00";
  * (hour · minute · AM/PM). The value stays "HH:mm", the shape the backend already stores.
  *
  * Minutes come every 15. A time saved earlier off that step (say 19:05) is still shown and kept until the
- * customer picks another; it is never rounded for them. `after` disables the times at or before it, for an
- * end time. `optional` lets the customer clear the field.
+ * customer picks another; it is never rounded for them. `after` is the start time, for an end time: anything
+ * later that day is allowed, and so is a time in the small hours (12:15 AM), shown as "next day". `optional`
+ * lets the customer clear the field.
  */
 export function TimeSelect({
   id,
@@ -60,7 +71,8 @@ export function TimeSelect({
   const [open, setOpen] = useState(false);
   const saved = fromHHmm(value);
   const minutes = saved && !STEP_MINUTES.includes(saved.m) ? [...STEP_MINUTES, saved.m].sort((a, b) => a - b) : STEP_MINUTES;
-  const allowed = (p: Parts) => !after || toHHmm(p) > after.slice(0, 5);
+  const allowed = (p: Parts) => !after || endTimeOk(after, toHHmm(p));
+  const nextDay = (time: string) => Boolean(after) && time.slice(0, 5) < after!.slice(0, 5);
 
   // Keep the draft on an allowed time: if it falls at or before `after`, move to the first time after it.
   function normalise(p: Parts): Parts {
@@ -101,7 +113,7 @@ export function TimeSelect({
           )}
         >
           <Clock className="size-4 shrink-0 text-primary" />
-          <span className="truncate">{value ? formatClock(value) : placeholder}</span>
+          <span className="truncate">{value ? `${formatClock(value)}${nextDay(value) ? " (next day)" : ""}` : placeholder}</span>
         </Popover.Trigger>
         {optional && value && (
           <button
@@ -123,11 +135,11 @@ export function TimeSelect({
               <span>AM/PM</span>
             </div>
             <Wheels>
-              <WheelColumn label="Hours" items={hours} selected={draft.h} onSelect={(h) => update({ h })} />
-              <WheelColumn label="Minutes" items={minuteItems} selected={draft.m} onSelect={(m) => update({ m })} />
+              <WheelColumn loop label="Hours" items={hours} selected={draft.h} onSelect={(h) => update({ h })} />
+              <WheelColumn loop label="Minutes" items={minuteItems} selected={draft.m} onSelect={(m) => update({ m })} />
               <WheelColumn label="AM/PM" items={halves} selected={draft.pm ? 1 : 0} onSelect={(v) => update({ pm: v === 1 })} />
             </Wheels>
-            <p className="mt-2 text-center text-sm text-foreground">{canPick ? formatClock(toHHmm(draft)) : "No time left after the start"}</p>
+            <p className="mt-2 text-center text-sm text-foreground">{canPick ? `${formatClock(toHHmm(draft))}${nextDay(toHHmm(draft)) ? " (next day)" : ""}` : "No time left after the start"}</p>
             <div className="mt-3 flex justify-end gap-2">
               <button type="button" className="rounded-md px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground" onClick={() => setOpen(false)}>
                 Cancel

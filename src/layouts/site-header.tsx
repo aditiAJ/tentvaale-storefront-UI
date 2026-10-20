@@ -12,6 +12,7 @@ import { GuideButton } from "@/features/help/GuideButton";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import { useSession } from "@/features/auth/session";
+import { useGuardedHref } from "@/features/auth/hooks/useGuardedHref";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { useCategories } from "@/features/catalog/hooks";
 
@@ -278,6 +279,7 @@ function CatalogMenu({ active }: { active: boolean }) {
 }
 
 export function SiteHeader() {
+  const guarded = useGuardedHref();
   const pathname = usePathname();
   const scrolled = useScrolled();
   const reduce = useReducedMotion();
@@ -315,7 +317,7 @@ export function SiteHeader() {
                 {c.href === "/catalog" ? (
                   <CatalogMenu active={isActive(c.href)} />
                 ) : (
-                  <NavItem href={c.href} label={c.label} active={isActive(c.href)} />
+                  <NavItem href={guarded(c.href)} label={c.label} active={isActive(c.href)} />
                 )}
               </li>
             ))}
@@ -407,7 +409,7 @@ export function SiteHeader() {
                     }}
                   >
                     <Link
-                      href={c.href}
+                      href={guarded(c.href)}
                       className={cn(
                         "block rounded-lg px-3 py-2.5 text-sm transition-colors duration-200 ease-out-quint",
                         isActive(c.href) ? "bg-primary/10 font-medium text-primary" : "text-foreground hover:bg-secondary"
