@@ -1,12 +1,7 @@
 "use client";
 
-<<<<<<< HEAD
-import { VenueSelect } from "@/features/venues";
-import { use, useMemo, useState } from "react";
-=======
 import { VenueField } from "@/features/venues";
-import { use, useEffect, useMemo, useRef, useState } from "react";
->>>>>>> f6de42a37824b87e8c1349383097c888d8b5e62b
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
