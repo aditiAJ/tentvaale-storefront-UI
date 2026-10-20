@@ -54,6 +54,12 @@ function GalleryImage({
   );
 }
 
+/**
+ * The arrows and dots show on hover where there is a mouse, and always on a touch screen (a phone has no hover, so
+ * hidden-until-hover would hide them for good). Same test Tailwind's own `group-hover` uses: `@media (hover: hover)`.
+ */
+const REVEALED = "opacity-100 [@media(hover:hover)]:opacity-0 group-hover:opacity-100 focus-visible:opacity-100";
+
 const slide = {
   enter: (direction: number) => ({ x: direction >= 0 ? "100%" : "-100%" }),
   center: { x: 0 },
@@ -149,7 +155,7 @@ export function HoverImageGallery({
             type="button"
             aria-label="Previous image"
             onClick={(e) => go(-1, e)}
-            className="absolute top-1/2 left-1.5 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity duration-200 ease-out-quint group-hover:opacity-100 hover:bg-background"
+            className={cn("absolute top-1/2 left-1.5 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm ring-1 ring-border transition-opacity duration-200 ease-out-quint hover:bg-background", REVEALED)}
           >
             <ChevronLeft className="size-4" />
           </button>
@@ -157,11 +163,11 @@ export function HoverImageGallery({
             type="button"
             aria-label="Next image"
             onClick={(e) => go(1, e)}
-            className="absolute top-1/2 right-1.5 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 shadow-sm ring-1 ring-border transition-opacity duration-200 ease-out-quint group-hover:opacity-100 hover:bg-background"
+            className={cn("absolute top-1/2 right-1.5 z-10 flex size-7 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-foreground shadow-sm ring-1 ring-border transition-opacity duration-200 ease-out-quint hover:bg-background", REVEALED)}
           >
             <ChevronRight className="size-4" />
           </button>
-          <div className="pointer-events-none absolute inset-x-0 bottom-1.5 z-10 flex justify-center gap-1 opacity-0 transition-opacity duration-200 ease-out-quint group-hover:opacity-100">
+          <div className={cn("pointer-events-none absolute inset-x-0 bottom-1.5 z-10 flex justify-center gap-1 transition-opacity duration-200 ease-out-quint", REVEALED)}>
             {images.map((image, i) => (
               <span key={(normalize(image).url ?? "") + i} className={cn("size-1.5 rounded-full transition-colors", i === index ? "bg-primary" : "bg-background/70")} />
             ))}
