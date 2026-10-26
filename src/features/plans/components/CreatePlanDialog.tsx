@@ -26,6 +26,7 @@ export const EVENT_TYPES = [
   "Corporate Event",
   "Anniversary Celebration",
   "Festival & Cultural",
+  "Social Gathering",
   "Private Gathering",
 ] as const;
 
