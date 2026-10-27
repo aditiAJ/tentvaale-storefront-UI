@@ -1,7 +1,7 @@
 "use client";
 
-import { VenueSelect } from "@/features/venues";
-import { use, useEffect, useMemo, useRef, useState } from "react";
+import { VenueField } from "@/features/venues";
+import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -22,7 +22,6 @@ import {
   MoreHorizontal,
   MoveRight,
   Heart,
-  ImagePlus,
   Package,
   PackageOpen,
   Split,
@@ -44,7 +43,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem,
 import { ProductThumb } from "@/components/product-thumb";
 import { DateWheelPicker } from "@/components/date-wheel-picker";
 import { NumberStepper } from "@/components/number-stepper";
-import { TimeSelect, formatClock } from "@/components/time-select";
+import { TimeSelect, endTimeOk, formatClock } from "@/components/time-select";
 import { RentalTerms } from "@/components/rental-terms";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -89,34 +88,12 @@ function shiftDate(iso: string, days: number): string {
 // "Add items" outside the setup suggestions opens the same picker on the full catalog.
 const BROWSE_PICKER: (typeof STARTER_SUGGESTIONS)[number] = { key: "browse", label: "product", categories: [] };
 
-const SCROLL_FADE = "linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)";
-
-// A horizontally-scrolling strip whose edges fade only once it actually overflows — applying the
-// fade unconditionally clips the first/last few pixels of content (e.g. a date label's leading
-// digit) even when everything already fits and there's nothing to scroll to.
-function ScrollFade({ children, className }: { children: React.ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [overflowing, setOverflowing] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const check = () => setOverflowing(el.scrollWidth > el.clientWidth + 1);
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
-  return (
-    <div
-      ref={ref}
-      className={cn("overflow-x-auto", className)}
-      style={overflowing ? { maskImage: SCROLL_FADE, WebkitMaskImage: SCROLL_FADE } : undefined}
-    >
-      {children}
-    </div>
-  );
+/** "3 h 45 min", "2 h", "45 min": how long a function runs. */
+function durationLabel(start: Date, end: Date): string {
+  const minutes = Math.round((end.getTime() - start.getTime()) / 60_000);
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return [h > 0 && `${h} h`, m > 0 && `${m} min`].filter(Boolean).join(" ");
 }
 
 const NO_PRODUCTS: BoardProduct[] = [];
@@ -492,6 +469,8 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       .map((se) => {
         const start = new Date(`${se.eventDate}T${se.startTime}`);
         const end = se.endTime ? new Date(`${se.eventDate}T${se.endTime}`) : new Date(start.getTime() + 2 * 60 * 60 * 1000);
+        // An end before the start is a function that runs past midnight: it finishes the next day.
+        if (se.endTime && end <= start) end.setDate(end.getDate() + 1);
         return { se, start, end: end > start ? end : new Date(start.getTime() + 30 * 60 * 1000) };
       })
       .sort((a, b) => a.start.getTime() - b.start.getTime());
@@ -519,57 +498,103 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, items]) => {
         const sorted = [...items].sort((a, b) => a.start.getTime() - b.start.getTime());
+        const day = new Date(`${date}T00:00:00`);
         return {
           date,
-          label: formatEventDate(date),
+          dayOfMonth: day.toLocaleDateString("en-IN", { day: "numeric" }),
+          month: day.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+          weekday: day.toLocaleDateString("en-IN", { weekday: "long" }),
           events: sorted.map((item, i) => ({
-            se: item.se,
+            ...item,
             overlaps: sorted.some((other, j) => j !== i && item.start < other.end && other.start < item.end),
           })),
         };
       });
     const hasOverlap = days.some((d) => d.events.some((e) => e.overlaps));
+    const itemsIn = (subEventId: string) => plan!.items.filter((item) => item.subEventIds.includes(subEventId)).length;
+    const daysBetween = (from: string, to: string) =>
+      Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86_400_000);
 
+    // One row per day, top to bottom: the date on the left, the day's functions on the right, joined by a line. Grows
+    // downwards however many days there are, so nothing is cut off or needs a sideways scroll.
     return (
       <div className="mt-6 flex flex-col gap-4">
-        <ScrollFade className="pb-1">
-          <div className="flex min-w-min">
-            {days.map((day, i) => (
-              <div key={day.date} className="flex w-48 shrink-0 flex-col sm:w-56">
-                {/* Route node, matching the progress-steps pattern above. */}
-                <div className="relative flex items-center px-1">
-                  <span className={cn("h-0.5 flex-1", i === 0 ? "bg-transparent" : "bg-border")} />
-                  <span className="relative z-10 flex size-6 shrink-0 items-center justify-center rounded-sm border border-primary bg-card text-[11px] font-semibold text-primary ring-4 ring-background">
-                    {i + 1}
-                  </span>
-                  <span className={cn("h-0.5 flex-1", i === days.length - 1 ? "bg-transparent" : "bg-border")} />
+        <ol className="flex flex-col">
+          {days.map((day, i) => {
+            const gap = i > 0 ? daysBetween(days[i - 1].date, day.date) : 0;
+            const last = i === days.length - 1;
+            return (
+              <li key={day.date} className="grid grid-cols-[4.5rem_1fr] gap-x-4 sm:grid-cols-[6.5rem_1fr] sm:gap-x-6">
+                <div className="pt-1 text-right">
+                  <div className="text-[11px] font-semibold tracking-wide text-primary uppercase">Day {i + 1}</div>
+                  <div className="font-serif text-3xl leading-tight text-foreground">{day.dayOfMonth}</div>
+                  <div className="text-xs text-muted-foreground">{day.month}</div>
+                  <div className="text-xs text-muted-foreground">{day.weekday}</div>
                 </div>
-                <div className="mt-2 px-1 text-xs font-medium whitespace-nowrap text-foreground">{day.label}</div>
-                <div className="mt-3 flex flex-1 flex-col gap-2 rounded-xl border border-border bg-card p-2.5">
-                  {day.events.map(({ se, overlaps }) => (
-                    <button
-                      key={se.id}
-                      onClick={() => {
-                        setActiveTab(se.id);
-                        setView("sub-events");
-                      }}
-                      className={cn(
-                        "flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors hover:bg-primary/15",
-                        overlaps ? "border-primary/60 bg-primary/10" : "border-border/80 bg-background/40",
-                      )}
-                    >
-                      <span className="truncate text-sm font-medium text-foreground">{se.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {se.startTime ? formatClock(se.startTime) : null}
-                        {se.endTime ? `–${formatClock(se.endTime)}` : ""}
-                      </span>
-                    </button>
-                  ))}
+
+                <div className={cn("relative border-l border-border pl-5 sm:pl-6", last ? "pb-1" : "pb-8")}>
+                  <span aria-hidden className="absolute top-2 -left-[5px] size-2.5 rounded-full bg-primary ring-4 ring-background" />
+                  {gap > 1 && (
+                    <p className="mb-2 text-xs text-muted-foreground">
+                      {gap - 1} day{gap - 1 === 1 ? "" : "s"} after the previous function
+                    </p>
+                  )}
+                  <div className="grid gap-2.5 md:grid-cols-2">
+                    {day.events.map(({ se, start, end, overlaps }) => {
+                      const items = itemsIn(se.id);
+                      const venue = se.venue ? (se.subVenue ? `${se.venue}, ${se.subVenue}` : se.venue) : null;
+                      return (
+                        <button
+                          key={se.id}
+                          type="button"
+                          onClick={() => {
+                            setActiveTab(se.id);
+                            setView("sub-events");
+                          }}
+                          className={cn(
+                            "group flex min-w-0 flex-col gap-1.5 rounded-xl border px-4 py-3 text-left transition-colors hover:border-primary/50",
+                            overlaps ? "border-primary/60 bg-primary/10" : "border-border bg-card",
+                          )}
+                        >
+                          <span className="flex items-start justify-between gap-2">
+                            <span className="truncate font-medium text-foreground">{se.name}</span>
+                            <ArrowRight className="mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                          </span>
+                          {/* The time range and its length each stay on one line; on a narrow card they wrap as wholes. */}
+                          <span className="flex flex-wrap items-center gap-x-1.5 text-sm text-foreground">
+                            <Clock className="size-3.5 shrink-0 text-primary" />
+                            <span className="whitespace-nowrap">
+                              {formatClock(se.startTime!)}
+                              {se.endTime ? ` – ${formatClock(se.endTime)}` : ""}
+                            </span>
+                            {se.endTime && <span className="whitespace-nowrap text-muted-foreground">· {durationLabel(start, end)}</span>}
+                          </span>
+                          {(venue || se.guestCount) && (
+                            <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                              {venue && (
+                                <span className="flex min-w-0 items-center gap-1">
+                                  <MapPin className="size-3 shrink-0" /> <span className="truncate">{venue}</span>
+                                </span>
+                              )}
+                              {se.guestCount ? (
+                                <span className="flex items-center gap-1">
+                                  <Users className="size-3 shrink-0" /> {se.guestCount} guests
+                                </span>
+                              ) : null}
+                            </span>
+                          )}
+                          <span className={cn("text-xs", items === 0 ? "text-primary" : "text-muted-foreground")}>
+                            {items === 0 ? "No items yet" : `${items} item${items === 1 ? "" : "s"}`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </ScrollFade>
+              </li>
+            );
+          })}
+        </ol>
 
         {hasOverlap && (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -1068,6 +1093,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
     { label: "Get a quote", hint: "Submit or order directly", done: plan.status !== "DRAFT", onClick: undefined },
   ];
   const currentStep = steps.findIndex((s) => !s.done);
+  const countdown = daysToGo(startDate);
   const blocker = quoteBlocker(plan);
   const incompleteFunctions = plan.subEvents.filter((se) => !functionComplete(se));
   const todos = [
@@ -1084,9 +1110,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       key: `empty-${se.id}`,
       text: `${se.name} has no items yet`,
       action: "Add items",
+      // Straight to the product list for that function, as the other "Add items" buttons do. The picker adds to the
+      // active tab, which is this function by the time anything is added.
       onClick: () => {
         setView("sub-events");
         setActiveTab(se.id);
+        openBrowsePicker();
       },
     })),
     ...pendingSharing.map((u) => ({
@@ -1133,45 +1162,56 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
       {/* ================= HERO ================= */}
       <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">
-        {plan.coverImageUrl && (
-          <div className="relative h-44 w-full bg-muted md:h-64">
-            {/* A plain <img>: the picture is a storage address, which next/image has nothing to optimise. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={plan.coverImageUrl} alt={`${plan.name}`} className="size-full object-cover" />
-            {plan.editable && (
-              <button
-                type="button"
-                onClick={openEditPlan}
-                className="absolute right-3 bottom-3 flex items-center gap-1.5 rounded-lg bg-black/60 px-3 py-1.5 text-xs text-white backdrop-blur transition-colors hover:bg-black/75"
-              >
-                <ImagePlus className="size-3.5" /> Change photo
-              </button>
-            )}
-          </div>
-        )}
-        <div className="flex flex-col gap-5 p-5 md:flex-row md:items-start md:justify-between md:p-7">
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="font-serif text-3xl text-foreground md:text-4xl">{plan.name}</h1>
-              <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{PLAN_STATUS_LABEL[plan.status]}</span>
+        {/* With a photo: details on the left, the photo on the right (16:9, filled, so only a little is cut off). */}
+        <div className={cn("gap-6 p-5 md:p-7", plan.coverImageUrl ? "grid md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:gap-8" : "flex flex-col")}>
+          {/* Spread over the photo's height: who/what/when at the top, Edit and Share at the bottom. */}
+          <div className={cn("flex min-w-0 flex-col gap-5", plan.coverImageUrl && "md:justify-between")}>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className={cn("rounded-sm px-3 py-1 text-xs", STATUS_STYLE[plan.status])}>{PLAN_STATUS_LABEL[plan.status]}</span>
+                {countdown && (
+                  <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="size-3.5 text-primary" /> {countdown}
+                  </span>
+                )}
+              </div>
+              <h1 className="font-serif text-3xl leading-tight text-foreground md:text-4xl">{plan.name}</h1>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <MetaChip icon={CalendarDays} value={startDate ? planDateLabel : undefined} empty="Add dates" onClick={openEditPlan} />
-              <MetaChip icon={MapPin} value={plan.venue ? (plan.subVenue ? `${plan.venue}, ${plan.subVenue}` : plan.venue) : undefined} empty="Add venue" onClick={openEditPlan} />
-              <MetaChip icon={Users} value={plan.guestCount ? `${plan.guestCount} guests` : undefined} empty="Add guest count" onClick={openEditPlan} />
-              {plan.editable && !plan.coverImageUrl && <MetaChip icon={ImagePlus} empty="Add photo" onClick={openEditPlan} />}
-              <MetaChip icon={LayoutList} value={`${functionsCount} function${functionsCount === 1 ? "" : "s"} · ${itemsCount} item${itemsCount === 1 ? "" : "s"}`} />
+
+            <div className={cn("grid grid-cols-2 gap-2.5", !plan.coverImageUrl && "lg:grid-cols-4")}>
+              <DetailTile icon={CalendarDays} label="Dates" value={startDate ? planDateLabel : undefined} />
+              <DetailTile icon={MapPin} label="Venue" value={plan.venue || undefined} sub={plan.venue ? plan.subVenue : undefined} />
+              <DetailTile icon={Users} label="Guests" value={plan.guestCount ? `${plan.guestCount} guests` : undefined} />
+              <DetailTile
+                icon={LayoutList}
+                label="In this plan"
+                value={`${functionsCount} function${functionsCount === 1 ? "" : "s"}`}
+                sub={`${itemsCount} item${itemsCount === 1 ? "" : "s"}`}
+              />
+            </div>
+
+            {/* The one way to change the event's details (and its photo): the Edit dialog. */}
+            <div className={cn("grid grid-cols-2 gap-2.5", !plan.coverImageUrl && "sm:max-w-sm")}>
+              <Button variant="outline" className="h-11 gap-2 rounded-xl" onClick={openEditPlan} disabled={!plan.editable}>
+                <Pencil className="size-4" /> Edit details
+              </Button>
+              <Link
+                href={`/plans/${plan.id}/share`}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-border text-sm font-medium transition-colors hover:bg-muted"
+              >
+                <Users className="size-4" /> {plan.role === "OWNER" ? "Share" : "People"}
+              </Link>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 rounded-lg" onClick={openEditPlan} disabled={!plan.editable}>
-              <Pencil className="size-4" /> Edit
-            </Button>
-            <Link href={`/plans/${plan.id}/share`} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-sm hover:bg-muted">
-              <Users className="size-4" /> {plan.role === "OWNER" ? "Share" : "People"}
-            </Link>
-          </div>
+          {/* On a phone the photo leads, so the page opens on the picture. */}
+          {plan.coverImageUrl && (
+            <div className="relative aspect-video w-full min-w-0 self-center overflow-hidden rounded-xl border border-border bg-muted max-md:order-first">
+              {/* A plain <img>: the picture is a storage address, which next/image has nothing to optimise. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={plan.coverImageUrl} alt={plan.name} className="size-full object-cover" />
+            </div>
+          )}
         </div>
 
         {/* Progress steps — tells a first-time planner what to do next */}
@@ -1576,11 +1616,13 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="plan-edit-venue">Venue</Label>
-                    <VenueSelect
-                      value={planForm.venueId}
-                      onChange={(venueId, text) => setPlanForm({ ...planForm, venueId, venue: venueId ? text : planForm.venue })}
+                    <VenueField
+                      id="plan-edit-venue"
+                      placeholder="Type a venue, or pick a saved one"
+                      value={planForm.venue}
+                      venueId={planForm.venueId}
+                      onChange={(venue, venueId) => setPlanForm({ ...planForm, venue, venueId })}
                     />
-                    <Input id="plan-edit-venue" placeholder="Taj Palace, Delhi" value={planForm.venue} onChange={(e) => setPlanForm({ ...planForm, venue: e.target.value })} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="plan-edit-sub-venue">Sub-venue</Label>
@@ -1727,7 +1769,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                       setSubEventForm({
                         ...subEventForm,
                         startTime,
-                        endTime: subEventForm.endTime && startTime && subEventForm.endTime <= startTime ? "" : subEventForm.endTime,
+                        endTime: subEventForm.endTime && startTime && !endTimeOk(startTime, subEventForm.endTime) ? "" : subEventForm.endTime,
                       })
                     }
                   />
@@ -1746,16 +1788,12 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
               </div>
               <div className="space-y-2">
                 <Label htmlFor="se-venue">Venue *</Label>
-                <VenueSelect
-                  value={subEventForm.venueId}
-                  noneLabel="Type it below"
-                  onChange={(venueId, text) => setSubEventForm({ ...subEventForm, venueId, venue: venueId ? text : subEventForm.venue })}
-                />
-                <Input
+                <VenueField
                   id="se-venue"
-                  placeholder="Garden Lawn, Taj Palace"
+                  placeholder="Type a venue, or pick a saved one"
                   value={subEventForm.venue}
-                  onChange={(e) => setSubEventForm({ ...subEventForm, venue: e.target.value })}
+                  venueId={subEventForm.venueId}
+                  onChange={(venue, venueId) => setSubEventForm({ ...subEventForm, venue, venueId })}
                 />
               </div>
               <div className="space-y-2">
@@ -1815,24 +1853,29 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   );
 }
 
-function MetaChip({ icon: Icon, value, empty, onClick }: { icon: LucideIcon; value?: string; empty?: string; onClick?: () => void }) {
-  const cls = cn(
-    "flex items-center gap-1.5 rounded-sm border px-3 py-1 text-xs transition-colors",
-    value ? "border-border bg-background text-foreground" : "border-dashed border-border text-muted-foreground",
-    onClick && "hover:border-primary/50 hover:text-primary",
+/** One fact about the event in the hero, shown only: details are changed through the Edit dialog. */
+function DetailTile({ icon: Icon, label, value, sub }: { icon: LucideIcon; label: string; value?: string; sub?: string }) {
+  return (
+    <div className={cn("flex min-w-0 flex-col rounded-xl border px-3.5 py-3", value ? "border-border bg-background/60" : "border-dashed border-border")}>
+      <span className="flex items-center gap-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        <Icon className="size-3.5 text-primary" /> {label}
+      </span>
+      <span className={cn("mt-1 text-sm font-medium wrap-break-word", value ? "text-foreground" : "text-muted-foreground")}>{value ?? "Not set yet"}</span>
+      {sub && <span className="truncate text-xs text-muted-foreground">{sub}</span>}
+    </div>
   );
-  const content = (
-    <>
-      <Icon className="size-3.5 text-primary" /> {value ?? empty}
-    </>
-  );
-  return onClick ? (
-    <button type="button" className={cls} onClick={onClick}>
-      {content}
-    </button>
-  ) : (
-    <span className={cls}>{content}</span>
-  );
+}
+
+/** "21 days to go", "Tomorrow" or "Today" before the event starts; nothing once it has. */
+function daysToGo(isoDate?: string): string | null {
+  if (!isoDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((new Date(`${isoDate.slice(0, 10)}T00:00:00`).getTime() - today.getTime()) / 86_400_000);
+  if (Number.isNaN(days) || days < 0) return null;
+  if (days === 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  return `${days} days to go`;
 }
 
 function PlanSkeleton() {

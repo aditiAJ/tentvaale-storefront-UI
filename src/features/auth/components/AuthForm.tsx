@@ -2,7 +2,7 @@
 
 import { GOOGLE_CLIENT_ID, GoogleButton } from "@/features/auth/components/GoogleButton";
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Eye, EyeOff, ChevronLeft, Loader2 } from "lucide-react";
@@ -20,6 +20,8 @@ import { InlineError } from "@/components/inline-error";
 /** The two kinds of account the form offers; the backend spells them CUSTOMER and EVENT_PLANNER. */
 type AccountType = "Customer" | "EventPlanner";
 
+// The "next" page is read from the address when a form is submitted, not through useSearchParams: that hook
+// forces a Suspense boundary, and the form then pops in after the page instead of being there from the start.
 /** Only ever follow a path on this site, never an address someone put in the link. */
 function safeNext(value: string | null): string {
   return value && value.startsWith("/") && !value.startsWith("//") ? value : "/plans";
@@ -31,7 +33,6 @@ function safeNext(value: string | null): string {
 export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   const router = useRouter();
   const { signup, login, loginWithGoogle } = useSession();
-  const searchParams = useSearchParams();
   const reduce = useReducedMotion();
   const [tab, setTab] = useState<"signup" | "login">(initialTab);
   const [fullName, setFullName] = useState("");
@@ -87,7 +88,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
       } else {
         await login({ email: cleanEmail, password });
       }
-      router.push(safeNext(searchParams.get("next")));
+      router.push(safeNext(new URLSearchParams(window.location.search).get("next")));
     } catch (failure) {
       setError(failure instanceof ApiError ? failure.message : "Something went wrong. Please try again.");
     } finally {
@@ -355,13 +356,12 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         </AnimatePresence>
 
         {tab === "login" && (
-          <button
-            type="button"
+          <Link
+            href="/forgot-password"
             className="self-end text-xs text-muted-foreground transition-colors hover:text-primary"
-            onClick={() => toast.info("Password reset isn't wired up yet.")}
           >
             Forgot password?
-          </button>
+          </Link>
         )}
 
         <Button type="submit" size="lg" disabled={submitting} className="mt-1 h-11 w-full">
@@ -380,7 +380,7 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         <GoogleButton
           onToken={async (idToken) => {
             await loginWithGoogle(idToken);
-            router.push(safeNext(searchParams.get("next")));
+            router.push(safeNext(new URLSearchParams(window.location.search).get("next")));
           }}
         />
       ) : null}

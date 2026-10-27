@@ -9,6 +9,8 @@ import { InlineError } from "@/components/inline-error";
 /** What the server takes: JPEG, PNG or WebP, up to 10 MB. Checked here first so the message is clear. */
 export const COVER_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 export const COVER_MAX_BYTES = 10 * 1024 * 1024;
+/** The plan page shows the photo about 650 px wide; on a sharp (2x) screen a narrower photo is enlarged and goes soft. */
+const COVER_SHARP_WIDTH = 1200;
 
 /**
  * What the customer did to the picture in a form that is not saved yet: chose a new file, or took the
@@ -49,6 +51,7 @@ export function PlanCoverField({
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [smallNote, setSmallNote] = useState<string | null>(null);
   const previewRef = useRef<string | null>(null);
 
   // Preview addresses live as long as the form: let the browser free the file when the form goes.
@@ -73,12 +76,14 @@ export function PlanCoverField({
       return;
     }
     setError(null);
+    setSmallNote(null);
     replacePreview(file);
     onChange({ file, removed: false });
   }
 
   function remove() {
     setError(null);
+    setSmallNote(null);
     replacePreview(null);
     // A photo only picked in this form is simply forgotten; a saved one is removed when they save.
     onChange({ file: null, removed: Boolean(currentUrl) });
@@ -94,9 +99,24 @@ export function PlanCoverField({
 
       {shown ? (
         <div className="relative overflow-hidden rounded-xl border border-border bg-muted">
+          {/* Same shape and fill as on the plan page, so what is seen here is what the plan shows. */}
           {/* A plain <img>: the picture is a local preview or a storage address, which next/image has nothing to optimise. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={shown} alt="Your event" className="aspect-[16/7] w-full object-cover" />
+          <img
+            src={shown}
+            alt="Your event"
+            className="aspect-video w-full object-cover"
+            onLoad={(event) => {
+              // Only a newly chosen photo is judged; the saved one was accepted already.
+              if (!change.file) return;
+              const { naturalWidth: width, naturalHeight: height } = event.currentTarget;
+              setSmallNote(
+                width < COVER_SHARP_WIDTH
+                  ? `This photo is small (${width} × ${height} px) and may look soft on your plan. A photo at least ${COVER_SHARP_WIDTH} px wide looks best.`
+                  : null,
+              );
+            }}
+          />
           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-linear-to-t from-black/70 to-transparent p-2.5 pt-8">
             <span className="text-xs text-white/90">{change.file ? "Saved when you press the button below" : "Your current photo"}</span>
             <span className="flex gap-1.5">
@@ -140,6 +160,8 @@ export function PlanCoverField({
       {error && (
         <InlineError>{error}</InlineError>
       )}
+
+      {!error && smallNote && <p className="text-xs text-amber-600 dark:text-amber-400">{smallNote}</p>}
 
       <input
         ref={input}

@@ -12,6 +12,7 @@ import { GuideButton } from "@/features/help/GuideButton";
 import { cn } from "@/lib/utils";
 import { useMockStore } from "@/mock-data/store";
 import { useSession } from "@/features/auth/session";
+import { useGuardedHref } from "@/features/auth/hooks/useGuardedHref";
 import { NotificationBell } from "@/features/notifications/NotificationBell";
 import { useCategories } from "@/features/catalog/hooks";
 
@@ -99,24 +100,48 @@ function AuthActions({ onNavigate }: { onNavigate?: () => void }) {
       </Link>
       <GuideButton />
       <ThemeToggle />
-      {!currentAccount && status !== "loading" && (
-        <div className="ml-1 flex items-center gap-1.5">
-          <Link
-            href="/login"
-            onClick={onNavigate}
-            className="press rounded-sm border border-border px-3.5 py-2 text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
-          >
-            Log In
-          </Link>
-          <Link
-            href="/signup"
-            onClick={onNavigate}
-            className="press rounded-sm bg-primary px-3.5 py-2 text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
-          >
-            Sign Up
-          </Link>
-        </div>
-      )}
+      {!currentAccount && status !== "loading" && <SignInLinks onNavigate={onNavigate} className="ml-1" />}
+    </div>
+  );
+}
+
+/** Log In / Sign Up, for a visitor who is not signed in. */
+function SignInLinks({ onNavigate, className }: { onNavigate?: () => void; className?: string }) {
+  return (
+    <div className={cn("flex items-center gap-1.5", className)}>
+      <Link
+        href="/login"
+        onClick={onNavigate}
+        className="press flex-1 rounded-sm border border-border px-3.5 py-2 text-center text-sm text-foreground transition-colors duration-200 ease-out-quint hover:border-primary hover:text-primary"
+      >
+        Log In
+      </Link>
+      <Link
+        href="/signup"
+        onClick={onNavigate}
+        className="press flex-1 rounded-sm bg-primary px-3.5 py-2 text-center text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
+      >
+        Sign Up
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * The bottom of the mobile menu: what is not already on the phone's top bar (wishlist, notifications, help) or
+ * bottom tab bar (account), so nothing shows twice.
+ */
+function MobileMenuFooter({ onNavigate }: { onNavigate: () => void }) {
+  const { currentAccount } = useMockStore();
+  const { status } = useSession();
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-3">
+      <div className="flex items-center justify-between rounded-lg px-3">
+        <span className="text-sm text-foreground">Theme</span>
+        <ThemeToggle />
+      </div>
+      {!currentAccount && status !== "loading" && <SignInLinks onNavigate={onNavigate} />}
     </div>
   );
 }
@@ -254,6 +279,7 @@ function CatalogMenu({ active }: { active: boolean }) {
 }
 
 export function SiteHeader() {
+  const guarded = useGuardedHref();
   const pathname = usePathname();
   const scrolled = useScrolled();
   const reduce = useReducedMotion();
@@ -291,7 +317,7 @@ export function SiteHeader() {
                 {c.href === "/catalog" ? (
                   <CatalogMenu active={isActive(c.href)} />
                 ) : (
-                  <NavItem href={c.href} label={c.label} active={isActive(c.href)} />
+                  <NavItem href={guarded(c.href)} label={c.label} active={isActive(c.href)} />
                 )}
               </li>
             ))}
@@ -336,17 +362,11 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center" aria-label="Tentvaale home">
           <SiteWordmark className="text-sm" />
         </Link>
-        <div className="flex items-center gap-0.5">
+        {/* Account is on the bottom tab bar and the theme in the menu, so each shows once on a phone. */}
+        <div className="-mr-2 flex items-center gap-0.5">
           <MobileWishlistLink />
-          <Link
-            href="/account"
-            className="press flex size-10 items-center justify-center rounded-sm text-foreground transition-colors hover:bg-secondary"
-            aria-label="Account"
-          >
-            <User className="size-5" />
-          </Link>
+          <NotificationBell />
           <GuideButton />
-          <ThemeToggle />
         </div>
       </div>
 
@@ -389,7 +409,7 @@ export function SiteHeader() {
                     }}
                   >
                     <Link
-                      href={c.href}
+                      href={guarded(c.href)}
                       className={cn(
                         "block rounded-lg px-3 py-2.5 text-sm transition-colors duration-200 ease-out-quint",
                         isActive(c.href) ? "bg-primary/10 font-medium text-primary" : "text-foreground hover:bg-secondary"
@@ -401,9 +421,7 @@ export function SiteHeader() {
                   </motion.li>
                 ))}
               </motion.ul>
-              <div className="border-t border-border pt-3">
-                <AuthActions onNavigate={() => setMobileMenuOpen(false)} />
-              </div>
+              <MobileMenuFooter onNavigate={() => setMobileMenuOpen(false)} />
             </div>
           </motion.div>
         )}

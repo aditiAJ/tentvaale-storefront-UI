@@ -21,13 +21,16 @@ export function AddVenueDialog({
   open,
   onClose,
   onSaved,
+  initialLabel = "",
 }: {
   open: boolean;
   onClose: () => void;
   onSaved: (venue: Venue) => void;
+  /** What the customer already typed, so they do not type the venue's name twice. Read when the dialog is mounted. */
+  initialLabel?: string;
 }) {
   const queryClient = useQueryClient();
-  const [label, setLabel] = useState("");
+  const [label, setLabel] = useState(initialLabel);
   const [address, setAddress] = useState("");
   const [notes, setNotes] = useState("");
   const [point, setPoint] = useState<{ lat: number; lng: number } | null>(null);

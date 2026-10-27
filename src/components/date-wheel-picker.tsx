@@ -50,19 +50,46 @@ export function Wheels({ children }: { children: ReactNode }) {
 
 // One scroll-snapping column. Scroll, drag or click a row; the row that
 // settles in the middle band is the selection.
-export function WheelColumn({ items, selected, onSelect, label }: { items: WheelItem[]; selected: number; onSelect: (v: number) => void; label: string }) {
+/** With `loop` the rows repeat this many times so the wheel can be spun past either end; it is re-centred after each settle. */
+const LOOP_COPIES = 5;
+
+export function WheelColumn({
+  items,
+  selected,
+  onSelect,
+  label,
+  loop = false,
+}: {
+  items: WheelItem[];
+  selected: number;
+  onSelect: (v: number) => void;
+  label: string;
+  /** Endless wheel: after the last row comes the first again (hours 11 -> 12 -> 1). */
+  loop?: boolean;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const settle = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const firstPaint = useRef(true);
+  const n = items.length;
   const index = Math.max(0, items.findIndex((i) => i.value === selected));
+  const copies = loop ? LOOP_COPIES : 1;
+  const middle = Math.floor(copies / 2);
+  // The row showing the selected item that is closest to where the wheel is now (a loop has several).
+  const nearest = (from: number) => {
+    if (!loop) return index;
+    const copy = Math.min(copies - 1, Math.max(0, Math.round((from - index) / n)));
+    return copy * n + index;
+  };
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const top = index * ITEM_H;
+    const row = firstPaint.current && loop ? middle * n + index : nearest(el.scrollTop / ITEM_H);
+    const top = row * ITEM_H;
     if (Math.abs(el.scrollTop - top) > 1) el.scrollTo({ top, behavior: firstPaint.current ? "auto" : "smooth" });
     firstPaint.current = false;
-  }, [index, items.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `nearest` is derived from index, n and loop, which are listed
+  }, [index, n, loop]);
 
   useEffect(() => () => clearTimeout(settle.current), []);
 
@@ -71,12 +98,23 @@ export function WheelColumn({ items, selected, onSelect, label }: { items: Wheel
     settle.current = setTimeout(() => {
       const el = ref.current;
       if (!el) return;
-      const i = Math.min(items.length - 1, Math.max(0, Math.round(el.scrollTop / ITEM_H)));
-      const item = items[i];
-      if (item.disabled) el.scrollTo({ top: index * ITEM_H, behavior: "smooth" });
-      else if (item.value !== selected) onSelect(item.value);
+      const row = Math.min(n * copies - 1, Math.max(0, Math.round(el.scrollTop / ITEM_H)));
+      const item = items[row % n];
+      if (item.disabled) {
+        el.scrollTo({ top: nearest(row) * ITEM_H, behavior: "smooth" });
+        return;
+      }
+      if (item.value !== selected) onSelect(item.value);
+      // Jump back to the middle copy (same picture, nothing moves) so there is always room to keep spinning.
+      if (loop && Math.floor(row / n) !== middle) el.scrollTo({ top: (middle * n + (row % n)) * ITEM_H, behavior: "auto" });
     }, 110);
   }
+
+  // How far a row is from the selected one, going the short way round a loop.
+  const distance = (i: number) => {
+    const d = Math.abs(i - index);
+    return loop ? Math.min(d, n - d) : d;
+  };
 
   return (
     <div className="relative flex-1">
@@ -90,31 +128,39 @@ export function WheelColumn({ items, selected, onSelect, label }: { items: Wheel
           if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
           e.preventDefault();
           const dir = e.key === "ArrowDown" ? 1 : -1;
-          for (let i = index + dir; i >= 0 && i < items.length; i += dir) {
-            if (!items[i].disabled) return onSelect(items[i].value);
+          for (let step = 1; step < n; step++) {
+            const i = index + dir * step;
+            if (!loop && (i < 0 || i >= n)) return;
+            const item = items[((i % n) + n) % n];
+            if (!item.disabled) return onSelect(item.value);
           }
         }}
         className="relative z-10 snap-y snap-mandatory overflow-y-auto overscroll-contain outline-none [scrollbar-width:none] focus-visible:ring-2 focus-visible:ring-primary/40 [&::-webkit-scrollbar]:hidden"
         style={{ height: ITEM_H * VISIBLE, paddingBlock: ITEM_H * Math.floor(VISIBLE / 2) }}
       >
-        {items.map((item, i) => (
-          <button
-            key={item.value}
-            type="button"
-            role="option"
-            aria-selected={i === index}
-            disabled={item.disabled}
-            onClick={() => onSelect(item.value)}
-            className={cn(
-              "flex w-full snap-center items-center justify-center text-sm tabular-nums transition-colors",
-              i === index ? "font-semibold text-primary" : Math.abs(i - index) === 1 ? "text-foreground/80" : "text-muted-foreground/60",
-              item.disabled && "cursor-not-allowed line-through opacity-30",
-            )}
-            style={{ height: ITEM_H }}
-          >
-            {item.label}
-          </button>
-        ))}
+        {Array.from({ length: n * copies }, (_, row) => {
+          const i = row % n;
+          const item = items[i];
+          const near = distance(i);
+          return (
+            <button
+              key={row}
+              type="button"
+              role="option"
+              aria-selected={i === index}
+              disabled={item.disabled}
+              onClick={() => onSelect(item.value)}
+              className={cn(
+                "flex w-full snap-center items-center justify-center text-sm tabular-nums transition-colors",
+                i === index ? "font-semibold text-primary" : near === 1 ? "text-foreground/80" : "text-muted-foreground/60",
+                item.disabled && "cursor-not-allowed line-through opacity-30",
+              )}
+              style={{ height: ITEM_H }}
+            >
+              {item.label}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
