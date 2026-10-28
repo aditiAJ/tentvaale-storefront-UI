@@ -18,7 +18,8 @@ export type QuotationStage =
   | "CLOSED";
 
 export interface QuotationLine {
-  productId: number;
+  /** Left out for a one-time line the shop quoted by name and rate, which is not a catalogue product. */
+  productId?: number | null;
   variantId?: number | null;
   productName: string;
   quantity: number;
