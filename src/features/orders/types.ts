@@ -29,7 +29,8 @@ export interface OrderSummary {
 }
 
 export interface OrderLine {
-  productId: number;
+  /** Left out for a one-time line, which is not a catalogue product. */
+  productId?: number | null;
   variantId?: number | null;
   productName: string;
   quantity: number;

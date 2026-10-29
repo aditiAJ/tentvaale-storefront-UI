@@ -36,11 +36,11 @@ const interBrand = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "Tentvaale | Best Luxury Event Decor Rentals in Vadodara",
+    default: "Tentvaale | Best Luxury Event Decor Rentals",
     template: "%s | Tentvaale",
   },
   description:
-    "Tentvaale is Vadodara's best-known name in luxury event decor — rent furniture, antique props and styled collections across every category, for events large and small. Plan your experience, build your inventory, and get a quotation online.",
+    "Tentvaale is best-known name in luxury event decor — rent furniture, antique props and styled collections across every category, for events large and small. Plan your experience, build your inventory, and get a quotation online.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
