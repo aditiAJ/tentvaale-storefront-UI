@@ -6,6 +6,8 @@ import { loadImageData, loadMarkData, loadQrCodes } from "./pdfAssets";
 
 const amount = (money: { amount: number | string } | null | undefined) => Number(money?.amount ?? 0);
 
+const RATE_FROM_WIRE = { QTY: "Qty", RFT: "RFt", SQFT: "SqFt" } as const;
+
 /** "Round Table (Red)" is the product "Round Table" in the variant "Red". */
 function splitName(name: string): [string, string | null] {
   const match = /^(.*) \((.+)\)$/.exec(name);
@@ -29,7 +31,7 @@ function statusOf(stage: QuotationStage): { status: string; note: string } {
 
 /**
  * Everything the quotation document prints, from the quotation the customer was sent: the lines grouped by function
- * and category, the totals as the backend worked them out (nothing is calculated here), and the logo, signature,
+ * and category, the totals as the backend worked them out (nothing is calculated here), and the logo,
  * pictures and QR codes loaded as data. Anything that cannot be loaded is simply left out.
  */
 export async function buildQuotationDoc(
@@ -52,6 +54,7 @@ export async function buildQuotationDoc(
       name,
       variant,
       quantity: line.quantity,
+      rateType: line.rateType ? RATE_FROM_WIRE[line.rateType] : null,
       days: line.rentalDays,
       rate: amount(line.unitRatePerDay),
       amount: amount(line.lineTotal),
@@ -62,9 +65,8 @@ export async function buildQuotationDoc(
 
   const company = q.company;
   const urls = [...new Set(q.lines.map((l) => l.imageUrl).filter((u): u is string => Boolean(u)))];
-  const [logo, signature, pictures] = await Promise.all([
+  const [logo, pictures] = await Promise.all([
     loadMarkData(company?.logoUrl),
-    loadMarkData(company?.signatureUrl),
     Promise.all(urls.map(async (url) => [url, await loadImageData(url)] as const)),
   ]);
   const images: Record<string, string> = {};
@@ -139,7 +141,6 @@ export async function buildQuotationDoc(
       bankIfsc: company?.bankIfsc ?? null,
       upiId: company?.upiId ?? null,
       logo,
-      signature,
     },
     images,
     picturesMissing: urls.length - Object.keys(images).length,

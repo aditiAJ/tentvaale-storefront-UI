@@ -112,7 +112,7 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
 
       {current && pdf && pdf.missing > 0 ? (
         <p className="rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          {pdf.missing} product picture{pdf.missing === 1 ? "" : "s"} could not be loaded and show as plain tiles.
+          {pdf.missing} product picture{pdf.missing === 1 ? "" : "s"} could not be loaded, so {pdf.missing === 1 ? "its item shows" : "their items show"} without a picture.
         </p>
       ) : null}
 

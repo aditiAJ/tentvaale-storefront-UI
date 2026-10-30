@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, ChevronRight, Heart, Play } from "lucide-react";
 import { Reveal, SPRING } from "@/components/motion";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -150,6 +151,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
 
   return (
     <div className="mx-auto w-full max-w-6xl py-6 md:py-8 page-x">
+      <BackButton fallback={`/catalog?category=${encodeURIComponent(product.categorySlug)}`} className="mb-3" />
       <nav className="mb-4 flex items-center gap-1.5 text-xs text-muted-foreground md:mb-6" aria-label="Breadcrumb">
         <Link href="/" className="transition-colors hover:text-primary">
           Home

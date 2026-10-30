@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapPin, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { FloatingList, useAnchoredPosition } from "@/components/floating-list";
 import { cn } from "@/lib/utils";
 import { listVenues, venueKeys } from "@/features/venues/api";
 import { AddVenueDialog } from "@/features/venues/components/AddVenueDialog";
@@ -14,6 +15,9 @@ const MAX_SUGGESTIONS = 6;
  * One field for a venue. Typing narrows the customer's saved venues into suggestions; choosing one fills
  * the field and links the saved venue. Typing something else is just free text (no saved venue linked).
  * "Add a venue" at the end of the list opens the form, pre-filled with what was typed.
+ *
+ * The suggestions are drawn by {@link FloatingList}, on the page body, so the dialog or scroll area the field sits in
+ * cannot cut them off; they open upwards when there is no room below.
  */
 export function VenueField({
   id,
@@ -34,6 +38,8 @@ export function VenueField({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [adding, setAdding] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const place = useAnchoredPosition(box, open, { maxHeight: 240 });
 
   const typed = value.trim().toLowerCase();
   // Once a saved venue is chosen its text is in the field, so show every venue rather than only that one.
@@ -53,7 +59,7 @@ export function VenueField({
   }
 
   return (
-    <div className="relative">
+    <div ref={box} className="relative">
       <Input
         id={id}
         value={value}
@@ -85,14 +91,10 @@ export function VenueField({
           }
         }}
       />
-      {open ? (
-        // onMouseDown keeps the input focused, so the click lands before the blur closes the list.
-        <ul
-          id={`${id}-suggestions`}
-          role="listbox"
-          onMouseDown={(e) => e.preventDefault()}
-          className="absolute inset-x-0 top-full z-50 mt-1 max-h-60 overflow-auto rounded-lg border border-border bg-popover p-1 text-popover-foreground shadow-lg"
-        >
+      {place ? (
+        // The frame keeps the input focused on mouse down, so the click lands before the blur closes the list.
+        <FloatingList place={place}>
+        <ul id={`${id}-suggestions`} role="listbox" className="min-h-0 flex-1 overflow-y-auto p-1">
           {matches.map((venue, index) => (
             <li
               key={venue.id}
@@ -120,6 +122,7 @@ export function VenueField({
             {value.trim() && !venueId ? `Add “${value.trim()}” as a new venue` : "Add a venue"}
           </li>
         </ul>
+        </FloatingList>
       ) : null}
       {adding ? (
         <AddVenueDialog
