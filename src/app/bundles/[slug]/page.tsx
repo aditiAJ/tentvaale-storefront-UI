@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { motion, useReducedMotion } from "framer-motion";
 import { CalendarDays, Check, ChevronRight } from "lucide-react";
 import { Reveal, Stagger, StaggerItem, SPRING } from "@/components/motion";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -179,6 +180,7 @@ function BundleView({ bundle, others }: { bundle: BundleDetail; others: { id: nu
 
   return (
     <div className="mx-auto w-full max-w-6xl py-6 pb-40 md:py-8 md:pb-8 page-x">
+      <BackButton fallback="/bundles" className="mb-3" />
       <nav className="mb-6 flex items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
         <Link href="/" className="transition-colors hover:text-primary">
           Home

@@ -22,6 +22,8 @@ export interface QuotationLine {
   productId?: number | null;
   variantId?: number | null;
   productName: string;
+  /** What `quantity` counts: pieces, running feet or square feet. Absent from a backend older than this field, read as pieces. */
+  rateType?: "QTY" | "RFT" | "SQFT" | null;
   quantity: number;
   rentalDays: number;
   unitRatePerDay: Money;

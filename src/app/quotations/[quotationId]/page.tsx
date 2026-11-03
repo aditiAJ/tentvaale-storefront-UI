@@ -287,6 +287,9 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
   );
 }
 
+/** What a line charged by length or area counts, and what its rate is per. A line charged per piece needs neither. */
+const COUNTED_IN = { RFT: { quantity: "running ft", rate: "/ ft" }, SQFT: { quantity: "sq ft", rate: "/ sq ft" } } as const;
+
 function LineTable({ lines }: { lines: QuotationLine[] }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-e1">
@@ -297,7 +300,9 @@ function LineTable({ lines }: { lines: QuotationLine[] }) {
         <span className="text-right">Per day</span>
         <span className="text-right">Amount</span>
       </div>
-      {lines.map((line, index) => (
+      {lines.map((line, index) => {
+        const counted = line.rateType && line.rateType !== "QTY" ? COUNTED_IN[line.rateType] : null;
+        return (
         <div
           key={`${line.productId}-${line.variantId ?? 0}-${index}`}
           className="flex flex-col gap-1 border-b border-border px-5 py-4 text-sm last:border-b-0 md:grid md:grid-cols-[2.4fr_0.8fr_0.8fr_1fr_1fr] md:items-center md:gap-4"
@@ -306,15 +311,19 @@ function LineTable({ lines }: { lines: QuotationLine[] }) {
           <span className="text-muted-foreground tabular-nums md:text-right">
             <span className="md:hidden">Qty </span>
             {line.quantity}
+            {counted ? ` ${counted.quantity}` : null}
           </span>
           <span className="text-muted-foreground tabular-nums md:text-right">
             <span className="md:hidden">Days </span>
             {line.rentalDays}
           </span>
-          <span className="text-muted-foreground tabular-nums md:text-right">{formatMoney(line.unitRatePerDay)}</span>
+          <span className="text-muted-foreground tabular-nums md:text-right">{formatMoney(line.unitRatePerDay)}
+            {counted ? ` ${counted.rate}` : null}
+          </span>
           <span className="text-foreground tabular-nums md:text-right">{formatMoney(line.lineTotal)}</span>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
