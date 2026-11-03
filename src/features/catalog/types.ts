@@ -5,8 +5,8 @@ import type { Money } from "@/lib/money";
  *
  * Vendor-blind by construction on the server: there is no supplier field here, and stock is one
  * aggregate "max you can order" number (owned plus supplier stock), not a live availability count.
- * Prices are already resolved for the caller: a verified event planner signed in gets their trade
- * rate; everyone else gets the standard rate.
+ * Prices are already resolved for the caller: an event planner signed in gets retail less their discount
+ * (20% unless staff set another); everyone else gets the standard rate.
  *
  * Ids are numbers on the wire, but pages route by `slug`; ids are used only when something has to
  * refer back to a product (a plan item, say).

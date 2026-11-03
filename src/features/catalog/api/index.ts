@@ -15,7 +15,7 @@ import type {
 
 /**
  * Catalogue reads. Open to anyone; a signed-in customer's token only changes which prices come back
- * (a verified event planner's trade rate). Which company is shown is the backend's configured
+ * (an event planner's discounted rate). Which company is shown is the backend's configured
  * default, so no call names one.
  */
 const BASE = "storefront/catalog";

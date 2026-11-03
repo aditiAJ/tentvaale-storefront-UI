@@ -19,7 +19,7 @@ import type { ProductQuery } from "./types";
 
 /**
  * Catalogue reads as TanStack queries. The catalogue is public, but the prices in it depend on who
- * is looking (a verified planner's trade rate), so every query is keyed by the viewer and waits
+ * is looking (an event planner's discounted rate), so every query is keyed by the viewer and waits
  * until the session answer is in: otherwise a signed-in planner would flash standard prices first.
  */
 const FIVE_MINUTES = 5 * 60_000;
