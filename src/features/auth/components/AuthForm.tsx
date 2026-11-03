@@ -11,6 +11,8 @@ import { DUR, EASE, SPRING } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StateSelect } from "@/components/ui/state-select";
+import { isStateName } from "@/lib/indian-states";
 import { cn } from "@/lib/utils";
 import { SiteWordmark } from "@/components/site-logo";
 import { ApiError } from "@/services/api-client";
@@ -63,8 +65,8 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         setError("Please enter your city.");
         return;
       }
-      if (!state.trim()) {
-        setError("Please choose or enter your state.");
+      if (!isStateName(state.trim())) {
+        setError("Please select your state from the list.");
         return;
       }
       if (password.length < 8) {
@@ -231,54 +233,8 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
                 <Label htmlFor="auth-state" className="text-xs text-muted-foreground">
                   State <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="auth-state"
-                  type="text"
-                  list="indian-states"
-                  autoComplete="address-level1"
-                  placeholder="e.g. Gujarat"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  className="h-11 bg-card"
-                  required
-                />
-                <datalist id="indian-states">
-                  {[
-                    "Andhra Pradesh",
-                    "Arunachal Pradesh",
-                    "Assam",
-                    "Bihar",
-                    "Chhattisgarh",
-                    "Goa",
-                    "Gujarat",
-                    "Haryana",
-                    "Himachal Pradesh",
-                    "Jharkhand",
-                    "Karnataka",
-                    "Kerala",
-                    "Madhya Pradesh",
-                    "Maharashtra",
-                    "Manipur",
-                    "Meghalaya",
-                    "Mizoram",
-                    "Nagaland",
-                    "Odisha",
-                    "Punjab",
-                    "Rajasthan",
-                    "Sikkim",
-                    "Tamil Nadu",
-                    "Telangana",
-                    "Tripura",
-                    "Uttar Pradesh",
-                    "Uttarakhand",
-                    "West Bengal",
-                    "Delhi",
-                    "Jammu and Kashmir",
-                    "Ladakh",
-                  ].map((s) => (
-                    <option key={s} value={s} />
-                  ))}
-                </datalist>
+                <StateSelect id="auth-state" name="state" value={state} onChange={setState} />
+                {/* The list of states lives in one place (lib/indian-states.ts); nothing here defines one. */}
               </div>
             </div>
           </>

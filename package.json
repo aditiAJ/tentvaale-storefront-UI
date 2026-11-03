@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "rimraf .next && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test src/lib/indian-states.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

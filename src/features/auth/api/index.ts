@@ -34,7 +34,7 @@ export function getCurrentAccount(signal?: AbortSignal): Promise<StorefrontAccou
   return apiFetch<StorefrontAccount>("storefront/account", { signal });
 }
 
-/** Name and phone only; the email and account type cannot be changed here. */
+/** Name, phone and state; the email and account type cannot be changed here. */
 export function updateAccount(payload: UpdateProfilePayload): Promise<StorefrontAccount> {
   return apiFetch<StorefrontAccount>("storefront/account", { method: "PUT", body: payload });
 }

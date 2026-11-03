@@ -20,6 +20,8 @@ import { statusCopy, useOrders } from "@/features/orders";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
 import { InlineError } from "@/components/inline-error";
+import { StateSelect, initialState } from "@/components/ui/state-select";
+import { isStateName } from "@/lib/indian-states";
 
 // Flowstep screen 40 (desktop) — mobile 41 not fetched; stacks naturally.
 const NAV_SECTIONS = [
@@ -89,10 +91,11 @@ export default function AccountPage() {
   const router = useRouter();
   const { addresses, addAddress, removeAddress } = useMockStore();
   const ordersQuery = useOrders();
-  const { logout, updateProfile } = useSession();
+  const { logout, updateProfile, account: savedAccount } = useSession();
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileName, setProfileName] = useState("");
   const [profilePhone, setProfilePhone] = useState("");
+  const [profileState, setProfileState] = useState("");
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
 
@@ -169,6 +172,7 @@ export default function AccountPage() {
               onClick={() => {
                 setProfileName(account.name);
                 setProfilePhone(account.phone);
+                setProfileState(initialState(savedAccount?.state));
                 setProfileError(null);
                 setProfileOpen(true);
               }}
@@ -321,10 +325,15 @@ export default function AccountPage() {
                   setProfileError("Please enter your name.");
                   return;
                 }
+                // A state is optional here (it may not have been set), but one that is there must be a real one.
+                if (profileState.trim() && !isStateName(profileState.trim())) {
+                  setProfileError("Please select your state from the list.");
+                  return;
+                }
                 setProfileSaving(true);
                 setProfileError(null);
                 try {
-                  await updateProfile({ fullName: profileName.trim(), phone: profilePhone.trim() });
+                  await updateProfile({ fullName: profileName.trim(), phone: profilePhone.trim(), state: profileState.trim() || undefined });
                   toast.success("Profile updated");
                   setProfileOpen(false);
                 } catch (error) {
@@ -344,6 +353,11 @@ export default function AccountPage() {
               <div className="space-y-2">
                 <Label htmlFor="profile-phone">Phone (optional)</Label>
                 <Input id="profile-phone" inputMode="tel" value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="profile-state">State</Label>
+                <StateSelect id="profile-state" value={profileState} onChange={setProfileState} />
+                <p className="text-xs text-muted-foreground">It decides the GST on your quotations.</p>
               </div>
               <p className="text-xs text-muted-foreground">Your email is {account.email} and cannot be changed here.</p>
               <DialogFooter>
