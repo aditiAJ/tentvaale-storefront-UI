@@ -1,5 +1,6 @@
 "use client";
 
+import { FadeImg } from "@/components/fade-img";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, MapPin, Plus, Users } from "lucide-react";
@@ -32,10 +33,8 @@ function PlanCard({ plan }: { plan: PlanSummary }) {
     <Link href={`/plans/${plan.id}`} className="group flex h-full">
       <Card interactive className="w-full gap-4 overflow-hidden border-border bg-card p-0">
         {plan.coverImageUrl && (
-          <div className="h-36 w-full overflow-hidden bg-muted">
-            {/* A plain <img>: the picture is a storage address, which next/image has nothing to optimise. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={plan.coverImageUrl} alt="" className="size-full object-cover object-[center_30%] transition-transform duration-500 ease-out-quint group-hover:scale-[1.04]" />
+          <div className="relative h-36 w-full overflow-hidden bg-muted">
+            <FadeImg src={plan.coverImageUrl} alt="" className="size-full object-cover object-[center_30%] transition-transform duration-500 ease-out-quint group-hover:scale-[1.04]" />
           </div>
         )}
         <CardContent className="flex flex-col gap-4 p-5">

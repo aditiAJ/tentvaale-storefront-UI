@@ -53,6 +53,7 @@ export async function buildQuotationDoc(
     group.lines.push({
       name,
       variant,
+      remark: line.remark ?? null,
       quantity: line.quantity,
       rateType: line.rateType ? RATE_FROM_WIRE[line.rateType] : null,
       days: line.rentalDays,

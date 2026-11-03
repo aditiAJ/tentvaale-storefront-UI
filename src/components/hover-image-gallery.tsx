@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FadeImg } from "@/components/fade-img";
 import type { MediaVariant } from "@/features/catalog/types";
 
 /** A plain URL (no variants — most callers today) or one with WebP size tiers for a real srcset. */
@@ -39,8 +40,7 @@ function GalleryImage({
   }
   const sorted = variants?.length ? [...variants].sort((a, b) => a.size - b.size) : undefined;
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <FadeImg
       src={sorted?.[0]?.url ?? url}
       srcSet={sorted?.map((v) => `${v.url} ${v.size}w`).join(", ")}
       sizes={sorted ? sizes : undefined}

@@ -79,6 +79,7 @@ export default function DocumentPage({ params }: { params: Promise<{ orderId: st
               <div key={i} className="flex justify-between gap-3 border-b border-border py-2">
                 <span>
                   {l.description} <span className="text-muted-foreground">× {l.quantity}, {l.days} day{l.days === 1 ? "" : "s"}</span>
+                  {l.remark ? <span className="block text-xs italic text-muted-foreground">{l.remark}</span> : null}
                 </span>
                 <span className="tabular-nums">{inr(l.amount)}</span>
               </div>

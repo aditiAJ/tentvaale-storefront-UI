@@ -241,7 +241,10 @@ function Items({ order }: { order: Order }) {
             key={`${line.productId}-${line.variantId ?? 0}-${index}`}
             className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-5 py-4 text-sm last:border-b-0"
           >
-            <span className="text-foreground">{line.productName}</span>
+            <span className="text-foreground">
+              {line.productName}
+              {line.remark ? <span className="block text-xs italic text-muted-foreground">{line.remark}</span> : null}
+            </span>
             <span className="text-muted-foreground">
               {line.quantity} × {line.rentalDays} day{line.rentalDays === 1 ? "" : "s"}
             </span>

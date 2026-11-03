@@ -307,7 +307,10 @@ function LineTable({ lines }: { lines: QuotationLine[] }) {
           key={`${line.productId}-${line.variantId ?? 0}-${index}`}
           className="flex flex-col gap-1 border-b border-border px-5 py-4 text-sm last:border-b-0 md:grid md:grid-cols-[2.4fr_0.8fr_0.8fr_1fr_1fr] md:items-center md:gap-4"
         >
-          <span className="text-foreground">{line.productName}</span>
+          <span className="text-foreground">
+            {line.productName}
+            {line.remark ? <span className="block text-xs italic text-muted-foreground">{line.remark}</span> : null}
+          </span>
           <span className="text-muted-foreground tabular-nums md:text-right">
             <span className="md:hidden">Qty </span>
             {line.quantity}

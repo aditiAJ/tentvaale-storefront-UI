@@ -39,6 +39,8 @@ export interface QuotationLine {
   /** HH:mm */
   functionStartTime?: string | null;
   functionVenue?: string | null;
+  /** What the line is for, as the vendor wrote it. */
+  remark?: string | null;
 }
 
 /** One discount line per bundle: its percentage off what its items add up to. */

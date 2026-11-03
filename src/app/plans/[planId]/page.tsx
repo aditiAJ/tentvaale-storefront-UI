@@ -1,5 +1,6 @@
 "use client";
 
+import { FadeImg } from "@/components/fade-img";
 import { VenueField } from "@/features/venues";
 import { use, useMemo, useState } from "react";
 import Link from "next/link";
@@ -1207,9 +1208,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
           {/* On a phone the photo leads, so the page opens on the picture. */}
           {plan.coverImageUrl && (
             <div className="relative aspect-video w-full min-w-0 self-center overflow-hidden rounded-xl border border-border bg-muted max-md:order-first">
-              {/* A plain <img>: the picture is a storage address, which next/image has nothing to optimise. */}
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={plan.coverImageUrl} alt={plan.name} className="size-full object-cover" />
+              <FadeImg src={plan.coverImageUrl} alt={plan.name} className="size-full object-cover" />
             </div>
           )}
         </div>
