@@ -4,6 +4,7 @@ import { use } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Circle, XCircle } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -69,6 +70,7 @@ function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean })
   const copy = statusCopy(order);
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 page-x">
+      <BackButton fallback="/orders" className="-mb-4" />
       {justPlaced && (
         <div className="flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5">
           <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />

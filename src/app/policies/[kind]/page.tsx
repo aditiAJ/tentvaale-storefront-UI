@@ -4,6 +4,7 @@ import { use } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/services/api-client";
+import { BackButton } from "@/components/back-button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const KINDS = ["cancellation", "damage", "delivery", "terms"] as const;
@@ -32,8 +33,15 @@ export default function PolicyPage({ params }: { params: Promise<{ kind: string 
     enabled: known,
   });
 
+  // A policy is opened from a quotation, sign-up or the footer, so there is no one parent page: home when nothing is behind it.
+  const back = <BackButton fallback="/" />;
   if (!known) {
-    return <div className="mx-auto w-full max-w-3xl py-20 text-center page-x">Policy not found.</div>;
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 py-10 page-x">
+        {back}
+        <p className="py-10 text-center">Policy not found.</p>
+      </div>
+    );
   }
   if (query.isPending) {
     return (
@@ -44,11 +52,17 @@ export default function PolicyPage({ params }: { params: Promise<{ kind: string 
     );
   }
   if (query.isError) {
-    return <div className="mx-auto w-full max-w-3xl py-20 text-center page-x">We couldn&apos;t load this policy. Please try again.</div>;
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 py-10 page-x">
+        {back}
+        <p className="py-10 text-center">We couldn&apos;t load this policy. Please try again.</p>
+      </div>
+    );
   }
   const policy = query.data;
   return (
     <article className="mx-auto flex w-full max-w-3xl flex-col gap-4 py-10 page-x">
+      {back}
       <h1 className="font-serif text-3xl text-foreground md:text-4xl">{policy.title}</h1>
       {policy.version > 0 && (
         <p className="text-xs text-muted-foreground">

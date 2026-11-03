@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireAccount } from "@/features/auth";
@@ -39,9 +40,7 @@ export default function DocumentPage({ params }: { params: Promise<{ orderId: st
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 py-8 page-x">
       <div className="flex items-center justify-between gap-3 print:hidden">
-        <Link className="text-sm text-primary hover:underline" href={`/orders/${orderId}`}>
-          Back to order {d.orderNumber}
-        </Link>
+        <BackButton fallback={`/orders/${orderId}`} />
         <Button onClick={() => window.print()}>Print</Button>
       </div>
       <article className="flex flex-col gap-6 rounded-2xl border border-border bg-card p-8 text-sm print:border-0 print:p-0">

@@ -178,3 +178,18 @@ export const STAGE_COPY: Record<
   },
   CLOSED: { label: "Closed", tone: "destructive", text: "This request was closed. Your plan is open again." },
 };
+
+/** What is shown for a stage this page does not know (a newer backend, or a damaged response): nothing to act on. */
+const UNKNOWN_STAGE_COPY = {
+  label: "Status unavailable",
+  tone: "default",
+  text: "We couldn't read where this quotation stands just now. Please refresh the page, or contact us if this keeps happening.",
+} as const;
+
+/**
+ * The words for a stage. Never undefined: an unknown or missing stage gets neutral words instead of breaking the page,
+ * and the page offers no action for it (every action checks for one known stage).
+ */
+export function stageCopy(stage: string | null | undefined): (typeof STAGE_COPY)[QuotationStage] {
+  return stage && Object.hasOwn(STAGE_COPY, stage) ? STAGE_COPY[stage as QuotationStage] : UNKNOWN_STAGE_COPY;
+}
