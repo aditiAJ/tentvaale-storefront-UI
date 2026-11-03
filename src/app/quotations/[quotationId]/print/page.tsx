@@ -1,9 +1,9 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import Link from "next/link";
 import { useTheme } from "next-themes";
-import { ArrowLeft, Download, Loader2, Printer } from "lucide-react";
+import { Download, Loader2, Printer } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { useRequireAccount, useSession } from "@/features/auth";
 import { useQuotation } from "@/features/quotations";
 
@@ -66,8 +66,9 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
   if (query.isPending) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Loading…</div>;
   if (!quotation || !printable) {
     return (
-      <div className="mx-auto w-full max-w-4xl py-10 page-x">
-        {query.isError ? "Quotation not found." : "This quotation has not been sent yet, so there is nothing to print."}
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-10 page-x">
+        <BackButton fallback={query.isError ? "/plans" : `/quotations/${requestId}`} />
+        <p>{query.isError ? "Quotation not found." : "This quotation has not been sent yet, so there is nothing to print."}</p>
       </div>
     );
   }
@@ -77,9 +78,7 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
   return (
     <div className="mx-auto w-full max-w-4xl space-y-4 py-8 page-x">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Link href={`/quotations/${requestId}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-          <ArrowLeft className="size-4" /> Back to quotation
-        </Link>
+        <BackButton fallback={`/quotations/${requestId}`} />
         <div className="flex gap-2">
           <button
             disabled={!current}

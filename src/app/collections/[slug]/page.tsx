@@ -5,6 +5,7 @@ import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
 import { Heart } from "lucide-react";
 import { DUR, EASE, Reveal, Stagger, StaggerItem } from "@/components/motion";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
@@ -69,6 +70,10 @@ export default function CollectionPage({ params }: { params: Promise<{ slug: str
 
   return (
     <div className="w-full pb-8">
+      {/* Above the photo rather than on it: muted text over a picture is not readable. */}
+      <div className="mx-auto max-w-7xl pt-4 pb-3 page-x">
+        <BackButton fallback="/collections" />
+      </div>
       <section className="relative h-96 w-full overflow-hidden bg-muted md:h-120">
         {/* Slow push-in on the hero: the photo settles from 1.12 to 1 over two seconds. A plain <img>
             (via ProductThumb): the photo is entered in the admin and can live on any host. */}

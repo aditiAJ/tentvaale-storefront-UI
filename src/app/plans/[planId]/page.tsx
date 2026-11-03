@@ -5,7 +5,6 @@ import { use, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
   ArrowRight,
   Boxes,
   CalendarDays,
@@ -36,6 +35,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -1156,9 +1156,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
 
   return (
     <div className="mx-auto w-full max-w-7xl pt-6 pb-28 md:pb-12 page-x">
-      <Link href="/plans" className="flex w-fit items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-primary">
-        <ArrowLeft className="size-4" /> All plans
-      </Link>
+      <BackButton fallback="/plans" />
 
       {/* ================= HERO ================= */}
       <section className="mt-3 overflow-hidden rounded-2xl border border-border bg-card">

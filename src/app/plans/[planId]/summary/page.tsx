@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Button } from "@/components/ui/button";
 import { ProductThumb } from "@/components/product-thumb";
 import { useRequireAccount } from "@/features/auth";
@@ -31,7 +31,14 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
 
   if (!account) return null;
   if (query.isPending) return <Skeleton className="mx-auto mt-10 h-64 w-full max-w-4xl" />;
-  if (!plan) return <div className="mx-auto w-full max-w-4xl py-10 page-x">Plan not found.</div>;
+  if (!plan) {
+    return (
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 py-10 page-x">
+        <BackButton fallback="/plans" />
+        <p>Plan not found.</p>
+      </div>
+    );
+  }
 
   const canSubmit = plan.editable;
   const usage = getProductUsage(plan, plan.products);
@@ -40,9 +47,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
 
   return (
     <div className="mx-auto w-full max-w-4xl pt-6 pb-28 page-x">
-      <Link href={`/plans/${planId}`} className="flex w-fit items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-        <ArrowLeft className="size-4" /> Back to {plan.name}
-      </Link>
+      <BackButton fallback={`/plans/${planId}`} />
 
       <div className="mt-4 flex flex-col gap-2 border-b border-border pb-6">
         <h1 className="font-serif text-3xl text-foreground md:text-4xl">Plan Summary</h1>

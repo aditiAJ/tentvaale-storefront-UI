@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Download, TriangleAlert } from "lucide-react";
 import { Reveal } from "@/components/motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useRequireAccount } from "@/features/auth";
 import {
-  STAGE_COPY,
+  stageCopy,
   useQuotation,
   useQuotationActions,
   type CustomerQuotation,
@@ -85,7 +86,7 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
   const [dialog, setDialog] = useState<"changes" | "reject" | null>(null);
   const [text, setText] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
-  const copy = STAGE_COPY[quotation.stage];
+  const copy = stageCopy(quotation.stage);
   const showPrices = quotation.totalAmount !== undefined;
   const canDecide = quotation.stage === "READY";
   // Approved by our team: nothing left to negotiate, the customer only has to place the order.
@@ -136,6 +137,8 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 page-x">
+      {/* There is no list of quotations: one is reached from its plan, so that is where Back goes when nothing is behind it. */}
+      <BackButton fallback={quotation.planId ? `/plans/${quotation.planId}` : "/plans"} className="-mb-4" />
       <Reveal immediate className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
           <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Quotation</span>
