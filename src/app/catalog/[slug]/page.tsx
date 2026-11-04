@@ -115,9 +115,17 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const images = product.media.filter((m) => m.type === "IMAGE");
   // The video is the last item of the gallery: its tile sits after the photos and plays only when pressed.
   const video = product.media.find((m) => m.type === "VIDEO");
-  const showVideo = video !== undefined && activeImage >= images.length;
   // A product with variants is bought as one of them; stock and price belong to the variant.
-  const variant = product.variants.find((v) => v.id === variantId) ?? product.variants[0];
+  // The plain "Standard" is the default until an option is chosen (and again when it is un-chosen), so it is not listed as one.
+  const standard = product.variants.find((v) => v.standard);
+  const options = product.variants.filter((v) => !v.standard);
+  const variant = options.find((v) => v.id === variantId) ?? standard ?? options[0];
+  // A variant with its own picture shows only that picture (Gold shows the gold one, not Standard's or Silver's); one without
+  // keeps the product's photos.
+  const gallery = variant?.imageUrl
+    ? [{ type: "IMAGE", url: variant.imageUrl, altText: `${product.name}, ${variant.name}` }]
+    : images;
+  const showVideo = video !== undefined && activeImage >= gallery.length;
   const rate = variant?.dailyRate ?? product.dailyRate;
   const stock = variant?.maxOrderable ?? product.maxOrderable;
   const needsDimensions = product.rateType !== "QTY";
@@ -179,8 +187,8 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             />
           ) : (
             <HoverImageGallery
-              images={images}
-              alt={images[activeImage]?.altText || product.name}
+              images={gallery}
+              alt={gallery[activeImage]?.altText || product.name}
               index={activeImage}
               onIndexChange={setActiveImage}
               eager
@@ -189,13 +197,13 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               imgClassName="size-full rounded-2xl bg-muted p-6"
             />
           )}
-          {images.length + (video ? 1 : 0) > 1 && (
+          {gallery.length + (video ? 1 : 0) > 1 && (
             <div className="mt-3 flex gap-2.5">
-              {images.map((image, i) => (
+              {gallery.map((image, i) => (
                 <button
                   key={image.url}
                   onClick={() => setActiveImage(i)}
-                  aria-label={`View ${i + 1} of ${images.length}`}
+                  aria-label={`View ${i + 1} of ${gallery.length}`}
                   aria-current={i === activeImage}
                   className={cn(
                     "overflow-hidden rounded-md ring-1 transition-colors duration-200 ease-out-quint",
@@ -207,7 +215,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
               ))}
               {video && (
                 <button
-                  onClick={() => setActiveImage(images.length)}
+                  onClick={() => setActiveImage(gallery.length)}
                   aria-label="Play video"
                   aria-current={showVideo}
                   className={cn(
@@ -274,11 +282,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             </dl>
           )}
 
-          {product.variants.length > 0 && (
+          {options.length > 0 && (
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <Label className="text-sm text-muted-foreground">Option</Label>
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Option">
-                {product.variants.map((v) => {
+                {options.map((v) => {
                   const on = v.id === variant?.id;
                   return (
                     <button
@@ -286,7 +294,12 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
                       role="radio"
                       aria-checked={on}
                       disabled={v.maxOrderable === 0}
-                      onClick={() => setVariantId(v.id)}
+                      onClick={() => {
+                        // Pressing the chosen option again goes back to the default (Standard), where there is one.
+                        setVariantId(on && standard ? undefined : v.id);
+                        // The picture changes with the option, so start on it.
+                        setActiveImage(0);
+                      }}
                       className={cn(
                         "press rounded-md border px-3.5 py-2 text-left text-sm transition-colors duration-200 ease-out-quint disabled:cursor-not-allowed disabled:opacity-40",
                         on ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground/80 hover:border-primary/50",
