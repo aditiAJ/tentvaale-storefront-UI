@@ -68,6 +68,8 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 
 function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean }) {
   const copy = statusCopy(order);
+  // The total the customer agreed includes the refundable deposit; the backend's balance already counts the part not yet received.
+  const heldDeposit = order.securityDeposit?.amount ?? 0;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 page-x">
       <BackButton fallback="/orders" className="-mb-4" />
@@ -107,7 +109,9 @@ function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean })
         <aside className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-e2">
             <h2 className="font-serif text-xl text-foreground">Summary</h2>
-            <Row label="Order total" value={formatMoney(order.totalAmount)} strong />
+            {heldDeposit > 0 && <Row label="Rental and charges" value={formatMoney(order.totalAmount)} />}
+            {heldDeposit > 0 && <Row label="Security deposit (refundable)" value={formatMoney(order.securityDeposit)} />}
+            <Row label="Order total" value={formatMoney({ ...order.totalAmount, amount: order.totalAmount.amount + heldDeposit })} strong />
             <Row label="Balance owed" value={formatMoney(order.balanceOwed)} />
             <p className="text-xs leading-5 text-muted-foreground">
               Balance is the total less any credit we have given you and the payments we have received and confirmed.
@@ -144,10 +148,25 @@ function PaymentsPanel({ orderId }: { orderId: string }) {
         <div key={p.id} className="flex items-baseline justify-between gap-3 text-sm">
           <span className="text-muted-foreground">
             {formatDay(p.paidOn)} · {p.purpose === "DEPOSIT" ? "Deposit" : "Payment"}
+            {p.mode === "RAZORPAY" ? " (paid online)" : ""}
+            {p.receiptNumber && docs.some((d) => d.number === p.receiptNumber) ? (
+              <>
+                {" · "}
+                <Link className="text-primary hover:underline" href={`/orders/${orderId}/documents/${docs.find((d) => d.number === p.receiptNumber)?.id}`}>
+                  Receipt {p.receiptNumber}
+                </Link>
+              </>
+            ) : null}
           </span>
           <span className="text-foreground tabular-nums">{formatMoney(p.amount)}</span>
         </div>
       ))}
+      {payments.length > 0 && (billing.data?.balance.amount ?? 0) > 0 && (
+        <p className="border-t border-border pt-3 text-xs leading-5 text-muted-foreground">
+          The balance of {formatMoney(billing.data?.balance)} is arranged with us. We record each payment you make and send you a
+          receipt.
+        </p>
+      )}
       {schedule.length > 0 && (
         <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
           <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Agreed instalments</span>
