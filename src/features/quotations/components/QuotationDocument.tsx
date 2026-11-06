@@ -720,7 +720,7 @@ export function QuotationDocument({ doc, theme }: { doc: QuotationDoc; theme: Do
                           <View style={{ flex: 1, paddingHorizontal: 6 }}>
                             <Text style={{ fontWeight: 600 }}>{l.name}</Text>
                             {l.variant ? <Text style={[s.muted, { fontSize: 7.5, marginTop: 1 }]}>{l.variant}</Text> : null}
-                            {l.remark ? <Text style={[s.muted, { fontSize: 7.5, marginTop: 1, fontStyle: "italic" }]}>{l.remark}</Text> : null}
+                            {l.remark ? <Text style={[s.muted, { fontSize: 7.5, marginTop: 1 }]}>{l.remark}</Text> : null}
                           </View>
                           <View style={{ width: 52, alignItems: "center" }}>
                             <Text style={s.cellCenter}>{l.quantity}</Text>
