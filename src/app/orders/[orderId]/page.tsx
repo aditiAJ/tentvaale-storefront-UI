@@ -1,9 +1,9 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Circle, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Download, Loader2, XCircle } from "lucide-react";
 import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,10 @@ import {
   useOrderBilling,
   useOrderDocuments,
   type Order,
+  type OrderDocument,
 } from "@/features/orders";
+import { canMakeInvoicePdf, type InvoiceBody } from "@/features/orders/buildInvoiceDoc";
+import { downloadInvoicePdf } from "@/features/orders/downloadInvoicePdf";
 import { formatMoney } from "@/lib/money";
 import { ApiError } from "@/services/api-client";
 
@@ -140,10 +143,25 @@ function PaymentsPanel({ orderId }: { orderId: string }) {
   const payments = billing.data?.payments ?? [];
   const schedule = billing.data?.schedule ?? [];
   const docs = documents.data ?? [];
+  // The order's one invoice is issued by us the moment the order is paid in full; until then there is nothing to download.
+  const invoice = docs.find((d) => d.kind === "TAX_INVOICE");
+  const others = docs.filter((d) => d.id !== invoice?.id);
   if (payments.length === 0 && schedule.length === 0 && docs.length === 0) return null;
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-e2">
       <h2 className="font-serif text-xl text-foreground">Payments</h2>
+      {documents.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          Your invoice could not be loaded just now. Please refresh the page.
+        </p>
+      ) : invoice ? (
+        <InvoiceCard orderId={orderId} invoice={invoice} />
+      ) : documents.isPending ? null : (
+        <p className="rounded-xl border border-dashed border-border p-3 text-sm leading-5 text-muted-foreground">
+          Your invoice will be available here once the order is paid in full, the rental and the refundable security deposit
+          included.
+        </p>
+      )}
       {payments.map((p) => (
         <div key={p.id} className="flex items-baseline justify-between gap-3 text-sm">
           <span className="text-muted-foreground">
@@ -182,16 +200,63 @@ function PaymentsPanel({ orderId }: { orderId: string }) {
           ))}
         </div>
       )}
-      {docs.length > 0 && (
+      {others.length > 0 && (
         <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
           <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Invoices and receipts</span>
-          {docs.map((d) => (
+          {others.map((d) => (
             <Link key={d.id} className="text-primary hover:underline" href={`/orders/${orderId}/documents/${d.id}`}>
               {DOCUMENT_LABEL[d.kind]} {d.number}
             </Link>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** The order's invoice: what it is for, its amount, and the PDF. Nothing else of ours is shown until it exists. */
+function InvoiceCard({ orderId, invoice }: { orderId: string; invoice: OrderDocument }) {
+  const [making, setMaking] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const body = invoice.body as unknown as InvoiceBody;
+  const canPdf = canMakeInvoicePdf({ body });
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex flex-col">
+          <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Tax invoice</span>
+          <span className="font-medium text-foreground tabular-nums">{invoice.number}</span>
+          <span className="text-xs text-muted-foreground">Issued {formatDay(invoice.issuedOn)}</span>
+        </div>
+        <span className="font-serif text-xl text-primary tabular-nums">{formatMoney(invoice.total)}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {canPdf ? (
+          <Button
+            size="sm"
+            disabled={making}
+            onClick={async () => {
+              setMaking(true);
+              setFailed(false);
+              try {
+                await downloadInvoicePdf({ number: invoice.number, issuedOn: invoice.issuedOn, orderNumber: invoice.orderNumber, body });
+              } catch {
+                setFailed(true);
+              } finally {
+                setMaking(false);
+              }
+            }}
+          >
+            {making ? <Loader2 className="animate-spin" /> : <Download />} Download invoice (PDF)
+          </Button>
+        ) : null}
+        <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/orders/${orderId}/documents/${invoice.id}`}>View</Link>} />
+      </div>
+      {failed ? (
+        <p role="alert" className="text-xs text-destructive">
+          The invoice PDF could not be made. Please try again.
+        </p>
+      ) : null}
     </div>
   );
 }

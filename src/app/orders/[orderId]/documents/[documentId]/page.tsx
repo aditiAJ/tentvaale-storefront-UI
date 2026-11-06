@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRequireAccount } from "@/features/auth";
 import { DOCUMENT_LABEL, useOrderDocument } from "@/features/orders";
+import { canMakeInvoicePdf, type InvoiceBody } from "@/features/orders/buildInvoiceDoc";
+import { InvoicePdfView } from "@/features/orders/InvoicePdfView";
 
 const inr = (value: number | undefined | null) =>
   value == null
@@ -37,6 +39,15 @@ export default function DocumentPage({ params }: { params: Promise<{ orderId: st
   const d = query.data;
   const b = d.body;
   const s = b.seller ?? {};
+  // A new invoice is shown as the PDF itself, the same file Download saves, so Print gives exactly that.
+  if (d.kind === "TAX_INVOICE" && canMakeInvoicePdf({ body: b as unknown as InvoiceBody })) {
+    return (
+      <div className="mx-auto flex w-full max-w-4xl flex-col gap-3 py-8 page-x">
+        <BackButton fallback={`/orders/${orderId}`} />
+        <InvoicePdfView source={{ number: d.number, issuedOn: d.issuedOn, orderNumber: d.orderNumber, body: b as unknown as InvoiceBody }} />
+      </div>
+    );
+  }
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 py-8 page-x">
       <div className="flex items-center justify-between gap-3 print:hidden">
