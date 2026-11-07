@@ -24,9 +24,9 @@ const HOW_IT_WORKS = [
 ];
 
 const PROJECTS = [
-  { title: "Delhi Palace Wedding", img: "https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
-  { title: "Mumbai Corporate Gala", img: "https://images.unsplash.com/photo-1716538878686-38567b89b5a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
-  { title: "Goa Beach Reception", img: "https://images.unsplash.com/photo-1651472652024-6ca9278d53a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
+  { img: "/projects/project-1.jpg" },
+  { img: "/projects/project-2.png" },
+  { img: "/projects/project-3.jpg" },
 ];
 
 // Every band below the hero shares this wrapper so gutters, max width and
@@ -324,11 +324,8 @@ export default function Home() {
           viewport={{ once: true, amount: 0.2 }}
         >
           {PROJECTS.map((p) => (
-            <motion.div key={p.title} variants={gridItem} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
-              <Image src={p.img} alt={p.title} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
-              <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background to-transparent p-4">
-                <span className="text-sm text-foreground">{p.title}</span>
-              </div>
+            <motion.div key={p.img} variants={gridItem} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
+              <Image src={p.img} alt="Featured Tentvaale event project" fill quality={100} sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
             </motion.div>
           ))}
         </motion.div>
