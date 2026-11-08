@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Package } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FadeImg } from "@/components/fade-img";
 import type { MediaVariant } from "@/features/catalog/types";
 
 // Falls back to a neutral icon placeholder when a product has no image, or the
@@ -38,8 +39,7 @@ export function ProductThumb({
         // Always contain, never crop — product photos (square, validated 1:1 at
         // upload) must stay fully visible; local /brand cutouts get extra padding
         // since they're not pre-validated to fill their square cleanly.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <FadeImg
           src={sorted?.[0]?.url ?? imageUrl}
           srcSet={sorted?.map((v) => `${v.url} ${v.size}w`).join(", ")}
           sizes={sorted ? "(min-width: 768px) 160px, 96px" : undefined}

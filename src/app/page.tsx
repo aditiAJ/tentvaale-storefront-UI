@@ -4,7 +4,7 @@ import { BundlePrice } from "@/components/bundle-price";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { Search, ArrowRight, LayoutGrid, FileText, CreditCard, Truck } from "lucide-react";
+import { Search, ArrowRight, ChevronRight, ClipboardList, CalendarDays, FileText } from "lucide-react";
 import { useSkipEntrance } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
@@ -16,35 +16,17 @@ import { useBundles, useCategories, useCollections, useOccasions, useProductPrev
 
 // Flowstep screens 1 (desktop) / 2 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
 
-// Mirrors the real flow: browse -> Plan with sub-events -> Submit for
-// Quotation or Direct Order -> pay -> delivery status on the Order page.
 const HOW_IT_WORKS = [
-  {
-    icon: LayoutGrid,
-    title: "Browse & Build a Plan",
-    description: "Browse the catalog and add pieces to a Plan, sorted by function like Haldi or Sangeet.",
-  },
-  {
-    icon: FileText,
-    title: "Submit or Order Direct",
-    description: "Get a quotation, or skip ahead with Direct Order at listed prices.",
-  },
-  {
-    icon: CreditCard,
-    title: "Review & Pay",
-    description: "Pay securely online. The full amount is collected upfront, so there are no surprises.",
-  },
-  {
-    icon: Truck,
-    title: "Delivery & Setup",
-    description: "We deliver and set up everything in time for your event, or you can pick it up yourself if that works better for you.",
-  },
+  { icon: Search, title: "Explore", description: "Browse our curated collection." },
+  { icon: ClipboardList, title: "Build your selection", description: "Save pieces for each event function." },
+  { icon: CalendarDays, title: "Share event details", description: "Add your city, venue and date." },
+  { icon: FileText, title: "Receive your quote", description: "Our team checks availability and prepares your proposal." },
 ];
 
 const PROJECTS = [
-  { title: "Delhi Palace Wedding", img: "https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
-  { title: "Mumbai Corporate Gala", img: "https://images.unsplash.com/photo-1716538878686-38567b89b5a0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
-  { title: "Goa Beach Reception", img: "https://images.unsplash.com/photo-1651472652024-6ca9278d53a4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1200" },
+  { img: "/projects/project-1.jpg" },
+  { img: "/projects/project-2.png" },
+  { img: "/projects/project-3.jpg" },
 ];
 
 // Every band below the hero shares this wrapper so gutters, max width and
@@ -134,16 +116,34 @@ export default function Home() {
             variants={heroItem}
             className="max-w-2xl font-serif leading-[1.1] font-semibold text-white [text-shadow:0_2px_16px_rgba(0,0,0,0.85)]"
           >
-            <span className="block text-xl sm:text-2xl md:text-3xl lg:text-4xl">Events</span>
-            <span className="block text-2xl sm:text-3xl md:text-4xl lg:text-5xl">Spaces</span>
-            <span className="block text-3xl text-primary sm:text-4xl md:text-5xl lg:text-6xl">Experience</span>
+            <span className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl">Create unforgettable</span>
+            <span className="block text-3xl text-primary sm:text-4xl md:text-5xl lg:text-6xl">event spaces</span>
           </motion.h1>
           <motion.p variants={heroItem} className="max-w-lg text-sm text-white/90 [text-shadow:0_1px_10px_rgba(0,0,0,0.85)] md:text-base">
-            Rent furniture, décor and fully styled collections for weddings, corporate events and shoots.
+            Explore furniture, décor and styled collections for weddings, corporate events and celebrations.
           </motion.p>
           <motion.div variants={heroItem} className="flex flex-col items-stretch gap-3 md:flex-row md:items-center md:gap-4">
-            <Button className="rounded-full" size="lg" nativeButton={false} render={<Link href="/catalog">Browse Product Catalog</Link>} />
-            <Button variant="outline" className="rounded-full" size="lg" nativeButton={false} render={<Link href="/plans">Start a Plan Event</Link>} />
+            <Button
+              className="rounded-full"
+              size="lg"
+              nativeButton={false}
+              render={
+                <Link href="/catalog">
+                  Browse the Collection <ChevronRight />
+                </Link>
+              }
+            />
+            <Button
+              variant="outline"
+              className="rounded-full border-transparent bg-white text-neutral-900 hover:border-transparent hover:bg-white/90 hover:text-neutral-900 dark:bg-white dark:hover:bg-white/90"
+              size="lg"
+              nativeButton={false}
+              render={
+                <Link href="/plans">
+                  Build Your Event Selection <ChevronRight />
+                </Link>
+              }
+            />
           </motion.div>
         </motion.div>
       </section>
@@ -198,22 +198,30 @@ export default function Home() {
       </Section>
 
       <Section className="bg-card/40">
-        <SectionHeading title="How It Works" />
+        <h2 className="mb-8 text-center font-serif text-2xl text-foreground md:text-3xl">A simpler way to bring your event together</h2>
         <motion.div
-          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10"
           variants={gridContainer}
           initial={skip ? "visible" : "hidden"}
           whileInView="visible"
           viewport={{ once: true, amount: 0.3 }}
         >
           {HOW_IT_WORKS.map((step, i) => (
-            <motion.div key={step.title} variants={gridItem} className="relative flex flex-col gap-2 rounded-xl border border-border bg-card p-4">
-              <span className="font-serif text-xl text-primary/30">{String(i + 1).padStart(2, "0")}</span>
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10">
-                <step.icon className="size-4 text-primary" />
+            <motion.div key={step.title} variants={gridItem} className="relative flex items-start gap-3 rounded-xl border border-border bg-card p-4">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 font-serif text-xs text-primary">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                <step.icon className="size-5 text-primary" />
               </div>
-              <h3 className="font-serif text-base text-foreground">{step.title}</h3>
-              <p className="text-xs leading-5 text-muted-foreground">{step.description}</p>
+              <div className="min-w-0">
+                <h3 className="font-serif text-base text-foreground">{step.title}</h3>
+                <p className="mt-1 text-xs leading-5 text-muted-foreground">{step.description}</p>
+              </div>
+              {/* Dotted link to the next step, desktop only. */}
+              {i < HOW_IT_WORKS.length - 1 && (
+                <span aria-hidden className="absolute top-1/2 -right-10 hidden w-10 border-t-2 border-dotted border-primary/40 lg:block" />
+              )}
             </motion.div>
           ))}
         </motion.div>
@@ -316,11 +324,8 @@ export default function Home() {
           viewport={{ once: true, amount: 0.2 }}
         >
           {PROJECTS.map((p) => (
-            <motion.div key={p.title} variants={gridItem} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
-              <Image src={p.img} alt={p.title} fill sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
-              <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background to-transparent p-4">
-                <span className="text-sm text-foreground">{p.title}</span>
-              </div>
+            <motion.div key={p.img} variants={gridItem} className="relative h-52 overflow-hidden rounded-2xl border border-border md:h-64">
+              <Image src={p.img} alt="Featured Tentvaale event project" fill quality={100} sizes="(min-width: 768px) 33vw, 100vw" className="object-cover" />
             </motion.div>
           ))}
         </motion.div>

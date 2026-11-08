@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/services/api-client";
 import { cn } from "@/lib/utils";
-import { useRequireAccount } from "@/features/auth";
+import { useRequireAccount, useSession } from "@/features/auth";
+import { StateSelect, initialState } from "@/components/ui/state-select";
+import { isStateName, matchState } from "@/lib/indian-states";
 import { lineQuantity, planGroupLabel, quoteBlocker, type BoardItem } from "@/features/plans/board";
 import { useBoard } from "@/features/plans/hooks";
 import { planKeys } from "@/features/plans/api";
@@ -28,6 +30,12 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState<QuotationRequest | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
+  // The state decides the GST on the quotation, so it is asked for here when the account has none (a Google sign-in
+  // never gives one) or an old one nobody can read; it is never assumed.
+  const { account: realAccount, updateProfile } = useSession();
+  const [chosenState, setChosenState] = useState<string | null>(null);
+  const [savingState, setSavingState] = useState(false);
+  const [stateProblem, setStateProblem] = useState<string | null>(null);
 
   const productById = useMemo(() => new Map((plan?.products ?? []).map((p) => [p.id, p])), [plan]);
 
@@ -66,6 +74,25 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
     !plan.venue?.trim() && !plan.venueId ? "the venue" : null,
     !plan.eventStartDate ? "the event dates" : null,
   ].filter((m): m is string => m !== null);
+
+  const hasState = Boolean(matchState(realAccount?.state));
+  const stateValue = chosenState ?? initialState(realAccount?.state);
+
+  async function saveState() {
+    if (!realAccount) return;
+    setSavingState(true);
+    setStateProblem(null);
+    try {
+      // Name and phone are sent as they are: a profile update that left the phone out would clear it.
+      await updateProfile({ fullName: realAccount.fullName, phone: realAccount.phone, state: stateValue });
+      setChosenState(null);
+      toast.success("State saved");
+    } catch (error) {
+      setStateProblem(error instanceof ApiError ? error.message : "We couldn't save your state just now. Please try again.");
+    } finally {
+      setSavingState(false);
+    }
+  }
 
   function toggleExpanded(key: string | null) {
     setExpanded((s) => {
@@ -155,6 +182,24 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
         </section>
       )}
 
+      {!hasState && realAccount && plan.editable && (
+        <section aria-labelledby="state-step" className="flex flex-col gap-3 rounded-lg border border-primary/40 bg-primary/5 p-4 text-sm text-foreground">
+          <div>
+            <h2 id="state-step" className="font-medium">Choose your state</h2>
+            <p className="mt-1 text-muted-foreground">It decides the GST on your quotation. You only need to do this once.</p>
+          </div>
+          <div className="flex max-w-md flex-col gap-3 sm:flex-row sm:items-start">
+            <div className="flex-1">
+              <StateSelect id="submit-state" value={stateValue} onChange={setChosenState} />
+            </div>
+            <Button className="h-11" onClick={saveState} disabled={savingState || !isStateName(stateValue)}>
+              {savingState ? "Saving…" : "Save state"}
+            </Button>
+          </div>
+          {stateProblem && <p role="alert" className="text-destructive">{stateProblem}</p>}
+        </section>
+      )}
+
       {unavailable.length > 0 && (
         <section role="alert" className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm text-foreground">
           {unavailable.map((p) => p.name).join(", ")} {unavailable.length === 1 ? "is" : "are"} no longer available. Remove {unavailable.length === 1 ? "it" : "them"} from the plan before submitting.
@@ -220,7 +265,7 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
 
       <footer className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
         <Button variant="outline" className="rounded-lg border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}`}>Back</Link>} />
-        <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || blocker !== null || unavailable.length > 0 || missingDetails.length > 0}>
+        <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || blocker !== null || unavailable.length > 0 || missingDetails.length > 0 || !hasState}>
           {submitting ? "Sending…" : "Confirm & Submit"}
         </Button>
       </footer>

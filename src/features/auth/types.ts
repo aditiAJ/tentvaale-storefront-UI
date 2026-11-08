@@ -33,4 +33,6 @@ export interface LoginPayload {
 export interface UpdateProfilePayload {
   fullName: string;
   phone?: string;
+  /** Left out keeps the state on file; one sent must be a state or union territory of India. */
+  state?: string;
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useQuotationRequests } from "../hooks";
-import { STAGE_COPY } from "../types";
+import { stageCopy } from "../types";
 
 /**
  * Where a submitted plan's quotation is: the newest request made from the plan, its stage in words,
@@ -16,7 +16,7 @@ export function PlanQuotationLink({ planId }: { planId: string }) {
   return (
     <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
       <span className="text-muted-foreground">
-        {request.quotationNumber}: <span className="text-foreground">{STAGE_COPY[request.stage].label}</span>
+        {request.quotationNumber}: <span className="text-foreground">{stageCopy(request.stage).label}</span>
       </span>
       <Button size="sm" nativeButton={false} render={<Link href={`/quotations/${request.id}`}>View quotation</Link>} />
     </div>

@@ -4,7 +4,8 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Mail, Trash2 } from "lucide-react";
+import { Mail, Trash2 } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,9 +63,7 @@ export default function SharePlanPage({ params }: { params: Promise<{ planId: st
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 py-8 page-x">
-      <Link href={`/plans/${planId}`} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowLeft className="size-4" /> Back to {plan.name}
-      </Link>
+      <BackButton fallback={`/plans/${planId}`} />
       <div>
         <h1 className="font-serif text-3xl text-foreground">Plan together</h1>
         <p className="text-sm text-muted-foreground">

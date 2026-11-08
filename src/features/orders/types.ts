@@ -36,6 +36,8 @@ export interface OrderLine {
   quantity: number;
   rentalDays: number;
   lineTotal: Money;
+  /** What the line is for, as the vendor wrote it. */
+  remark?: string | null;
 }
 
 export interface OrderMovement {

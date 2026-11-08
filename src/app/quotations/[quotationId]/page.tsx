@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Download, TriangleAlert } from "lucide-react";
 import { Reveal } from "@/components/motion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useRequireAccount } from "@/features/auth";
 import {
-  STAGE_COPY,
+  stageCopy,
   useQuotation,
   useQuotationActions,
   type CustomerQuotation,
@@ -28,6 +29,7 @@ import {
 import { formatMoney, type Money } from "@/lib/money";
 import { ApiError } from "@/services/api-client";
 import { InlineError } from "@/components/inline-error";
+import { AcceptAndPay, usePayable } from "@/features/payments";
 
 /**
  * A quotation, as its customer sees it. The route id is the quotation REQUEST id.
@@ -85,12 +87,15 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
   const [dialog, setDialog] = useState<"changes" | "reject" | null>(null);
   const [text, setText] = useState("");
   const [problem, setProblem] = useState<string | null>(null);
-  const copy = STAGE_COPY[quotation.stage];
+  const copy = stageCopy(quotation.stage);
   const showPrices = quotation.totalAmount !== undefined;
   const canDecide = quotation.stage === "READY";
   // Approved by our team: nothing left to negotiate, the customer only has to place the order.
   const canPlaceOrder = quotation.stage === "ACCEPTED";
   const busy = actions.accept.isPending || actions.requestChanges.isPending || actions.reject.isPending;
+  // With online payment on, accepting means paying the advance: the plain Accept buttons give way to "Accept and pay".
+  const payable = usePayable(requestId, canDecide || canPlaceOrder).data;
+  const payOnline = payable?.online === true && payable.payable ? payable : null;
 
   function openDialog(which: "changes" | "reject") {
     setText("");
@@ -136,6 +141,8 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 page-x">
+      {/* There is no list of quotations: one is reached from its plan, so that is where Back goes when nothing is behind it. */}
+      <BackButton fallback={quotation.planId ? `/plans/${quotation.planId}` : "/plans"} className="-mb-4" />
       <Reveal immediate className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-2">
           <span className="text-xs tracking-[0.16em] text-muted-foreground uppercase">Quotation</span>
@@ -196,7 +203,12 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
               total={quotation.totalAmount}
               deposit={quotation.securityDeposit}
             />
-            {canPlaceOrder && (
+            {canPlaceOrder && payOnline && (
+              <div className="mt-2 flex flex-col gap-2.5">
+                <AcceptAndPay requestId={requestId} payable={payOnline} disabled={busy} />
+              </div>
+            )}
+            {canPlaceOrder && !payOnline && (
               <div className="mt-2 flex flex-col gap-2.5">
                 <Button size="lg" className="w-full" onClick={accept} disabled={busy}>
                   {actions.accept.isPending ? "Placing order…" : "Accept and place order"}
@@ -208,9 +220,13 @@ function QuotationView({ quotation, requestId }: { quotation: CustomerQuotation;
             )}
             {canDecide && (
               <div className="mt-2 flex flex-col gap-2.5">
-                <Button size="lg" className="w-full" onClick={accept} disabled={busy}>
-                  {actions.accept.isPending ? "Accepting…" : "Accept quotation"}
-                </Button>
+                {payOnline ? (
+                  <AcceptAndPay requestId={requestId} payable={payOnline} disabled={busy} />
+                ) : (
+                  <Button size="lg" className="w-full" onClick={accept} disabled={busy}>
+                    {actions.accept.isPending ? "Accepting…" : "Accept quotation"}
+                  </Button>
+                )}
                 <Button variant="outline" size="lg" className="w-full" onClick={() => openDialog("changes")} disabled={busy}>
                   Request changes
                 </Button>
@@ -307,7 +323,10 @@ function LineTable({ lines }: { lines: QuotationLine[] }) {
           key={`${line.productId}-${line.variantId ?? 0}-${index}`}
           className="flex flex-col gap-1 border-b border-border px-5 py-4 text-sm last:border-b-0 md:grid md:grid-cols-[2.4fr_0.8fr_0.8fr_1fr_1fr] md:items-center md:gap-4"
         >
-          <span className="text-foreground">{line.productName}</span>
+          <span className="text-foreground">
+            {line.productName}
+            {line.remark ? <span className="block text-xs italic text-muted-foreground">{line.remark}</span> : null}
+          </span>
           <span className="text-muted-foreground tabular-nums md:text-right">
             <span className="md:hidden">Qty </span>
             {line.quantity}
@@ -356,6 +375,7 @@ function Totals({
   depositWaiver?: DepositWaiver;
   policies?: PolicyRef[];
 }) {
+  const heldDeposit = deposit && deposit.amount > 0 && !depositWaiver?.waived ? deposit : null;
   const row = (label: string, value?: Money, negative = false, key = label) => (
     <div key={key} className="flex items-baseline justify-between gap-3 text-sm">
       <span className="text-muted-foreground">{label}</span>
@@ -376,19 +396,22 @@ function Totals({
       {delivery && delivery.amount > 0 && row("Delivery", delivery)}
       {transportation && transportation.amount > 0 && row("Transportation", transportation)}
       {installation && installation.amount > 0 && row("Installation", installation)}
+      {heldDeposit && row("Security deposit (refundable)", deposit)}
       <div className="flex items-baseline justify-between gap-3 border-t border-border pt-3">
         <span className="text-sm font-medium text-foreground">Total</span>
-        <span className="font-serif text-3xl text-primary tabular-nums">{formatMoney(total)}</span>
+        <span className="font-serif text-3xl text-primary tabular-nums">
+          {formatMoney(total && heldDeposit ? { ...total, amount: total.amount + heldDeposit.amount } : total)}
+        </span>
       </div>
       {depositWaiver?.waived && (
         <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
           <span className="text-foreground">Deposit waived.</span> No security deposit is collected for this order.
         </p>
       )}
-      {deposit && deposit.amount > 0 && !depositWaiver?.waived && (
+      {heldDeposit && (
         <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
-          Plus a refundable security deposit of <span className="text-foreground tabular-nums">{formatMoney(deposit)}</span>,
-          returned after your items come back in good condition. No GST on the deposit.
+          The security deposit is included in the total. It is returned after your items come back in good condition, and no GST
+          is charged on it.
         </p>
       )}
       {(policies ?? []).length > 0 && (

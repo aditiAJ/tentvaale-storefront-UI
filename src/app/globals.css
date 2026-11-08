@@ -405,3 +405,45 @@
     scroll-behavior: auto !important;
   }
 }
+/* ---- Tentvaale logo as an image placeholder (see FadeImg) ---- */
+@keyframes logo-breathe {
+  0%,
+  100% {
+    transform: scale(0.92);
+  }
+  50% {
+    transform: scale(1);
+  }
+}
+@keyframes logo-sweep {
+  from {
+    background-position: 170% 0;
+  }
+  to {
+    background-position: -70% 0;
+  }
+}
+.logo-loader-mark {
+  animation: logo-breathe 2.2s ease-in-out infinite;
+}
+/* The logo is the stencil (set inline, see LOGO_MASK), so the light only falls on its own pixels. */
+.logo-loader-sheen {
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  background-image: linear-gradient(105deg, transparent 30%, color-mix(in oklab, var(--primary) 40%, white) 50%, transparent 70%);
+  background-size: 250% 100%;
+  animation: logo-sweep 1.8s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .logo-loader-mark,
+  .logo-loader-sheen {
+    animation: none;
+  }
+  .logo-loader-sheen {
+    display: none;
+  }
+}

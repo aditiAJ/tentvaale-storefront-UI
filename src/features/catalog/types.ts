@@ -106,6 +106,11 @@ export interface Variant {
   dailyRate: Money;
   /** Most of this variant a customer can ask for. A ceiling, not a date-based availability. */
   maxOrderable: number;
+  /** This variant's own picture; when it has one, the product page shows it in place of the product's photos. */
+  imageUrl?: string | null;
+  thumbnailUrl?: string | null;
+  /** The product's own plain version: the default shown until an option is chosen, never an option in the list. */
+  standard?: boolean;
 }
 
 export interface ProductDetail {

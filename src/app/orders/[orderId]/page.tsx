@@ -1,9 +1,10 @@
 "use client";
 
-import { use } from "react";
+import { use, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, Circle, XCircle } from "lucide-react";
+import { CheckCircle2, Circle, Download, Loader2, XCircle } from "lucide-react";
+import { BackButton } from "@/components/back-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,7 +17,10 @@ import {
   useOrderBilling,
   useOrderDocuments,
   type Order,
+  type OrderDocument,
 } from "@/features/orders";
+import { canMakeInvoicePdf, type InvoiceBody } from "@/features/orders/buildInvoiceDoc";
+import { downloadInvoicePdf } from "@/features/orders/downloadInvoicePdf";
 import { formatMoney } from "@/lib/money";
 import { ApiError } from "@/services/api-client";
 
@@ -67,8 +71,11 @@ export default function OrderPage({ params }: { params: Promise<{ orderId: strin
 
 function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean }) {
   const copy = statusCopy(order);
+  // The total the customer agreed includes the refundable deposit; the backend's balance already counts the part not yet received.
+  const heldDeposit = order.securityDeposit?.amount ?? 0;
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 py-8 page-x">
+      <BackButton fallback="/orders" className="-mb-4" />
       {justPlaced && (
         <div className="flex items-start gap-3 rounded-2xl border border-primary/30 bg-primary/5 p-5">
           <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
@@ -105,7 +112,9 @@ function OrderView({ order, justPlaced }: { order: Order; justPlaced: boolean })
         <aside className="flex flex-col gap-4">
           <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-e2">
             <h2 className="font-serif text-xl text-foreground">Summary</h2>
-            <Row label="Order total" value={formatMoney(order.totalAmount)} strong />
+            {heldDeposit > 0 && <Row label="Rental and charges" value={formatMoney(order.totalAmount)} />}
+            {heldDeposit > 0 && <Row label="Security deposit (refundable)" value={formatMoney(order.securityDeposit)} />}
+            <Row label="Order total" value={formatMoney({ ...order.totalAmount, amount: order.totalAmount.amount + heldDeposit })} strong />
             <Row label="Balance owed" value={formatMoney(order.balanceOwed)} />
             <p className="text-xs leading-5 text-muted-foreground">
               Balance is the total less any credit we have given you and the payments we have received and confirmed.
@@ -134,18 +143,48 @@ function PaymentsPanel({ orderId }: { orderId: string }) {
   const payments = billing.data?.payments ?? [];
   const schedule = billing.data?.schedule ?? [];
   const docs = documents.data ?? [];
+  // The order's one invoice is issued by us the moment the order is paid in full; until then there is nothing to download.
+  const invoice = docs.find((d) => d.kind === "TAX_INVOICE");
+  const others = docs.filter((d) => d.id !== invoice?.id);
   if (payments.length === 0 && schedule.length === 0 && docs.length === 0) return null;
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-6 shadow-e2">
       <h2 className="font-serif text-xl text-foreground">Payments</h2>
+      {documents.isError ? (
+        <p role="alert" className="text-sm text-destructive">
+          Your invoice could not be loaded just now. Please refresh the page.
+        </p>
+      ) : invoice ? (
+        <InvoiceCard orderId={orderId} invoice={invoice} />
+      ) : documents.isPending ? null : (
+        <p className="rounded-xl border border-dashed border-border p-3 text-sm leading-5 text-muted-foreground">
+          Your invoice will be available here once the order is paid in full, the rental and the refundable security deposit
+          included.
+        </p>
+      )}
       {payments.map((p) => (
         <div key={p.id} className="flex items-baseline justify-between gap-3 text-sm">
           <span className="text-muted-foreground">
             {formatDay(p.paidOn)} · {p.purpose === "DEPOSIT" ? "Deposit" : "Payment"}
+            {p.mode === "RAZORPAY" ? " (paid online)" : ""}
+            {p.receiptNumber && docs.some((d) => d.number === p.receiptNumber) ? (
+              <>
+                {" · "}
+                <Link className="text-primary hover:underline" href={`/orders/${orderId}/documents/${docs.find((d) => d.number === p.receiptNumber)?.id}`}>
+                  Receipt {p.receiptNumber}
+                </Link>
+              </>
+            ) : null}
           </span>
           <span className="text-foreground tabular-nums">{formatMoney(p.amount)}</span>
         </div>
       ))}
+      {payments.length > 0 && (billing.data?.balance.amount ?? 0) > 0 && (
+        <p className="border-t border-border pt-3 text-xs leading-5 text-muted-foreground">
+          The balance of {formatMoney(billing.data?.balance)} is arranged with us. We record each payment you make and send you a
+          receipt.
+        </p>
+      )}
       {schedule.length > 0 && (
         <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
           <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Agreed instalments</span>
@@ -161,16 +200,63 @@ function PaymentsPanel({ orderId }: { orderId: string }) {
           ))}
         </div>
       )}
-      {docs.length > 0 && (
+      {others.length > 0 && (
         <div className="flex flex-col gap-1 border-t border-border pt-3 text-sm">
           <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Invoices and receipts</span>
-          {docs.map((d) => (
+          {others.map((d) => (
             <Link key={d.id} className="text-primary hover:underline" href={`/orders/${orderId}/documents/${d.id}`}>
               {DOCUMENT_LABEL[d.kind]} {d.number}
             </Link>
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+/** The order's invoice: what it is for, its amount, and the PDF. Nothing else of ours is shown until it exists. */
+function InvoiceCard({ orderId, invoice }: { orderId: string; invoice: OrderDocument }) {
+  const [making, setMaking] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const body = invoice.body as unknown as InvoiceBody;
+  const canPdf = canMakeInvoicePdf({ body });
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="flex flex-col">
+          <span className="text-xs tracking-[0.12em] text-muted-foreground uppercase">Tax invoice</span>
+          <span className="font-medium text-foreground tabular-nums">{invoice.number}</span>
+          <span className="text-xs text-muted-foreground">Issued {formatDay(invoice.issuedOn)}</span>
+        </div>
+        <span className="font-serif text-xl text-primary tabular-nums">{formatMoney(invoice.total)}</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {canPdf ? (
+          <Button
+            size="sm"
+            disabled={making}
+            onClick={async () => {
+              setMaking(true);
+              setFailed(false);
+              try {
+                await downloadInvoicePdf({ number: invoice.number, issuedOn: invoice.issuedOn, orderNumber: invoice.orderNumber, body });
+              } catch {
+                setFailed(true);
+              } finally {
+                setMaking(false);
+              }
+            }}
+          >
+            {making ? <Loader2 className="animate-spin" /> : <Download />} Download invoice (PDF)
+          </Button>
+        ) : null}
+        <Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/orders/${orderId}/documents/${invoice.id}`}>View</Link>} />
+      </div>
+      {failed ? (
+        <p role="alert" className="text-xs text-destructive">
+          The invoice PDF could not be made. Please try again.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -241,7 +327,10 @@ function Items({ order }: { order: Order }) {
             key={`${line.productId}-${line.variantId ?? 0}-${index}`}
             className="flex flex-wrap items-baseline justify-between gap-3 border-b border-border px-5 py-4 text-sm last:border-b-0"
           >
-            <span className="text-foreground">{line.productName}</span>
+            <span className="text-foreground">
+              {line.productName}
+              {line.remark ? <span className="block text-xs italic text-muted-foreground">{line.remark}</span> : null}
+            </span>
             <span className="text-muted-foreground">
               {line.quantity} × {line.rentalDays} day{line.rentalDays === 1 ? "" : "s"}
             </span>

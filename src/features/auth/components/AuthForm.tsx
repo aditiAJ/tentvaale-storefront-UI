@@ -11,6 +11,9 @@ import { DUR, EASE, SPRING } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { StateSelect } from "@/components/ui/state-select";
+import { isStateName } from "@/lib/indian-states";
+import { canGoBackInApp, safeInternalPath, type NavigationLike } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { SiteWordmark } from "@/components/site-logo";
 import { ApiError } from "@/services/api-client";
@@ -24,7 +27,7 @@ type AccountType = "Customer" | "EventPlanner";
 // forces a Suspense boundary, and the form then pops in after the page instead of being there from the start.
 /** Only ever follow a path on this site, never an address someone put in the link. */
 function safeNext(value: string | null): string {
-  return value && value.startsWith("/") && !value.startsWith("//") ? value : "/plans";
+  return safeInternalPath(value) ?? "/plans";
 }
 
 // Flowstep screens 3 (desktop) / 4 (mobile), fileId 8bd03b8a-4561-4b58-bb2d-ca011d84d53e.
@@ -63,8 +66,8 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
         setError("Please enter your city.");
         return;
       }
-      if (!state.trim()) {
-        setError("Please choose or enter your state.");
+      if (!isStateName(state.trim())) {
+        setError("Please select your state from the list.");
         return;
       }
       if (password.length < 8) {
@@ -99,9 +102,14 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-4 md:gap-5">
       <div className="flex w-full items-center justify-between md:hidden">
+        {/* Back only when the page behind is ours (often the page that asked to sign in); otherwise home, never
+            back to the email or site the visitor came from. */}
         <button
+          type="button"
           className="press -ml-1 flex size-10 items-center justify-center rounded-sm transition-colors hover:bg-secondary"
-          onClick={() => router.back()}
+          onClick={() =>
+            canGoBackInApp((window as Window & { navigation?: NavigationLike }).navigation) ? router.back() : router.push("/")
+          }
           aria-label="Back"
         >
           <ChevronLeft className="size-6 text-foreground" />
@@ -231,54 +239,8 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
                 <Label htmlFor="auth-state" className="text-xs text-muted-foreground">
                   State <span className="text-destructive">*</span>
                 </Label>
-                <Input
-                  id="auth-state"
-                  type="text"
-                  list="indian-states"
-                  autoComplete="address-level1"
-                  placeholder="e.g. Gujarat"
-                  value={state}
-                  onChange={(e) => setState(e.target.value)}
-                  className="h-11 bg-card"
-                  required
-                />
-                <datalist id="indian-states">
-                  {[
-                    "Andhra Pradesh",
-                    "Arunachal Pradesh",
-                    "Assam",
-                    "Bihar",
-                    "Chhattisgarh",
-                    "Goa",
-                    "Gujarat",
-                    "Haryana",
-                    "Himachal Pradesh",
-                    "Jharkhand",
-                    "Karnataka",
-                    "Kerala",
-                    "Madhya Pradesh",
-                    "Maharashtra",
-                    "Manipur",
-                    "Meghalaya",
-                    "Mizoram",
-                    "Nagaland",
-                    "Odisha",
-                    "Punjab",
-                    "Rajasthan",
-                    "Sikkim",
-                    "Tamil Nadu",
-                    "Telangana",
-                    "Tripura",
-                    "Uttar Pradesh",
-                    "Uttarakhand",
-                    "West Bengal",
-                    "Delhi",
-                    "Jammu and Kashmir",
-                    "Ladakh",
-                  ].map((s) => (
-                    <option key={s} value={s} />
-                  ))}
-                </datalist>
+                <StateSelect id="auth-state" name="state" value={state} onChange={setState} />
+                {/* The list of states lives in one place (lib/indian-states.ts); nothing here defines one. */}
               </div>
             </div>
           </>
