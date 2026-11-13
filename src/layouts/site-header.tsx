@@ -119,7 +119,7 @@ function SignInLinks({ onNavigate, className }: { onNavigate?: () => void; class
       <Link
         href="/signup"
         onClick={onNavigate}
-        className="press flex-1 rounded-sm bg-primary px-3.5 py-2 text-center text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
+        className="press flex-1 whitespace-nowrap rounded-sm bg-primary px-3.5 py-2 text-center text-sm font-medium text-primary-foreground shadow-[0_1px_2px_0_rgba(34,29,23,0.18)] transition-shadow duration-200 ease-out-quint hover:shadow-[0_4px_14px_-4px_color-mix(in_oklab,var(--primary)_70%,transparent)]"
       >
         Sign Up
       </Link>
