@@ -1156,7 +1156,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
   );
 
   return (
-    <div className="mx-auto w-full max-w-7xl pt-6 pb-28 md:pb-12 page-x">
+    <div className="mx-auto w-full max-w-7xl pt-6 pb-44 lg:pb-24 xl:pb-12 page-x">
       <BackButton fallback="/plans" />
 
       {/* ================= HERO ================= */}
@@ -1825,7 +1825,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
       <ItemPicker prompt={pickerFor} targetLabel={activeLabel} onClose={() => setPickerFor(null)} onAdd={addPicked} />
 
       {/* Mobile action bar — the sidebar's buttons are off-screen on phones */}
-      <footer className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
+      <footer className="fixed inset-x-0 bottom-[calc(4.0625rem+env(safe-area-inset-bottom))] xl:bottom-0 z-30 flex items-center gap-3 border-t border-border bg-background/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="flex min-w-0 flex-col">
           <span className="text-[11px] text-muted-foreground uppercase">Total</span>
           <span className="font-serif text-xl text-primary">{formatRupees(planTotal)}</span>

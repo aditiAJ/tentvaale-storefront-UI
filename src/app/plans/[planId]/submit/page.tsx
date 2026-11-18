@@ -142,7 +142,7 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 py-8 pb-28 md:py-10 page-x">
+    <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 py-8 pb-44 md:py-10 xl:pb-28 page-x">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link href="/">Home</Link>
         <ChevronRight className="size-4" />
@@ -246,9 +246,9 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
         ))}
       </section>
 
-      <div className="flex items-end justify-between border-t border-border pt-6">
+      <div className="flex flex-col gap-2 border-t border-border pt-6 sm:flex-row sm:items-end sm:justify-between">
         <p className="text-sm text-muted-foreground">An estimate at today&apos;s rates; final pricing is confirmed in your quotation.</p>
-        <p className="font-serif text-3xl text-primary">Estimated Total: {formatRupees(total)}</p>
+        <p className="font-serif text-2xl text-primary sm:text-3xl">Estimated Total: {formatRupees(total)}</p>
       </div>
 
       {blocker && (
@@ -263,7 +263,8 @@ export default function SubmitForQuotationPage({ params }: { params: Promise<{ p
         </p>
       )}
 
-      <footer className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
+      {/* Above the phone tab bar (z-40, 4rem + border), which would otherwise cover these buttons. */}
+      <footer className="fixed inset-x-0 bottom-[calc(4.0625rem+env(safe-area-inset-bottom))] xl:bottom-0 z-30 flex justify-end gap-3 border-t border-border bg-background px-4 py-4 md:px-8">
         <Button variant="outline" className="rounded-lg border-primary text-primary" nativeButton={false} render={<Link href={`/plans/${planId}`}>Back</Link>} />
         <Button className="rounded-lg bg-primary text-primary-foreground" onClick={handleSubmit} disabled={submitting || !plan.editable || blocker !== null || unavailable.length > 0 || missingDetails.length > 0 || !hasState}>
           {submitting ? "Sending…" : "Confirm & Submit"}

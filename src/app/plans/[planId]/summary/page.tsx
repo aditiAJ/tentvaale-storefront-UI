@@ -46,7 +46,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
   const startDate = plan.eventStartDate ?? plan.subEvents[0]?.eventDate;
 
   return (
-    <div className="mx-auto w-full max-w-4xl pt-6 pb-28 page-x">
+    <div className="mx-auto w-full max-w-4xl pt-6 pb-44 xl:pb-28 page-x">
       <BackButton fallback={`/plans/${planId}`} />
 
       <div className="mt-4 flex flex-col gap-2 border-b border-border pb-6">
@@ -90,7 +90,7 @@ export default function PlanSummaryPage({ params }: { params: Promise<{ planId: 
         </section>
       )}
 
-      <div className="fixed inset-x-0 bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
+      <div className="fixed inset-x-0 bottom-[calc(4.0625rem+env(safe-area-inset-bottom))] xl:bottom-0 z-30 flex justify-end gap-4 border-t border-border bg-background px-4 py-4 md:px-8">
         {canSubmit ? (
           <Button
             className="rounded-lg bg-primary text-primary-foreground"
