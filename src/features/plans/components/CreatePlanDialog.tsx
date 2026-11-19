@@ -17,6 +17,7 @@ import { NO_COVER_CHANGE, PlanCoverField, type CoverChange } from "./PlanCoverFi
 import { useCreatePlan } from "../hooks";
 import type { Plan } from "../types";
 import { InlineError } from "@/components/inline-error";
+import { VenueField } from "@/features/venues";
 
 export const EVENT_TYPES = [
   "Wedding",
@@ -85,6 +86,8 @@ export function CreatePlanDialog({
   const [eventType, setEventType] = useState(initialEventType ?? defaults.eventType);
   const [name, setName] = useState(initialName ?? defaults.name);
   const [venue, setVenue] = useState(initialVenue ?? defaults.venue);
+  // The saved venue the text came from (it carries the map point); empty when the venue is typed.
+  const [venueId, setVenueId] = useState("");
   const [startDate, setStartDate] = useState(initialStartDate ?? defaults.startDate);
   const [endDate, setEndDate] = useState(initialEndDate ?? defaults.endDate);
   const [guestCount, setGuestCount] = useState<number | undefined>(initialGuestCount ?? defaults.guestCount);
@@ -106,6 +109,7 @@ export function CreatePlanDialog({
       setEventType(initialEventType ?? defaults.eventType);
       setName(initialName ?? defaults.name);
       setVenue(initialVenue ?? defaults.venue);
+      setVenueId("");
       setStartDate(initialStartDate ?? defaults.startDate);
       setEndDate(initialEndDate ?? defaults.endDate);
       setGuestCount(initialGuestCount ?? defaults.guestCount);
@@ -128,7 +132,7 @@ export function CreatePlanDialog({
       const plan = await createPlan.mutateAsync(
         nameOnly
           ? { name: name.trim() }
-          : { name: name.trim(), venue: venue.trim(), eventDate: startDate, eventEndDate: endDate, guestCount: Number(guestCount) },
+          : { name: name.trim(), venue: venue.trim(), venueId: venueId || undefined, eventDate: startDate, eventEndDate: endDate, guestCount: Number(guestCount) },
       );
 
       if (cover.file) {
@@ -205,11 +209,15 @@ export function CreatePlanDialog({
           <>
           <div className="space-y-1.5">
             <Label htmlFor="plan-venue">Venue *</Label>
-            <Input
+            <VenueField
               id="plan-venue"
               placeholder="e.g. Taj Palace, Delhi"
               value={venue}
-              onChange={(e) => setVenue(e.target.value)}
+              venueId={venueId}
+              onChange={(text, id) => {
+                setVenue(text);
+                setVenueId(id);
+              }}
             />
           </div>
 

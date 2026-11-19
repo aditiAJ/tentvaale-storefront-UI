@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PlaceSearch } from "@/features/venues/components/PlaceSearch";
+import { MAPS_KEY, describePlace } from "@/features/venues/maps";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -216,6 +218,12 @@ export default function AccountPage() {
                       <Label htmlFor="addr-label">Label</Label>
                       <Input id="addr-label" placeholder="Home" value={addrLabel} onChange={(e) => setAddrLabel(e.target.value)} />
                     </div>
+                    {MAPS_KEY ? (
+                      <div className="space-y-2">
+                        <Label htmlFor="addr-search">Search on the map</Label>
+                        <PlaceSearch id="addr-search" onPick={(found) => setAddrDetail(describePlace(found).slice(0, 500))} />
+                      </div>
+                    ) : null}
                     <div className="space-y-2">
                       <Label htmlFor="addr-detail">Address</Label>
                       <Input

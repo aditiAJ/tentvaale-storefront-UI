@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { ApiError } from "@/services/api-client";
 import type { Venue } from "@/features/plans/types";
 import { createVenue, venueKeys } from "@/features/venues/api";
-import { MAPS_KEY, loadMaps } from "@/features/venues/maps";
+import { PlaceSearch } from "@/features/venues/components/PlaceSearch";
+import { MAPS_KEY, loadMapKit, type MapMarker, type MapView, type Place } from "@/features/venues/maps";
 import { InlineError } from "@/components/inline-error";
 
 /**
@@ -37,40 +38,25 @@ export function AddVenueDialog({
   const [placeId, setPlaceId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<HTMLDivElement>(null);
+  const view = useRef<{ map: MapView; marker: MapMarker } | null>(null);
 
-  // The map and search box need their elements, which exist once the dialog has rendered them.
+  // The map needs its element, which exists once the dialog has rendered it.
   useEffect(() => {
     if (!open || !MAPS_KEY) return;
     let cancelled = false;
     const timer = setTimeout(() => {
-      void loadMaps()
-        .then((maps) => {
-          if (cancelled || !searchRef.current || !mapRef.current) return;
+      void loadMapKit()
+        .then(({ Map, Marker }) => {
+          if (cancelled || !mapRef.current) return;
           const start = { lat: 22.3072, lng: 73.1812 };
-          const map = new maps.Map(mapRef.current, { center: start, zoom: 12 });
-          const marker = new maps.Marker({ position: start, map, draggable: true });
+          const map = new Map(mapRef.current, { center: start, zoom: 12 });
+          const marker = new Marker({ position: start, map, draggable: true });
           marker.addListener("dragend", () => {
             const position = marker.getPosition();
             if (position) setPoint({ lat: position.lat(), lng: position.lng() });
           });
-          const search = new maps.places.Autocomplete(searchRef.current, {
-            fields: ["place_id", "formatted_address", "name", "geometry"],
-          });
-          search.addListener("place_changed", () => {
-            const place = search.getPlace();
-            const location = place.geometry?.location;
-            if (!location) return;
-            const next = { lat: location.lat(), lng: location.lng() };
-            map.setCenter(next);
-            map.setZoom(16);
-            marker.setPosition(next);
-            setPoint(next);
-            setPlaceId(place.place_id ?? null);
-            setAddress((current) => place.formatted_address ?? current);
-            setLabel((current) => current || place.name || "");
-          });
+          view.current = { map, marker };
         })
         .catch(() => undefined);
     }, 50);
@@ -79,6 +65,20 @@ export function AddVenueDialog({
       clearTimeout(timer);
     };
   }, [open]);
+
+  // A picked place fills the address and the name (if empty), and moves the map and its marker to it.
+  function fillFrom(place: Place) {
+    const found = place.formattedAddress ?? place.displayName;
+    if (found) setAddress(found.slice(0, 500));
+    if (place.displayName) setLabel((current) => current || place.displayName!.slice(0, 150));
+    setPlaceId(place.id ?? null);
+    if (!place.location) return;
+    const next = { lat: place.location.lat(), lng: place.location.lng() };
+    setPoint(next);
+    view.current?.map.setCenter(next);
+    view.current?.map.setZoom(16);
+    view.current?.marker.setPosition(next);
+  }
 
   async function save() {
     setSaving(true);
@@ -118,7 +118,7 @@ export function AddVenueDialog({
           {MAPS_KEY ? (
             <div className="space-y-2">
               <Label htmlFor="venue-search">Search on the map</Label>
-              <Input id="venue-search" ref={searchRef} placeholder="Search a place or address" />
+              <PlaceSearch id="venue-search" onPick={fillFrom} />
               <div ref={mapRef} className="h-48 w-full rounded-lg border border-border bg-muted" />
               <p className="text-xs text-muted-foreground">Drag the marker to the exact spot.</p>
             </div>
