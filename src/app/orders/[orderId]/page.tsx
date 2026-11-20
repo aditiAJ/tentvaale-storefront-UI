@@ -22,6 +22,7 @@ import {
 import { canMakeInvoicePdf, type InvoiceBody } from "@/features/orders/buildInvoiceDoc";
 import { downloadInvoicePdf } from "@/features/orders/downloadInvoicePdf";
 import { formatMoney } from "@/lib/money";
+import { measuredQuantity } from "@/features/catalog/format";
 import { ApiError } from "@/services/api-client";
 
 /**
@@ -332,7 +333,7 @@ function Items({ order }: { order: Order }) {
               {line.remark ? <span className="block text-xs italic text-muted-foreground">{line.remark}</span> : null}
             </span>
             <span className="text-muted-foreground">
-              {line.quantity} × {line.rentalDays} day{line.rentalDays === 1 ? "" : "s"}
+              {measuredQuantity(line.quantity, line.rateType)} × {line.rentalDays} day{line.rentalDays === 1 ? "" : "s"}
             </span>
             <span className="text-foreground tabular-nums">{formatMoney(line.lineTotal)}</span>
           </div>
@@ -361,7 +362,7 @@ function Deliveries({ order }: { order: Order }) {
             <ul className="mt-1 text-xs text-muted-foreground">
               {movement.items.map((item, index) => (
                 <li key={index}>
-                  {item.productName} × {item.quantity}
+                  {item.productName} × {measuredQuantity(item.quantity, item.rateType)}
                 </li>
               ))}
             </ul>

@@ -18,9 +18,10 @@ interface Policy {
 }
 
 /**
- * A policy page the vendor publishes (cancellation, damage, delivery, terms). Public. A quotation
- * links to the version it was sent with (?version=N); with none, the latest is shown. The text is
- * shown as plain text: nothing the vendor types is ever treated as markup.
+ * A policy page the vendor publishes in Settings (terms, cancellation, damage, delivery). Public, and the one place
+ * each policy is read in full: the footer, the product and plan pages and every quotation link here. It shows the latest
+ * version (an old link with ?version=N still opens that version). The text is shown as plain text: nothing the vendor
+ * types is ever treated as markup.
  */
 export default function PolicyPage({ params }: { params: Promise<{ kind: string }> }) {
   const { kind } = use(params);

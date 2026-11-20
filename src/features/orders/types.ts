@@ -38,13 +38,15 @@ export interface OrderLine {
   lineTotal: Money;
   /** What the line is for, as the vendor wrote it. */
   remark?: string | null;
+  /** What the quantity counts (QTY pieces, SQFT square feet, RFT running feet); absent on an older order. */
+  rateType?: "QTY" | "SQFT" | "RFT" | null;
 }
 
 export interface OrderMovement {
   movementNumber: string;
   direction: "OUTWARD" | "INWARD";
   movedOn: string;
-  items: { productId: number; variantId?: number | null; productName: string; quantity: number }[];
+  items: { productId: number; variantId?: number | null; productName: string; quantity: number; rateType?: "QTY" | "SQFT" | "RFT" | null }[];
 }
 
 export interface OrderDeposit {

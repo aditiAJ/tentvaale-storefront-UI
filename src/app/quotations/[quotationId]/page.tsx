@@ -410,8 +410,8 @@ function Totals({
       )}
       {heldDeposit && (
         <p className="rounded-lg bg-muted/50 px-3 py-2 text-xs leading-5 text-muted-foreground">
-          The security deposit is included in the total. It is returned after your items come back in good condition, and no GST
-          is charged on it.
+          The security deposit is included in the total, and no GST is charged on it. How it is returned is set out in the policies
+          below.
         </p>
       )}
       {(policies ?? []).length > 0 && (
@@ -420,7 +420,7 @@ function Totals({
           {(policies ?? []).map((policy, i) => (
             <span key={policy.kind}>
               {i > 0 ? ", " : ""}
-              <a className="text-primary hover:underline" href={`/policies/${policy.kind.toLowerCase()}?version=${policy.version}`} target="_blank" rel="noreferrer">
+              <a className="text-primary hover:underline" href={`/policies/${policy.kind.toLowerCase()}`} target="_blank" rel="noreferrer">
                 {(POLICY_LABEL[policy.kind] ?? policy.kind).toLowerCase()}
               </a>
             </span>

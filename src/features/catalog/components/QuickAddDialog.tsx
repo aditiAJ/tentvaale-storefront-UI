@@ -19,7 +19,7 @@ import { ProductThumb } from "@/components/product-thumb";
 import { formatMoney } from "@/lib/money";
 import { useMockStore } from "@/mock-data/store";
 import { useProduct } from "../hooks";
-import { quantityLabel, rateUnitLabel } from "../format";
+import { quantityLabel, rateUnitLabel, stockLabel } from "../format";
 import type { ProductCard } from "../types";
 
 /**
@@ -44,6 +44,9 @@ export function QuickAddDialog({ card, onClose }: { card: ProductCard | null; on
   const rate = variant?.dailyRate ?? product?.dailyRate;
   const ceiling = variant?.maxOrderable ?? product?.maxOrderable;
   const perArea = product ? product.rateType !== "QTY" : false;
+  // The most that can be ordered, in what the product is sold in (units, sq ft or running ft); an area-priced item may
+  // also be capped lower by its own coverage limit. None known (or none in stock) leaves the number free.
+  const maxAmount = ceiling && ceiling > 0 ? (perArea && product?.maxCoverageSqft ? Math.min(ceiling, product.maxCoverageSqft) : ceiling) : undefined;
 
   async function handleAdd() {
     if (!product || !plan) return;
@@ -51,7 +54,7 @@ export function QuickAddDialog({ card, onClose }: { card: ProductCard | null; on
       subEventId: target.subEventId,
       productId: product.id,
       variantId: variant?.id ?? null,
-      quantity: qty,
+      quantity: maxAmount ? Math.min(qty, maxAmount) : qty,
     });
     if (!saved) return;
     toast.success(`Added ${product.name} to ${plan.name}`, { action: { label: "View plan", onClick: () => router.push(`/plans/${plan.id}`) } });
@@ -117,8 +120,9 @@ export function QuickAddDialog({ card, onClose }: { card: ProductCard | null; on
 
                 <div className="flex items-center justify-between gap-3">
                   <Label>{quantityLabel(product.rateType)}</Label>
-                  <NumberStepper value={qty} onChange={setQty} max={perArea ? undefined : ceiling} aria-label="Quantity" />
+                  <NumberStepper value={maxAmount ? Math.min(qty, maxAmount) : qty} onChange={setQty} max={maxAmount} aria-label={quantityLabel(product.rateType)} />
                 </div>
+                {maxAmount ? <p className="-mt-2 text-right text-xs text-muted-foreground">Most you can order: {stockLabel(maxAmount, product.rateType)}</p> : null}
 
                 <div className="flex items-center justify-between rounded-lg bg-primary/5 px-3 py-2 text-sm">
                   <span className="text-muted-foreground">Estimated</span>

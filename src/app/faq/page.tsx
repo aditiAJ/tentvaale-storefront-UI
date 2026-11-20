@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
 
 // Flowstep screen 50 (desktop) — the design only fully wrote out one answer and
@@ -10,6 +11,8 @@ import { ChevronDown, Search } from "lucide-react";
 interface FaqItem {
   q: string;
   a: string;
+  /** Where the answer is settled in full: the business's own policy pages, written in Settings. */
+  links?: { href: string; label: string }[];
 }
 
 const SECTIONS: { title: string; items: FaqItem[] }[] = [
@@ -33,10 +36,18 @@ const SECTIONS: { title: string; items: FaqItem[] }[] = [
   {
     title: "Payments & Refunds",
     items: [
-      { q: "Is the rental charge refundable?", a: "No — the rental charge is non-refundable once an order is confirmed." },
+      {
+        q: "Is the rental charge refundable?",
+        a: "Refunds depend on when an order is cancelled. Our cancellation policy has the exact terms.",
+        links: [{ href: "/policies/cancellation", label: "Read the cancellation policy" }],
+      },
       {
         q: "How does the security deposit refund work?",
-        a: "It's refunded immediately if you cancel before the event date. If you cancel after the event date, it enters \"Pending Review\" while our team inspects for damage before releasing it.",
+        a: "The deposit is returned after your items come back and are checked. Our damage and cancellation policies explain when and how.",
+        links: [
+          { href: "/policies/damage", label: "Read the damage policy" },
+          { href: "/policies/cancellation", label: "Read the cancellation policy" },
+        ],
       },
       {
         q: "What payment methods are accepted?",
@@ -110,7 +121,16 @@ export default function FaqPage() {
                       <span>{item.q}</span>
                       <ChevronDown className={`size-4 shrink-0 text-primary transition-transform ${open ? "rotate-180" : ""}`} />
                     </button>
-                    {open && <div className="border-t border-primary/40 px-4 pt-3 pb-4 text-sm leading-6 text-foreground/75">{item.a}</div>}
+                    {open && (
+                      <div className="border-t border-primary/40 px-4 pt-3 pb-4 text-sm leading-6 text-foreground/75">
+                        {item.a}
+                        {item.links?.map((link) => (
+                          <Link key={link.href} href={link.href} className="mt-1 block text-primary hover:underline">
+                            {link.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

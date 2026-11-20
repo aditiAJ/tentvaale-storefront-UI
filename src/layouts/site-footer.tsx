@@ -28,8 +28,10 @@ const COLUMNS: { title: string; links: { href: string; label: string }[] }[] = [
   {
     title: "Legal",
     links: [
-      { href: "/terms", label: "Terms" },
-      { href: "/terms", label: "Privacy" },
+      { href: "/policies/terms", label: "Terms & Conditions" },
+      { href: "/policies/cancellation", label: "Cancellation Policy" },
+      { href: "/policies/damage", label: "Damage Policy" },
+      { href: "/policies/delivery", label: "Delivery Policy" },
     ],
   },
 ];
@@ -109,7 +111,7 @@ export function SiteFooter() {
           <span className="text-xs text-muted-foreground">© 2026 Tentvaale. All rights reserved.</span>
           <SocialLinks size="sm" className="md:order-last" />
           <div className="flex items-center gap-5">
-            <Link href="/terms" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/policies/terms" className="text-xs text-muted-foreground transition-colors hover:text-foreground">
               Terms
             </Link>
             <Link href="/faq" className="text-xs text-muted-foreground transition-colors hover:text-foreground">

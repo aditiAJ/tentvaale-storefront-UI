@@ -1,5 +1,4 @@
 import type { CustomerQuotation, QuotationStage } from "@/features/quotations/types";
-import { POLICY_LABEL } from "@/features/quotations/tax";
 import { apiFetch } from "@/services/api-client";
 import type { DocFunction, QuotationDoc } from "./QuotationDocument";
 import { loadImageData, loadMarkData, loadQrCodes } from "./pdfAssets";
@@ -73,14 +72,13 @@ export async function buildQuotationDoc(
   const images: Record<string, string> = {};
   for (const [url, data] of pictures) if (data) images[url] = data;
 
-  // The text of each policy at the version the quotation was sent with. A policy that cannot be read is left out.
+  // The policies in force now (the latest version of each), so an edit in Settings shows on the very next download.
+  // A policy that cannot be read is left out.
   const policyTexts = (
     await Promise.all(
       (q.policies ?? []).map(async (ref) => {
         try {
-          const found = await apiFetch<{ title: string; version: number; body: string }>(
-            `storefront/policies/${ref.kind}?version=${ref.version}`,
-          );
+          const found = await apiFetch<{ title: string; version: number; body: string }>(`storefront/policies/${ref.kind}`);
           return found.body.trim() ? { title: found.title, version: found.version, body: found.body } : null;
         } catch {
           return null;
@@ -127,7 +125,7 @@ export async function buildQuotationDoc(
       label: waived ? "Security deposit (waived)" : "Refundable security deposit (not taxed)",
       amount: waived ? amount(q.depositWaiver?.amount) : amount(q.securityDeposit),
     },
-    policies: (q.policies ?? []).map((p) => `${POLICY_LABEL[p.kind] ?? p.kind} (v${p.version})`),
+    policies: policyTexts.map((p) => p.title),
     policyTexts,
     company: {
       name,

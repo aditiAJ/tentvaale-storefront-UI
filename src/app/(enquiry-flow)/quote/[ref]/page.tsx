@@ -220,8 +220,11 @@ export default function QuotePage({ params }: { params: Promise<{ ref: string }>
             <span style={{ fontFamily: "var(--font-display)", fontSize: 34, color: "var(--text-primary)" }}>{formatRupees(totals.total)}</span>
           </div>
           <span style={{ fontFamily: "var(--font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--text-muted)" }}>
-            40% on confirmation, balance seven days before install. Refundable damage deposit of {formatRupees(totals.deposit)} billed
-            separately.
+            Refundable damage deposit of {formatRupees(totals.deposit)} billed separately. Payment and refund terms are in our{" "}
+            <a href="/policies/terms" style={{ color: "inherit", textDecoration: "underline" }}>
+              terms and conditions
+            </a>
+            .
           </span>
           <Button variant="primary" fullWidth onClick={accept} disabled={accepted}>
             {accepted ? "Accepted" : "Accept Quote"}

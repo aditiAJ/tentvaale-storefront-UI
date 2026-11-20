@@ -22,7 +22,7 @@ import { formatMoney } from "@/lib/money";
 import { useRecentlyViewed } from "@/lib/recently-viewed";
 import { useMockStore } from "@/mock-data/store";
 import { useProduct } from "@/features/catalog/hooks";
-import { quantityLabel, rateUnitLabel } from "@/features/catalog/format";
+import { quantityLabel, rateUnitLabel, stockLabel } from "@/features/catalog/format";
 import { ProductRail } from "@/features/catalog/components/ProductRail";
 import { planProductId, registerDetail } from "@/features/catalog/plan-bridge";
 import { usePlanActions } from "@/features/plans/hooks";
@@ -129,6 +129,11 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
   const rate = variant?.dailyRate ?? product.dailyRate;
   const stock = variant?.maxOrderable ?? product.maxOrderable;
   const needsDimensions = product.rateType !== "QTY";
+  // The most that can be ordered, in what the product is sold in (units, sq ft or running ft). One booking of an
+  // area-priced item may also be capped lower by its own coverage limit.
+  const ceiling = product.maxCoverageSqft && needsDimensions ? Math.min(stock, product.maxCoverageSqft) : stock;
+  // A number typed, or left over from another option, never stays above what can be ordered.
+  const amount = needsDimensions ? Math.min(length, Math.max(ceiling, 1)) : Math.min(quantity, Math.max(stock, 1));
   const wishlisted = wishlist.includes(planProductId(product.id));
   const size = sizeOf(product);
   const rows: [string, string][] = [
@@ -147,7 +152,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
       return;
     }
     if (!product) return;
-    const amount = needsDimensions ? length : quantity;
     const saved = await actions.addItem({
       subEventId: target.subEventId,
       productId: product.id,
@@ -318,14 +322,14 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <div className="flex flex-col gap-2 border-t border-border pt-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-foreground">{quantityLabel(product.rateType)}</span>
-                <NumberStepper value={length} onChange={setLength} aria-label="Size" />
+                <NumberStepper value={amount} onChange={setLength} max={Math.max(ceiling, 1)} aria-label={quantityLabel(product.rateType)} />
               </div>
-              {product.maxCoverageSqft && <p className="text-xs text-muted-foreground">One booking can cover up to {product.maxCoverageSqft} sq ft.</p>}
+              {ceiling > 0 && <p className="text-xs text-muted-foreground">Most you can order: {stockLabel(ceiling, product.rateType)}.</p>}
             </div>
           ) : (
             <div className="flex items-center justify-between border-t border-border pt-4">
               <span className="font-serif text-xl text-foreground">Quantity</span>
-              <NumberStepper value={quantity} onChange={setQuantity} max={Math.max(stock, 1)} aria-label="Quantity" />
+              <NumberStepper value={amount} onChange={setQuantity} max={Math.max(stock, 1)} aria-label="Quantity" />
             </div>
           )}
 
@@ -333,7 +337,7 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
             <div className="flex items-start gap-2.5 rounded-xl bg-[color-mix(in_oklab,var(--success)_10%,transparent)] px-4 py-3 text-sm text-[var(--success)] ring-1 ring-[color-mix(in_oklab,var(--success)_28%,transparent)] ring-inset">
               <Check className="mt-0.5 size-4 shrink-0" />
               <span>
-                <strong className="font-medium tabular-nums">{stock}</strong> units in our inventory
+                <strong className="font-medium tabular-nums">{stockLabel(stock, product.rateType)}</strong> in our inventory
                 <span className="block text-xs opacity-80">Maximum you can order. Availability for your dates is confirmed on the quote.</span>
               </span>
             </div>
@@ -392,7 +396,6 @@ export default function ProductPage({ params }: { params: Promise<{ slug: string
           title="Create Plan & Add Item"
           submitLabel="Create Plan & Add"
           onCreated={async (newPlan) => {
-            const amount = needsDimensions ? length : quantity;
             await apiAddItem(newPlan.id, {
               productId: product.id,
               variantId: variant?.id ?? null,

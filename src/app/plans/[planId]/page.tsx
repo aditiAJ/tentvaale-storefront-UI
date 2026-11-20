@@ -1512,7 +1512,7 @@ export default function PlanDetailPage({ params }: { params: Promise<{ planId: s
                                 </span>
                               </span>
                               <span className="order-3 flex items-center gap-2 text-xs text-muted-foreground md:order-none">
-                                <NumberStepper id={`qty-${item.id}`} size="sm" aria-label={`${product.name} quantity`} value={lineQty(item)} onChange={(v) => void actions.setQuantity(item.id, v)} />
+                                <NumberStepper id={`qty-${item.id}`} size="sm" aria-label={`${product.name} quantity`} value={lineQty(item)} max={product.availableQuantity !== undefined && product.availableQuantity > 0 && product.availableQuantity < 999 ? product.availableQuantity : undefined} onChange={(v) => void actions.setQuantity(item.id, v)} />
                                 {item.dimensions && (product.rateType === "SqFt" ? "sqft" : "ft")}
                               </span>
                               <span className="order-4 text-right font-serif text-lg text-primary md:order-none">{formatRupees(linePrice(item))}</span>

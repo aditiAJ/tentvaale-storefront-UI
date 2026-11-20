@@ -9,6 +9,7 @@ import { useRequireAccount } from "@/features/auth";
 import { DOCUMENT_LABEL, useOrderDocument } from "@/features/orders";
 import { canMakeInvoicePdf, type InvoiceBody } from "@/features/orders/buildInvoiceDoc";
 import { InvoicePdfView } from "@/features/orders/InvoicePdfView";
+import { measuredQuantity } from "@/features/catalog/format";
 
 const inr = (value: number | undefined | null) =>
   value == null
@@ -88,7 +89,7 @@ export default function DocumentPage({ params }: { params: Promise<{ orderId: st
             {b.lines.map((l, i) => (
               <div key={i} className="flex justify-between gap-3 border-b border-border py-2">
                 <span>
-                  {l.description} <span className="text-muted-foreground">× {l.quantity}, {l.days} day{l.days === 1 ? "" : "s"}</span>
+                  {l.description} <span className="text-muted-foreground">× {measuredQuantity(l.quantity, l.rateType)}, {l.days} day{l.days === 1 ? "" : "s"}</span>
                   {l.remark ? <span className="block text-xs italic text-muted-foreground">{l.remark}</span> : null}
                 </span>
                 <span className="tabular-nums">{inr(l.amount)}</span>
