@@ -24,6 +24,11 @@ export function listCategories(signal?: AbortSignal): Promise<CategoryNode[]> {
   return apiFetch<CategoryNode[]>(`${BASE}/categories`, { signal });
 }
 
+/** The landing page hero pictures set in the back office; either may be absent. */
+export function getSiteHero(signal?: AbortSignal): Promise<{ light?: string | null; dark?: string | null }> {
+  return apiFetch<{ light?: string | null; dark?: string | null }>(`${BASE}/site`, { signal });
+}
+
 export function listOccasions(signal?: AbortSignal): Promise<Occasion[]> {
   return apiFetch<Occasion[]>(`${BASE}/occasions`, { signal });
 }
@@ -97,6 +102,7 @@ export function getCollection(slug: string, signal?: AbortSignal): Promise<Colle
 export const catalogKeys = {
   categories: ["catalog", "categories"] as const,
   occasions: ["catalog", "occasions"] as const,
+  siteHero: ["catalog", "site-hero"] as const,
   products: (query: ProductQuery) => ["catalog", "products", query] as const,
   filters: (query: ProductQuery) => ["catalog", "filters", query] as const,
   product: (slug: string) => ["catalog", "product", slug] as const,

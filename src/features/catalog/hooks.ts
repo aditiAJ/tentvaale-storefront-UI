@@ -9,6 +9,7 @@ import {
   getCollection,
   getProduct,
   getProductFilters,
+  getSiteHero,
   listBundles,
   listCategories,
   listCollections,
@@ -41,6 +42,11 @@ export function useCategories() {
     queryFn: ({ signal }) => listCategories(signal),
     staleTime: FIVE_MINUTES,
   });
+}
+
+/** The landing page hero pictures. A failed read just means the standard picture, so it is not retried much. */
+export function useSiteHero() {
+  return useQuery({ queryKey: catalogKeys.siteHero, queryFn: ({ signal }) => getSiteHero(signal), staleTime: FIVE_MINUTES, retry: 1 });
 }
 
 export function useOccasions() {

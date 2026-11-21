@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { MediaCard } from "@/components/media-card";
 import { ProductThumb } from "@/components/product-thumb";
 import { HoverImageGallery } from "@/components/hover-image-gallery";
+import { HeroPicture } from "@/components/hero-picture";
 import { formatMoney } from "@/lib/money";
 import { rateUnitLabel } from "@/features/catalog/format";
 import { useBundles, useCategories, useCollections, useOccasions, useProductPreview } from "@/features/catalog/hooks";
@@ -95,14 +96,7 @@ export default function Home() {
     <div className="w-full [--radius:0.625rem]">
       <section className="relative h-110 w-full overflow-hidden md:h-140">
         <motion.div className="absolute inset-0" variants={heroImage} initial={skip ? "visible" : "hidden"} animate="visible">
-          <Image
-            src="https://images.unsplash.com/photo-1729237261091-bae8eba0c60c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1600"
-            alt="Luxury event decor"
-            fill
-            priority
-            sizes="100vw"
-            className="object-cover"
-          />
+          <HeroPicture />
         </motion.div>
         {/* Fade confined to the bottom band only — the rest of the photo stays fully visible, undimmed. */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/85 via-black/40 to-transparent" />
