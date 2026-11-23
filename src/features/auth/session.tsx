@@ -129,7 +129,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const signup = useCallback(
     async (payload: SignupPayload) => {
       await apiSignup(payload);
-      await apiLogin({ email: payload.email, password: payload.password });
+      // The mobile number is the one thing every account has, so it is what signs the new account in.
+      await apiLogin({ login: payload.phone, password: payload.password });
       setSignedOutAt(null);
       return refresh();
     },

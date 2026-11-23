@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { use } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, Icon } from "@/components/brand";
@@ -221,9 +222,9 @@ export default function QuotePage({ params }: { params: Promise<{ ref: string }>
           </div>
           <span style={{ fontFamily: "var(--font-body)", fontSize: 13, lineHeight: 1.6, color: "var(--text-muted)" }}>
             Refundable damage deposit of {formatRupees(totals.deposit)} billed separately. Payment and refund terms are in our{" "}
-            <a href="/policies/terms" style={{ color: "inherit", textDecoration: "underline" }}>
+            <Link href="/policies/terms" style={{ color: "inherit", textDecoration: "underline" }}>
               terms and conditions
-            </a>
+            </Link>
             .
           </span>
           <Button variant="primary" fullWidth onClick={accept} disabled={accepted}>

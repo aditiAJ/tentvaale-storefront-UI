@@ -53,7 +53,7 @@ interface StoreContextValue extends StoreState {
    * TEMPORARY BRIDGE: makes the local account mirror the real signed-in one (same id, name, email),
    * creating it on first sight. Removed with the rest of this store when wishlist and addresses move to the backend.
    */
-  syncAccount: (real: { id: string; fullName: string; email: string; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => void;
+  syncAccount: (real: { id: string; fullName: string; email: string | null; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => void;
   logout: () => void;
   upgradeToEventPlanner: () => void;
 
@@ -86,11 +86,11 @@ export function MockStoreProvider({ children }: { children: React.ReactNode }) {
   const currentAccount = state.accounts.find((a) => a.id === state.currentAccountId) ?? null;
 
   const syncAccount = useCallback(
-    (real: { id: string; fullName: string; email: string; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => {
+    (real: { id: string; fullName: string; email: string | null; phone?: string; accountType: "CUSTOMER" | "EVENT_PLANNER" }) => {
       const mirrored: Account = {
         id: real.id,
         name: real.fullName,
-        email: real.email,
+        email: real.email ?? "",
         phone: real.phone ?? "",
         accountType: real.accountType === "EVENT_PLANNER" ? "EventPlanner" : "Customer",
       };

@@ -86,7 +86,7 @@ export function usePayQuotation(requestId: string) {
           name: checkout.businessName,
           description: `Advance for quotation ${checkout.quotationNumber}`,
           order_id: checkout.gatewayOrderId,
-          prefill: { name: account?.fullName, email: account?.email, contact: account?.phone },
+          prefill: { name: account?.fullName, email: account?.email ?? undefined, contact: account?.phone },
           theme: { color: "#A96720" },
           handler: (result) => {
             setPhase("confirming");

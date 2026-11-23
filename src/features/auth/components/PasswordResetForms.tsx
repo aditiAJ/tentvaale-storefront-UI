@@ -19,7 +19,7 @@ function Heading({ title, text }: { title: string; text: string }) {
   );
 }
 
-/** Asks for the email. The answer is the same whether or not an account exists, so this page never says which. */
+/** Asks for the email or mobile number. The answer is the same whether or not an account exists, so this page never says which. */
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +31,7 @@ export function ForgotPasswordForm() {
     setError(null);
     const clean = email.trim();
     if (!clean) {
-      setError("Please enter your email.");
+      setError("Please enter your email or mobile number.");
       return;
     }
     setSubmitting(true);
@@ -51,7 +51,7 @@ export function ForgotPasswordForm() {
         <MailCheck className="size-10 text-primary" aria-hidden />
         <Heading
           title="Check your email"
-          text={`If an account exists for ${email.trim()}, we have sent a link to reset the password. It works once and expires in 1 hour.`}
+          text={`If an account exists for ${email.trim()}, we have sent a link to the email on it to reset the password. It works once and expires in 1 hour.`}
         />
         <p className="text-xs text-muted-foreground">Nothing arrived? Look in spam, or wait a minute and try again.</p>
         <Button variant="outline" nativeButton={false} render={<Link href="/login">Back to log in</Link>} className="w-full" />
@@ -61,18 +61,18 @@ export function ForgotPasswordForm() {
 
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-5">
-      <Heading title="Forgot your password?" text="Enter your email and we will send you a link to choose a new one." />
+      <Heading title="Forgot your password?" text="Enter your email or mobile number and we will send a link to the email on your account to choose a new password." />
       <form onSubmit={handleSubmit} className="flex w-full flex-col gap-3">
         {error && <InlineError>{error}</InlineError>}
         <div className="flex flex-col gap-2">
           <Label htmlFor="forgot-email" className="text-xs text-muted-foreground">
-            Email <span className="text-destructive">*</span>
+            Email or mobile number <span className="text-destructive">*</span>
           </Label>
           <Input
             id="forgot-email"
-            type="email"
-            autoComplete="email"
-            placeholder="Enter your email"
+            type="text"
+            autoComplete="username"
+            placeholder="Enter your email or mobile number"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="h-11 bg-card"

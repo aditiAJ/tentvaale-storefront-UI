@@ -40,7 +40,7 @@ export default function QuotationPrintPage({ params }: { params: Promise<{ quota
           import("@/features/quotations/components/QuotationDocument"),
           import("@/features/quotations/components/buildQuotationDoc"),
         ]);
-        const doc = await buildQuotationDoc(quotation, { name: account.fullName, email: account.email });
+        const doc = await buildQuotationDoc(quotation, { name: account.fullName, email: account.email, phone: account.phone ?? null });
         const blob = await render(<QuotationDocument doc={doc} theme={theme} />).toBlob();
         if (cancelled) return;
         made = URL.createObjectURL(blob);

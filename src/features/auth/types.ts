@@ -7,7 +7,8 @@ export type StorefrontAccountType = "CUSTOMER" | "EVENT_PLANNER";
 
 export interface StorefrontAccount {
   id: string;
-  email: string;
+  /** Null for an account made with a mobile number only. */
+  email: string | null;
   fullName: string;
   phone?: string;
   city?: string;
@@ -17,8 +18,10 @@ export interface StorefrontAccount {
 
 export interface SignupPayload {
   fullName: string;
-  email: string;
+  /** Optional: a mobile number is enough to have an account. */
+  email?: string;
   password: string;
+  /** Required: ten digits, one account each. */
   phone: string;
   city: string;
   state: string;
@@ -26,7 +29,8 @@ export interface SignupPayload {
 }
 
 export interface LoginPayload {
-  email: string;
+  /** The email or the mobile number the account was made with. */
+  login: string;
   password: string;
 }
 

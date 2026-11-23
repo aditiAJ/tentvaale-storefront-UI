@@ -12,8 +12,8 @@ export function signup(payload: SignupPayload): Promise<StorefrontAccount> {
 }
 
 /**
- * 422 for a wrong email or password (the same answer for both, on purpose); 429 when there have been
- * too many wrong attempts for that email, with the wait in the message.
+ * 422 for a wrong email, mobile number or password (the same answer for all, on purpose); 429 when there have been
+ * too many wrong attempts for that login, with the wait in the message.
  */
 export function login(payload: LoginPayload): Promise<void> {
   return apiFetch<void>("storefront/auth/login", { method: "POST", body: payload });
@@ -40,11 +40,11 @@ export function updateAccount(payload: UpdateProfilePayload): Promise<Storefront
 }
 
 /**
- * "Forgot password?". Always succeeds (204) whether or not the email has an account, so the page can only
- * say "if it exists, we sent a link"; the email carries a one-time link to /reset-password.
+ * "Forgot password?" with an email or a mobile number. Always succeeds (204) whether or not there is an account, so the
+ * page can only say "if it exists, we sent a link"; the link goes to the email on the account.
  */
-export function requestPasswordReset(email: string): Promise<void> {
-  return apiFetch<void>("storefront/auth/forgot-password", { method: "POST", body: { email } });
+export function requestPasswordReset(login: string): Promise<void> {
+  return apiFetch<void>("storefront/auth/forgot-password", { method: "POST", body: { login } });
 }
 
 /** 422 when the link is wrong, already used or expired (its message is written for the person). Does not sign anyone in. */

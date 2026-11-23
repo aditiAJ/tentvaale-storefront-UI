@@ -24,6 +24,7 @@ import { useMockStore } from "@/mock-data/store";
 import { InlineError } from "@/components/inline-error";
 import { StateSelect, initialState } from "@/components/ui/state-select";
 import { isStateName } from "@/lib/indian-states";
+import { isMobile, onlyDigits } from "@/lib/phone";
 
 // Flowstep screen 40 (desktop) — mobile 41 not fetched; stacks naturally.
 const NAV_SECTIONS = [
@@ -188,7 +189,7 @@ export default function AccountPage() {
               </div>
               <div className="min-w-0">
                 <h3 className="mb-1 font-serif text-2xl text-foreground">{account.name}</h3>
-                <p className="truncate text-sm text-muted-foreground">{account.email}</p>
+                <p className="truncate text-sm text-muted-foreground">{account.email || "No email added"}</p>
                 <p className="truncate text-sm text-muted-foreground">{account.phone || "No phone on file"}</p>
                 <Badge variant="accent" className="mt-2.5">
                   {account.accountType === "Customer" ? "Customer" : "Event Planner"}
@@ -333,6 +334,16 @@ export default function AccountPage() {
                   setProfileError("Please enter your name.");
                   return;
                 }
+                // A number that is new must be ten digits; one already on file is left as it is. Without an email it is the way in.
+                const phoneValue = profilePhone.trim();
+                if (phoneValue && phoneValue !== account.phone && !isMobile(phoneValue)) {
+                  setProfileError("Enter a valid 10-digit mobile number.");
+                  return;
+                }
+                if (!phoneValue && !account.email) {
+                  setProfileError("A mobile number is needed to sign in.");
+                  return;
+                }
                 // A state is optional here (it may not have been set), but one that is there must be a real one.
                 if (profileState.trim() && !isStateName(profileState.trim())) {
                   setProfileError("Please select your state from the list.");
@@ -359,15 +370,17 @@ export default function AccountPage() {
                 <Input id="profile-name" value={profileName} onChange={(e) => setProfileName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="profile-phone">Phone (optional)</Label>
-                <Input id="profile-phone" inputMode="tel" value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} />
+                <Label htmlFor="profile-phone">{account.email ? "Mobile number (optional)" : "Mobile number"}</Label>
+                <Input id="profile-phone" inputMode="numeric" maxLength={10} value={profilePhone} onChange={(e) => setProfilePhone(onlyDigits(e.target.value))} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="profile-state">State</Label>
                 <StateSelect id="profile-state" value={profileState} onChange={setProfileState} />
                 <p className="text-xs text-muted-foreground">It decides the GST on your quotations.</p>
               </div>
-              <p className="text-xs text-muted-foreground">Your email is {account.email} and cannot be changed here.</p>
+              <p className="text-xs text-muted-foreground">
+                {account.email ? `Your email is ${account.email} and cannot be changed here.` : "Your account signs in with your mobile number."}
+              </p>
               <DialogFooter>
                 <Button type="submit" disabled={profileSaving}>
                   {profileSaving ? "Saving…" : "Save"}

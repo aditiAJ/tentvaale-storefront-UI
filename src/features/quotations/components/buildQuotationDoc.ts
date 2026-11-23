@@ -35,7 +35,7 @@ function statusOf(stage: QuotationStage): { status: string; note: string } {
  */
 export async function buildQuotationDoc(
   q: CustomerQuotation,
-  customer: { name: string; email: string | null },
+  customer: { name: string; email: string | null; phone?: string | null },
 ): Promise<QuotationDoc> {
   const groups = new Map<string, DocFunction>();
   for (const line of q.lines) {
@@ -100,7 +100,8 @@ export async function buildQuotationDoc(
     status,
     statusNote: note,
     customerName: customer.name,
-    customerEmail: customer.email,
+    // The contact on the document: the email, or the mobile number for an account that has none.
+    customerEmail: customer.email ?? customer.phone ?? null,
     eventDate: q.eventDate ?? null,
     venue: q.venue ?? null,
     functions: [...groups.values()],

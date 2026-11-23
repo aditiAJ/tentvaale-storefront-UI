@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { StateSelect } from "@/components/ui/state-select";
 import { isStateName } from "@/lib/indian-states";
+import { looksLikeEmail, mobileError, onlyDigits } from "@/lib/phone";
 import { canGoBackInApp, safeInternalPath, type NavigationLike } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { SiteWordmark } from "@/components/site-logo";
@@ -35,10 +36,11 @@ function safeNext(value: string | null): string {
 // field set (no account-type toggle, adds "Forgot password?").
 export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   const router = useRouter();
-  const { signup, login, loginWithGoogle } = useSession();
+  const { signup, login: signIn, loginWithGoogle } = useSession();
   const reduce = useReducedMotion();
   const [tab, setTab] = useState<"signup" | "login">(initialTab);
   const [fullName, setFullName] = useState("");
+  const [login, setLogin] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
@@ -52,14 +54,22 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    const cleanEmail = email.trim();
-    if (!cleanEmail || !password) {
-      setError("Please enter your email and password.");
+    if (tab === "login" && (!login.trim() || !password)) {
+      setError("Please enter your email or mobile number, and your password.");
       return;
     }
     if (tab === "signup") {
       if (!fullName.trim()) {
         setError("Please tell us your name.");
+        return;
+      }
+      const phoneProblem = mobileError(phone);
+      if (phoneProblem) {
+        setError(phoneProblem);
+        return;
+      }
+      if (email.trim() && !looksLikeEmail(email.trim())) {
+        setError("That email does not look right. Leave it empty if you have none.");
         return;
       }
       if (!city.trim()) {
@@ -80,16 +90,16 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
       if (tab === "signup") {
         await signup({
           fullName: fullName.trim(),
-          email: cleanEmail,
+          email: email.trim() || undefined,
           password,
-          phone: phone.trim(),
+          phone,
           city: city.trim(),
           state: state.trim(),
           accountType: accountType === "EventPlanner" ? "EVENT_PLANNER" : "CUSTOMER",
         });
         toast.success("Account created — your Plan Event is ready.");
       } else {
-        await login({ email: cleanEmail, password });
+        await signIn({ login: login.trim(), password });
       }
       router.push(safeNext(new URLSearchParams(window.location.search).get("next")));
     } catch (failure) {
@@ -188,37 +198,61 @@ export function AuthForm({ initialTab }: { initialTab: "signup" | "login" }) {
             />
           </div>
         )}
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="auth-email" className="text-xs text-muted-foreground">
-            Email <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="auth-email"
-            type="email"
-            autoComplete="email"
-            placeholder="Enter your email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-11 bg-card"
-            required
-          />
-        </div>
-        {tab === "signup" && (
+        {tab === "login" ? (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="auth-login" className="text-xs text-muted-foreground">
+              Email or mobile number <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="auth-login"
+              type="text"
+              autoComplete="username"
+              placeholder="Enter your email or mobile number"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              className="h-11 bg-card"
+            />
+          </div>
+        ) : (
           <>
             <div className="flex flex-col gap-2">
               <Label htmlFor="auth-phone" className="text-xs text-muted-foreground">
-                Phone number
+                Mobile number <span className="text-destructive">*</span>
+              </Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">+91</span>
+                <Input
+                  id="auth-phone"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  maxLength={10}
+                  placeholder="10-digit mobile number"
+                  value={phone}
+                  onChange={(e) => setPhone(onlyDigits(e.target.value))}
+                  className="h-11 bg-card pl-12"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground/80">You can sign in with it. One account for each number.</p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="auth-email" className="text-xs text-muted-foreground">
+                Email (optional)
               </Label>
               <Input
-                id="auth-phone"
-                type="tel"
-                autoComplete="tel"
-                placeholder="+91 98765 43210"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                id="auth-email"
+                type="email"
+                autoComplete="email"
+                placeholder="Add it if you have one"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="h-11 bg-card"
               />
             </div>
+          </>
+        )}
+        {tab === "signup" && (
+          <>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="auth-city" className="text-xs text-muted-foreground">
